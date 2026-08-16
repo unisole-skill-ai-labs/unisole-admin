@@ -48,6 +48,7 @@ There are no tests and no linter configured. Verification = `npm run build` + ma
 - `nginx.conf`: SPA fallback (`try_files ... /index.html`), gzip, immutable caching for `/assets/`.
 - `docker-compose.yml`: single `admin` service, port `5173:80`.
 - `npm ci` runs inside the container on Linux, so native binaries (`@rollup/rollup-linux-x64-gnu`, `@esbuild/linux-x64`) are always correct there.
+- Default API URL is configurable at build time via the `VITE_API_BASE_URL` build arg (reads `import.meta.env.VITE_API_BASE_URL` in `src/store.js`; falls back to `http://localhost:3000`). See `.env.example` and `deploy/nginx-admin.conf` for EC2 usage.
 
 ## Critical Environment Warning
 

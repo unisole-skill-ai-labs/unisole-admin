@@ -31,6 +31,19 @@ docker compose up --build
 
 Multi-stage image: builds the app with Node 22, then serves the static bundle with nginx (`Dockerfile`, `nginx.conf`). SPA routing falls back to `index.html`.
 
+### Deployment (EC2, alongside the engine)
+
+The image builds entirely inside a Linux container, so it always installs the correct native binaries — no Windows/WSL `node_modules` issues on the server.
+
+1. Set the default API URL for the deployed bundle:
+   ```sh
+   VITE_API_BASE_URL=https://uni.engine.unisole.org docker compose up --build -d
+   ```
+   (Without it, the panel defaults to `http://localhost:3000`, which is wrong from a browser.)
+2. Open EC2 security-group inbound TCP `5173`, **or** serve it behind nginx on 80/443 — see `deploy/nginx-admin.conf` (A record + certbot, like the engine domain).
+
+The browser talks to the engine API directly (CORS is allow-all), so the panel needs no network link to the engine container.
+
 ## Project Structure
 
 ```

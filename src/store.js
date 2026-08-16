@@ -4,12 +4,14 @@ import { resources } from "./config/resources";
 
 const STORAGE_KEY = "unisole-admin:baseUrl";
 
-const getBase = () => localStorage.getItem(STORAGE_KEY) || "http://localhost:3000";
+const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+
+const getBase = () => localStorage.getItem(STORAGE_KEY) || DEFAULT_BASE_URL;
 
 const settingsSlice = createSlice({
   name: "settings",
   initialState: {
-    baseUrl: localStorage.getItem(STORAGE_KEY) || "http://localhost:3000",
+    baseUrl: localStorage.getItem(STORAGE_KEY) || DEFAULT_BASE_URL,
   },
   reducers: {
     setBaseUrl(state, action) {
