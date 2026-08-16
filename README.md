@@ -35,14 +35,20 @@ Multi-stage image: builds the app with Node 22, then serves the static bundle wi
 
 The image builds entirely inside a Linux container, so it always installs the correct native binaries — no Windows/WSL `node_modules` issues on the server.
 
-1. Set the default API URL for the deployed bundle:
+1. Point one DNS A record (`uni.admin.unisole.org`) at the EC2 public IP.
+2. Set the default API URL for the deployed bundle:
    ```sh
-   VITE_API_BASE_URL=https://uni.engine.unisole.org docker compose up --build -d
+   VITE_API_BASE_URL=https://uni.admin.unisole.org docker compose up --build -d
    ```
    (Without it, the panel defaults to `http://localhost:3000`, which is wrong from a browser.)
-2. Open EC2 security-group inbound TCP `5173`, **or** serve it behind nginx on 80/443 — see `deploy/nginx-admin.conf` (A record + certbot, like the engine domain).
+3. Install nginx + the server block from `deploy/nginx-admin.conf` (proxy admin on `:5173` and reverse-proxy `/api/*`, `/health` to the engine on `127.0.0.1:3000`), then:
+   ```sh
+   sudo nginx -t && sudo systemctl reload nginx
+   sudo certbot --nginx -d uni.admin.unisole.org
+   ```
+4. Keep the engine internal: EC2 security group should only open `22`, `80`, `443`.
 
-The browser talks to the engine API directly (CORS is allow-all), so the panel needs no network link to the engine container.
+The panel and its API share one origin (`https://uni.admin.unisole.org`) — nginx proxies `/api/*` to the engine, so the engine's port `3000` is never exposed to the internet and CORS isn't involved.
 
 ## Project Structure
 
