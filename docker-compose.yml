@@ -1,0 +1,6 @@
+services:
+  admin:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "5173:80"
