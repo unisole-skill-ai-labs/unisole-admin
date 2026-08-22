@@ -22,7 +22,15 @@ export default function LoginPage() {
         body: JSON.stringify({ email, password }),
       });
 
-      const data = await res.json();
+      const contentType = res.headers.get("content-type") || "";
+      let data = {};
+      if (contentType.includes("application/json")) {
+        data = await res.json();
+      } else {
+        throw new Error(
+          `HTTP ${res.status}: Backend returned an HTML error page. Check if unisole-engine container is running on port 3000.`
+        );
+      }
 
       if (!res.ok) {
         throw new Error(data.detail || data.error || data.message || `HTTP ${res.status}`);
