@@ -1,6 +1,7 @@
 import { configureStore, createSlice } from "@reduxjs/toolkit";
 import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import { resources } from "./config/resources";
+import authReducer, { logout } from "./store/auth-slice";
 
 const STORAGE_KEY = "unisole-admin:baseUrl";
 
@@ -23,11 +24,28 @@ const settingsSlice = createSlice({
 
 export const { setBaseUrl } = settingsSlice.actions;
 
+const rawBaseQuery = fetchBaseQuery({
+  baseUrl: "",
+  prepareHeaders: (headers, { getState }) => {
+    const token = getState().auth.token;
+    if (token) headers.set("Authorization", `Bearer ${token}`);
+    return headers;
+  },
+});
+
+const baseQueryWithReauth = async (args, apiInstance, extraOptions) => {
+  const result = await rawBaseQuery(args, apiInstance, extraOptions);
+  if (result.error && result.error.status === 401) {
+    apiInstance.dispatch(logout());
+  }
+  return result;
+};
+
 // One generic CRUD endpoint set per resource, generated from the config.
 // Endpoint naming: "<resource>:list|get|create|update|remove|custom"
 export const api = createApi({
   reducerPath: "api",
-  baseQuery: fetchBaseQuery({ baseUrl: "" }),
+  baseQuery: baseQueryWithReauth,
   tagTypes: resources.map((r) => r.name),
   endpoints: (build) => {
     const eps = {};
@@ -79,6 +97,7 @@ export const api = createApi({
 
 export const store = configureStore({
   reducer: {
+    auth: authReducer,
     settings: settingsSlice.reducer,
     [api.reducerPath]: api.reducer,
   },

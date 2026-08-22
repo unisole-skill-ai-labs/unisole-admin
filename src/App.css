@@ -249,6 +249,9 @@ tbody tr:hover {
 .row-actions {
   white-space: nowrap;
   text-align: right;
+  max-width: none;
+  overflow: visible;
+  text-overflow: unset;
 }
 
 .row-actions button {
@@ -362,4 +365,56 @@ tbody tr:hover {
   margin: 0;
   font-size: 12px;
   line-height: 1.5;
+}
+
+.login-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--bg);
+}
+
+.login-card {
+  background: var(--panel);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 32px;
+  width: 380px;
+  max-width: 92vw;
+}
+
+.login-card h1 {
+  margin: 0 0 4px;
+  font-size: 22px;
+}
+
+.login-card form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  margin-top: 20px;
+}
+
+.login-btn {
+  margin-top: 4px;
+  padding: 10px;
+  font-size: 14px;
+}
+
+.topbar-right {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.user-badge {
+  font-size: 13px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+
+.user-badge em {
+  font-style: normal;
+  color: var(--primary);
 }

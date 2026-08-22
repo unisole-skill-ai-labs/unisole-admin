@@ -8,11 +8,13 @@ export const resources = [
     label: "Users",
     path: "/api/users",
     required: ["name", "email"],
+    passwordAction: { url: (id) => `/api/users/${id}/password` },
     fields: [
+      { key: "id", label: "User ID", type: "text" },
       { key: "name", label: "Name", type: "text", required: true },
       { key: "email", label: "Email", type: "text", required: true },
       { key: "phone", label: "Phone", type: "text" },
-      { key: "password_hash", label: "Password Hash", type: "text" },
+      { key: "password", label: "Password", type: "password", hideInTable: true },
       { key: "role", label: "Role", type: "select", options: ["student", "admin"] },
       {
         key: "auth_provider",
@@ -21,6 +23,8 @@ export const resources = [
         options: ["local", "google", "supabase"],
       },
       { key: "is_verified", label: "Verified", type: "boolean" },
+      { key: "created_at", label: "Created At", type: "datetime" },
+      { key: "updated_at", label: "Updated At", type: "datetime" },
     ],
   },
   {
@@ -28,7 +32,10 @@ export const resources = [
     label: "Categories",
     path: "/api/categories",
     required: ["name"],
-    fields: [{ key: "name", label: "Name", type: "text", required: true }],
+    fields: [
+      { key: "id", label: "Category ID", type: "text" },
+      { key: "name", label: "Name", type: "text", required: true },
+    ],
   },
   {
     name: "courses",
@@ -36,12 +43,15 @@ export const resources = [
     path: "/api/courses",
     required: ["title", "slug"],
     fields: [
+      { key: "id", label: "Course ID", type: "text" },
       { key: "title", label: "Title", type: "text", required: true },
       { key: "slug", label: "Slug", type: "text", required: true },
       { key: "category_id", label: "Category ID", type: "text" },
       { key: "price", label: "Price", type: "number" },
       { key: "rating_avg", label: "Avg Rating", type: "number" },
       { key: "total_enrollments", label: "Enrollments", type: "number" },
+      { key: "created_at", label: "Created At", type: "datetime" },
+      { key: "updated_at", label: "Updated At", type: "datetime" },
     ],
     actions: [
       { label: "Modules", url: (id) => `/api/courses/${id}/modules` },
@@ -54,12 +64,10 @@ export const resources = [
     path: "/api/modules",
     required: ["title"],
     fields: [
+      { key: "id", label: "Module ID", type: "text" },
       { key: "title", label: "Title", type: "text", required: true },
       { key: "course_id", label: "Course ID", type: "text" },
       { key: "order_index", label: "Order Index", type: "number" },
-    ],
-    actions: [
-      { label: "Lessons", url: (id) => `/api/modules/${id}/lessons` },
     ],
   },
   {
@@ -68,6 +76,8 @@ export const resources = [
     path: "/api/module-items",
     required: ["title", "type"],
     fields: [
+      { key: "id", label: "Module Item ID", type: "text" },
+      { key: "module_id", label: "Module ID", type: "text", required: true },
       { key: "title", label: "Title", type: "text", required: true },
       {
         key: "type",
@@ -77,17 +87,7 @@ export const resources = [
         required: true,
       },
       { key: "content_url", label: "Content URL", type: "text" },
-      { key: "order_index", label: "Order Index", type: "number" },
-    ],
-  },
-  {
-    name: "module-lessons",
-    label: "Module Lessons",
-    path: "/api/module-lessons",
-    required: ["module_id", "module_item_id"],
-    fields: [
-      { key: "module_id", label: "Module ID", type: "text", required: true },
-      { key: "module_item_id", label: "Module Item ID", type: "text", required: true },
+      { key: "content_body", label: "Content Body", type: "textarea", hideInTable: true },
       { key: "order_index", label: "Order Index", type: "number" },
     ],
   },
@@ -97,6 +97,7 @@ export const resources = [
     path: "/api/assignments",
     required: ["title"],
     fields: [
+      { key: "id", label: "Assignment ID", type: "text" },
       { key: "lesson_id", label: "Lesson ID", type: "text" },
       { key: "title", label: "Title", type: "text", required: true },
       { key: "max_score", label: "Max Score", type: "number" },
@@ -110,6 +111,7 @@ export const resources = [
     path: "/api/assignment-submissions",
     required: ["assignment_id", "user_id"],
     fields: [
+      { key: "id", label: "Submission ID", type: "text" },
       { key: "assignment_id", label: "Assignment ID", type: "text", required: true },
       { key: "user_id", label: "User ID", type: "text", required: true },
       { key: "file_url", label: "File URL", type: "text" },
@@ -119,25 +121,12 @@ export const resources = [
     ],
   },
   {
-    name: "quizzes",
-    label: "Quizzes",
-    path: "/api/quizzes",
-    required: ["title"],
-    fields: [
-      { key: "moduel_item_id", label: "Module Item ID", type: "text" },
-      { key: "title", label: "Title", type: "text", required: true },
-      { key: "duration_min", label: "Duration (min)", type: "number" },
-      { key: "total_marks", label: "Total Marks", type: "number" },
-      { key: "passing_marks", label: "Passing Marks", type: "number" },
-      { key: "max_attempts", label: "Max Attempts", type: "number" },
-    ],
-  },
-  {
     name: "tests",
     label: "Tests",
     path: "/api/tests",
     required: ["title"],
     fields: [
+      { key: "id", label: "Test ID", type: "text" },
       { key: "module_item_id", label: "Module Item ID", type: "text" },
       { key: "title", label: "Title", type: "text", required: true },
       { key: "duration_min", label: "Duration (min)", type: "number" },
@@ -147,31 +136,12 @@ export const resources = [
     ],
   },
   {
-    name: "questions",
-    label: "Questions",
-    path: "/api/questions",
-    required: ["quiz_id", "question_text", "type"],
-    fields: [
-      { key: "quiz_id", label: "Quiz ID", type: "text", required: true },
-      { key: "question_text", label: "Question Text", type: "textarea", required: true },
-      {
-        key: "type",
-        label: "Type",
-        type: "select",
-        options: ["mcq_single", "mcq_multi", "true_false", "subjective"],
-        required: true,
-      },
-      { key: "options", label: "Options (JSON)", type: "json" },
-      { key: "correct_answer", label: "Correct Answer (JSON)", type: "json" },
-      { key: "marks", label: "Marks", type: "number" },
-    ],
-  },
-  {
     name: "test-attempts",
     label: "Test Attempts",
     path: "/api/test-attempts",
     required: ["test_id", "user_id"],
     fields: [
+      { key: "id", label: "Test Attempt ID", type: "text" },
       { key: "test_id", label: "Test ID", type: "text", required: true },
       { key: "user_id", label: "User ID", type: "text", required: true },
       {
@@ -189,7 +159,10 @@ export const resources = [
     label: "Carts",
     path: "/api/carts",
     required: ["user_id"],
-    fields: [{ key: "user_id", label: "User ID", type: "text", required: true }],
+    fields: [
+      { key: "id", label: "Cart ID", type: "text" },
+      { key: "user_id", label: "User ID", type: "text", required: true },
+    ],
   },
   {
     name: "coupons",
@@ -197,6 +170,7 @@ export const resources = [
     path: "/api/coupons",
     required: ["code", "discount_type"],
     fields: [
+      { key: "id", label: "Coupon ID", type: "text" },
       { key: "code", label: "Code", type: "text", required: true },
       { key: "discount_type", label: "Discount Type", type: "select", options: ["flat", "percent"], required: true },
       { key: "value", label: "Value", type: "number" },
@@ -212,6 +186,7 @@ export const resources = [
     path: "/api/enrollments",
     required: ["user_id", "course_id"],
     fields: [
+      { key: "id", label: "Enrollment ID", type: "text" },
       { key: "user_id", label: "User ID", type: "text", required: true },
       { key: "course_id", label: "Course ID", type: "text", required: true },
       { key: "enrolled_at", label: "Enrolled At", type: "datetime" },
@@ -226,6 +201,7 @@ export const resources = [
     path: "/api/orders",
     required: ["user_id"],
     fields: [
+      { key: "id", label: "Order ID", type: "text" },
       { key: "user_id", label: "User ID", type: "text", required: true },
       { key: "razorpay_order_id", label: "Razorpay Order ID", type: "text" },
       { key: "amount", label: "Amount", type: "number" },
@@ -240,6 +216,7 @@ export const resources = [
     path: "/api/order-items",
     required: ["order_id", "course_id"],
     fields: [
+      { key: "id", label: "Order Item ID", type: "text" },
       { key: "order_id", label: "Order ID", type: "text", required: true },
       { key: "course_id", label: "Course ID", type: "text", required: true },
       { key: "price_at_purchase", label: "Price at Purchase", type: "number" },
@@ -251,6 +228,7 @@ export const resources = [
     path: "/api/payments",
     required: ["order_id"],
     fields: [
+      { key: "id", label: "Payment ID", type: "text" },
       { key: "order_id", label: "Order ID", type: "text", required: true },
       { key: "razorpay_payment_id", label: "Razorpay Payment ID", type: "text" },
       { key: "razorpay_signature", label: "Razorpay Signature", type: "text" },
@@ -264,6 +242,7 @@ export const resources = [
     path: "/api/certificates",
     required: ["user_id", "course_id"],
     fields: [
+      { key: "id", label: "Certificate ID", type: "text" },
       { key: "user_id", label: "User ID", type: "text", required: true },
       { key: "course_id", label: "Course ID", type: "text", required: true },
       { key: "certificate_url", label: "Certificate URL", type: "text" },
@@ -275,6 +254,7 @@ export const resources = [
     path: "/api/reviews",
     required: ["user_id", "course_id", "rating"],
     fields: [
+      { key: "id", label: "Review ID", type: "text" },
       { key: "user_id", label: "User ID", type: "text", required: true },
       { key: "course_id", label: "Course ID", type: "text", required: true },
       { key: "rating", label: "Rating (1-5)", type: "number", required: true },

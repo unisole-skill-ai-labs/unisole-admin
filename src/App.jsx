@@ -2,6 +2,8 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { api, setBaseUrl } from "./store";
 import { resources } from "./config/resources";
+import { logout } from "./store/auth-slice";
+import LoginPage from "./pages/login";
 
 // RTK Query exposes one hook per endpoint on api.endpoints.<name>.
 const endpointHook = (resource, op) => {
@@ -11,9 +13,15 @@ const endpointHook = (resource, op) => {
 
 const apiError = (e) => {
   if (!e) return "Unknown error";
-  if (e.data && e.data.error) return e.data.error;
-  if (e.data && e.data.message) return e.data.message;
-  if (e.status) return `HTTP ${e.status}`;
+  if (typeof e === "string") return e;
+  const data = e.data || e;
+  if (typeof data === "string") return data;
+
+  const main = data.detail || data.error || data.message;
+  const extra = data.constraint ? ` (${data.constraint})` : data.code ? ` [${data.code}]` : "";
+  if (main) return `${main}${extra}`;
+  if (data.details) return typeof data.details === "string" ? data.details : JSON.stringify(data.details);
+  if (e.status) return `HTTP ${e.status}: ${JSON.stringify(data)}`;
   return String(e.error || e);
 };
 
@@ -72,10 +80,37 @@ const fmt = (v) => {
 
 export default function App() {
   const baseUrl = useSelector((s) => s.settings.baseUrl);
+  const { isAuthenticated, user, token } = useSelector((s) => s.auth);
   const dispatch = useDispatch();
   const [selected, setSelected] = useState(resources[0].name);
   const [baseInput, setBaseInput] = useState(baseUrl);
   const [health, setHealth] = useState(null);
+  const [authChecked, setAuthChecked] = useState(!token);
+
+  useEffect(() => {
+    if (!token) return;
+    let cancelled = false;
+    fetch(`${baseUrl}/api/auth/me`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+      .then((r) => {
+        if (!r.ok) throw new Error("invalid");
+        return r.json();
+      })
+      .then((u) => {
+        if (!cancelled && u.role !== "admin") {
+          dispatch(logout());
+        }
+        if (!cancelled) setAuthChecked(true);
+      })
+      .catch(() => {
+        if (!cancelled) {
+          dispatch(logout());
+          setAuthChecked(true);
+        }
+      });
+    return () => { cancelled = true; };
+  }, [token, baseUrl, dispatch]);
 
   useEffect(() => {
     let cancelled = false;
@@ -84,10 +119,20 @@ export default function App() {
       .then((r) => r.json())
       .then((d) => !cancelled && setHealth({ ok: true, data: d }))
       .catch((e) => !cancelled && setHealth({ ok: false, error: String(e) }));
-    return () => {
-      cancelled = true;
-    };
+    return () => { cancelled = true; };
   }, [baseUrl]);
+
+  if (!authChecked) {
+    return (
+      <div className="login-page">
+        <p className="muted">Checking session…</p>
+      </div>
+    );
+  }
+
+  if (!isAuthenticated) {
+    return <LoginPage />;
+  }
 
   const current = resources.find((r) => r.name === selected);
 
@@ -103,15 +148,24 @@ export default function App() {
             {health ? (health.ok ? "API online" : "API offline") : "checking…"}
           </span>
         </div>
-        <div className="base-url">
-          <input
-            type="text"
-            value={baseInput}
-            placeholder="http://localhost:3000"
-            onChange={(e) => setBaseInput(e.target.value)}
-          />
-          <button onClick={() => dispatch(setBaseUrl(baseInput.trim() || "http://localhost:3000"))}>
-            Set API URL
+        <div className="topbar-right">
+          <div className="base-url">
+            <input
+              type="text"
+              value={baseInput}
+              placeholder="http://localhost:3000"
+              onChange={(e) => setBaseInput(e.target.value)}
+            />
+            <button onClick={() => dispatch(setBaseUrl(baseInput.trim() || "http://localhost:3000"))}>
+              Set API URL
+            </button>
+          </div>
+          <span className="user-badge">
+            {user?.name || user?.email}
+            {user?.role && <em> ({user.role})</em>}
+          </span>
+          <button className="danger" onClick={() => dispatch(logout())}>
+            Logout
           </button>
         </div>
       </header>
@@ -141,7 +195,7 @@ export default function App() {
 }
 
 function ResourcePanel({ resource, baseUrl }) {
-  const { name, label, path, fields, required, actions = [] } = resource;
+  const { name, label, path, fields, required, actions = [], passwordAction } = resource;
 
   const listHook = endpointHook(name, "list");
   const createHook = endpointHook(name, "create");
@@ -156,6 +210,7 @@ function ResourcePanel({ resource, baseUrl }) {
   const [form, setForm] = useState(null);
   const [jsonUrl, setJsonUrl] = useState(null);
   const [notice, setNotice] = useState(null);
+  const [pwRow, setPwRow] = useState(null);
 
   useEffect(() => {
     const res = createRes.isSuccess
@@ -207,7 +262,7 @@ function ResourcePanel({ resource, baseUrl }) {
         <table>
           <thead>
             <tr>
-              {fields.map((f) => (
+              {fields.filter((f) => !f.hideInTable).map((f) => (
                 <th key={f.key}>{f.label}</th>
               ))}
               <th className="actions-col">Actions</th>
@@ -216,26 +271,26 @@ function ResourcePanel({ resource, baseUrl }) {
           <tbody>
             {error ? (
               <tr>
-                <td colSpan={fields.length + 1} className="table-error">
+                <td colSpan={fields.filter((f) => !f.hideInTable).length + 1} className="table-error">
                   {apiError(error)}
                 </td>
               </tr>
             ) : isFetching && !data ? (
               <tr>
-                <td colSpan={fields.length + 1} className="muted">
+                <td colSpan={fields.filter((f) => !f.hideInTable).length + 1} className="muted">
                   Loading…
                 </td>
               </tr>
             ) : !data || data.length === 0 ? (
               <tr>
-                <td colSpan={fields.length + 1} className="muted">
+                <td colSpan={fields.filter((f) => !f.hideInTable).length + 1} className="muted">
                   No rows yet — click “+ Add Row”.
                 </td>
               </tr>
-            ) : (
+              ) : (
               data.map((row) => (
                 <tr key={row.id}>
-                  {fields.map((f) => (
+                  {fields.filter((f) => !f.hideInTable).map((f) => (
                     <td key={f.key} title={row[f.key] != null ? String(row[f.key]) : ""}>
                       {fmt(row[f.key])}
                     </td>
@@ -253,6 +308,9 @@ function ResourcePanel({ resource, baseUrl }) {
                         {a.label}
                       </button>
                     ))}
+                    {passwordAction && (
+                      <button onClick={() => setPwRow(row)}>Change Password</button>
+                    )}
                     <button className="danger" onClick={() => onDelete(row)}>
                       Delete
                     </button>
@@ -286,6 +344,15 @@ function ResourcePanel({ resource, baseUrl }) {
           title={jsonUrl.title}
           baseUrl={baseUrl}
           onClose={() => setJsonUrl(null)}
+        />
+      )}
+
+      {pwRow && (
+        <PasswordModal
+          row={pwRow}
+          baseUrl={baseUrl}
+          passwordAction={passwordAction}
+          onClose={() => setPwRow(null)}
         />
       )}
     </section>
@@ -324,8 +391,20 @@ function FormModal({ resource, mode, row, baseUrl, onClose, onSubmit }) {
         </p>
         {error && <div className="notice err">{error}</div>}
         <div className="form">
-          {fields.map((f) => (
-            <FieldInput key={f.key} field={f} value={values[f.key]} onChange={set(f.key)} />
+          {fields
+            .filter((f) => {
+              if (f.key === "created_at" || f.key === "updated_at") return false;
+              if (f.key === "id" && mode === "create") return false;
+              return true;
+            })
+            .map((f) => (
+            <FieldInput
+              key={f.key}
+              field={f}
+              value={values[f.key]}
+              onChange={set(f.key)}
+              disabled={f.key === "id" && mode === "edit"}
+            />
           ))}
         </div>
         <div className="modal-foot">
@@ -339,17 +418,17 @@ function FormModal({ resource, mode, row, baseUrl, onClose, onSubmit }) {
   );
 }
 
-function FieldInput({ field, value, onChange }) {
+function FieldInput({ field, value, onChange, disabled }) {
   const { key, label, type, options, required } = field;
   const id = `field-${key}`;
   let control;
   if (type === "boolean") {
     control = (
-      <input id={id} type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} />
+      <input id={id} type="checkbox" checked={value} onChange={(e) => onChange(e.target.checked)} disabled={disabled} />
     );
   } else if (type === "select") {
     control = (
-      <select id={id} value={value || ""} onChange={(e) => onChange(e.target.value)}>
+      <select id={id} value={value || ""} onChange={(e) => onChange(e.target.value)} disabled={disabled}>
         <option value="">— select —</option>
         {options.map((o) => (
           <option key={o} value={o}>
@@ -360,16 +439,18 @@ function FieldInput({ field, value, onChange }) {
     );
   } else if (type === "number") {
     control = (
-      <input id={id} type="number" value={value ?? ""} onChange={(e) => onChange(e.target.value)} />
+      <input id={id} type="number" value={value ?? ""} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
     );
   } else if (type === "datetime") {
     control = (
-      <input id={id} type="datetime-local" value={value || ""} onChange={(e) => onChange(e.target.value)} />
+      <input id={id} type="datetime-local" value={value || ""} onChange={(e) => onChange(e.target.value)} disabled={disabled} />
     );
   } else if (type === "textarea") {
-    control = <textarea id={id} rows={4} value={value ?? ""} onChange={(e) => onChange(e.target.value)} />;
+    control = <textarea id={id} rows={4} value={value ?? ""} onChange={(e) => onChange(e.target.value)} disabled={disabled} />;
+  } else if (type === "password") {
+    control = <input id={id} type="password" value={value ?? ""} onChange={(e) => onChange(e.target.value)} disabled={disabled} autoComplete="new-password" />;
   } else {
-    control = <input id={id} type="text" value={value ?? ""} onChange={(e) => onChange(e.target.value)} />;
+    control = <input id={id} type="text" value={value ?? ""} onChange={(e) => onChange(e.target.value)} disabled={disabled} />;
   }
   return (
     <label className="field" htmlFor={id}>
@@ -407,6 +488,71 @@ function JsonModal({ resource, url, title, baseUrl, onClose }) {
           </button>
           <button className="primary" onClick={onClose}>
             Close
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function PasswordModal({ row, baseUrl, passwordAction, onClose }) {
+  const [password, setPassword] = useState("");
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+
+  const submit = async () => {
+    if (!password || password.length < 6) {
+      setError("Password must be at least 6 characters");
+      return;
+    }
+    setError(null);
+    setLoading(true);
+    try {
+      const token = localStorage.getItem("unisole-admin:token");
+      const res = await fetch(`${baseUrl}${passwordAction.url(row.id)}`, {
+        method: "PATCH",
+        headers: {
+          "Content-Type": "application/json",
+          ...(token ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ password }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || `HTTP ${res.status}`);
+      setSuccess(true);
+      setTimeout(onClose, 1200);
+    } catch (e) {
+      setError(e.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onMouseDown={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal">
+        <h3>Change Password — {row.name || row.email || row.id}</h3>
+        <p className="muted">New password will be hashed and stored.</p>
+        {error && <div className="notice err">{error}</div>}
+        {success && <div className="notice ok">Password updated.</div>}
+        <div className="form" style={{ gridTemplateColumns: "1fr", marginTop: 14 }}>
+          <label className="field" htmlFor="pw">
+            <span>New Password *</span>
+            <input
+              id="pw"
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Min 6 characters"
+              autoFocus
+            />
+          </label>
+        </div>
+        <div className="modal-foot">
+          <button onClick={onClose}>Cancel</button>
+          <button className="primary" onClick={submit} disabled={loading || success}>
+            {loading ? "Saving…" : success ? "Done" : "Save Password"}
           </button>
         </div>
       </div>
