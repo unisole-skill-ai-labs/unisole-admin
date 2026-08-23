@@ -57,9 +57,9 @@ export const api = createApi({
         providesTags: (result) =>
           result
             ? [
-                ...result.map((row) => ({ type: r.name, id: row.id })),
-                { type: r.name, id: "LIST" },
-              ]
+              ...result.map((row) => ({ type: r.name, id: row.id })),
+              { type: r.name, id: "LIST" },
+            ]
             : [{ type: r.name, id: "LIST" }],
       });
       eps[`${r.name}:get`] = build.query({
