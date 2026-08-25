@@ -4,6 +4,7 @@ import { api, setBaseUrl } from "./store";
 import { resources } from "./config/resources";
 import { logout } from "./store/auth-slice";
 import LoginPage from "./pages/login";
+import LiveSessionsPage from "./pages/LiveSessionsPage";
 
 // RTK Query exposes one hook per endpoint on api.endpoints.<name>.
 const endpointHook = (resource, op) => {
@@ -82,7 +83,7 @@ export default function App() {
   const baseUrl = useSelector((s) => s.settings.baseUrl);
   const { isAuthenticated, user, token } = useSelector((s) => s.auth);
   const dispatch = useDispatch();
-  const [selected, setSelected] = useState(resources[0].name);
+  const [selected, setSelected] = useState("unisole-live");
   const [baseInput, setBaseInput] = useState(baseUrl);
   const [health, setHealth] = useState(null);
   const [authChecked, setAuthChecked] = useState(!token);
@@ -172,6 +173,35 @@ export default function App() {
 
       <div className="layout">
         <nav className="sidebar">
+          <div style={{ padding: "8px 12px 12px 12px", borderBottom: "1px solid var(--border, #e2e8f0)", marginBottom: "8px" }}>
+            <button
+              className={`nav-item ${selected === "unisole-live" ? "active" : ""}`}
+              style={{
+                width: "100%",
+                background: selected === "unisole-live" ? "#4f46e5" : "linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)",
+                color: "#ffffff",
+                fontWeight: 800,
+                borderRadius: "10px",
+                padding: "10px 14px",
+                boxShadow: "0 4px 12px rgba(79, 70, 229, 0.3)",
+                display: "flex",
+                alignItems: "center",
+                gap: "8px",
+                cursor: "pointer",
+                border: "none",
+              }}
+              onClick={() => setSelected("unisole-live")}
+            >
+              <span>⚡</span>
+              <span>Unisole Live</span>
+              <span style={{ marginLeft: "auto", fontSize: "10px", background: "#ffffff", color: "#4f46e5", padding: "2px 6px", borderRadius: "9999px", fontWeight: 900 }}>NEW</span>
+            </button>
+          </div>
+
+          <div style={{ padding: "0 12px", fontSize: "11px", fontWeight: 700, color: "#94a3b8", textTransform: "uppercase", letterSpacing: "0.05em", marginBottom: "4px" }}>
+            Database Resources
+          </div>
+
           {resources.map((r) => (
             <button
               key={r.name}
@@ -182,12 +212,16 @@ export default function App() {
             </button>
           ))}
         </nav>
-        <main className="main">
-          <ResourcePanel
-            key={`${current.name}:${baseUrl}`}
-            resource={current}
-            baseUrl={baseUrl}
-          />
+        <main className="main" style={{ padding: selected === "unisole-live" ? "0" : undefined, backgroundColor: selected === "unisole-live" ? "#f8fafc" : undefined }}>
+          {selected === "unisole-live" ? (
+            <LiveSessionsPage baseUrl={baseUrl} token={token} />
+          ) : current ? (
+            <ResourcePanel
+              key={`${current.name}:${baseUrl}`}
+              resource={current}
+              baseUrl={baseUrl}
+            />
+          ) : null}
         </main>
       </div>
     </div>
@@ -287,7 +321,7 @@ function ResourcePanel({ resource, baseUrl }) {
                   No rows yet — click “+ Add Row”.
                 </td>
               </tr>
-              ) : (
+            ) : (
               data.map((row) => (
                 <tr key={row.id}>
                   {fields.filter((f) => !f.hideInTable).map((f) => (
