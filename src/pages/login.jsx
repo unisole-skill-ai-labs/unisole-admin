@@ -66,7 +66,6 @@ export default function LoginPage() {
               onChange={(e) => setEmail(e.target.value)}
               required
               autoFocus
-              placeholder="admin@unisole.test"
             />
           </label>
 
@@ -78,7 +77,6 @@ export default function LoginPage() {
               value={password}
               onChange={(e) => setPassword(e.target.value)}
               required
-              placeholder="password123"
             />
           </label>
 
