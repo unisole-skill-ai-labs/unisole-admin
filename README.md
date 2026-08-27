@@ -1,16 +1,21 @@
 # Unisole Admin
 
-A generic admin panel for the [Unisole Engine](https://github.com/anomalyco/unisole-engine) API. Built with Vite, React 18, and Redux Toolkit (RTK Query). It renders CRUD tables + forms for all 21 engine resources, driven entirely by `src/config/resources.js`.
+Modern, intuitive administrative dashboard for the [Unisole Engine](https://github.com/anomalyco/unisole-engine) EdTech Platform API. Built with Vite, React 18, Redux Toolkit (RTK Query), and Lucide Icons.
 
 ## Features
 
-- Sidebar with all engine resources (users, courses, modules, lessons, tests, orders, payments, etc.)
-- Generic data table with create / edit / delete modals
-- JSON view modal (raw response, GET) and a free-form custom request modal
-- Configurable API base URL (persisted in `localStorage`) with live health indicator
-- Auto-refetch on row changes via RTK Query tag invalidation
+- **Phone OTP Authentication**: Secure mobile OTP sign-in with uppercase `ADMIN` authorization check and dev quick-fill helper.
+- **Executive Dashboard Overview**: Real-time KPI cards (Learners, Published Pathways, Curriculum Courses, Active Enrollments, Revenue in ₹) and live activity feeds.
+- **Pathways & Curriculum Builder**: Manage pathways, pricing, lifecycle status (`DRAFT`, `PUBLISHED`, `ARCHIVED`), and visually link categories, target colleges, and ordered course sequences.
+- **Curriculum Hierarchy Workspace**: Unified 3-tab workspace for Courses, Modules, and Lessons with position-based sequence ordering.
+- **Colleges & Categories Management**: Manage partner universities and domain taxonomy.
+- **Learners & Enrollments**: Directory with phone search, role badges, 1-click deactivation, enrollment filters, and manual enrollment grant dialog.
+- **Billing & Payments Ledger**: Real-time transaction audit table with Razorpay order IDs, payment IDs, and INR rupee formatting.
+- **Engine Health Monitor**: Live API connectivity check against `/health`.
 
 ## Getting Started
+
+### Prerequisites
 
 Requires the Engine API running (default `http://localhost:3000`):
 
@@ -20,8 +25,6 @@ npm run dev
 # open http://localhost:5173
 ```
 
-The API URL is set in the top-right field (default `http://localhost:3000`); click the health dot to check connectivity.
-
 ## Docker
 
 ```sh
@@ -29,40 +32,22 @@ docker compose up --build
 # open http://localhost:5173
 ```
 
-Multi-stage image: builds the app with Node 22, then serves the static bundle with nginx (`Dockerfile`, `nginx.conf`). SPA routing falls back to `index.html`.
-
-### Deployment (EC2, alongside the engine)
-
-The image builds entirely inside a Linux container, so it always installs the correct native binaries — no Windows/WSL `node_modules` issues on the server.
-
-1. Point one DNS A record (`uni.admin.unisole.org`) at the EC2 public IP.
-2. Set the default API URL for the deployed bundle:
-   ```sh
-   VITE_API_BASE_URL=https://uni.admin.unisole.org docker compose up --build -d
-   ```
-   (Without it, the panel defaults to `http://localhost:3000`, which is wrong from a browser.)
-3. Install nginx + the server block from `deploy/nginx-admin.conf` (proxy admin on `:5173` and reverse-proxy `/api/*`, `/health` to the engine on `127.0.0.1:3000`), then:
-   ```sh
-   sudo nginx -t && sudo systemctl reload nginx
-   sudo certbot --nginx -d uni.admin.unisole.org
-   ```
-4. Keep the engine internal: EC2 security group should only open `22`, `80`, `443`.
-
-The panel and its API share one origin (`https://uni.admin.unisole.org`) — nginx proxies `/api/*` to the engine, so the engine's port `3000` is never exposed to the internet and CORS isn't involved.
-
 ## Project Structure
 
 ```
 src/
-  main.jsx              React root + Redux Provider
-  store.js              Redux store + dynamically generated RTK Query API
-  config/resources.js   Source of truth for all resources/fields/actions
-  App.jsx               Sidebar, table, modals, base-URL settings
-  App.css               Styles
+  components/
+    curriculum/         Courses, Modules, Lessons tabs & sequencers
+    dashboard/          KPI metrics & recent activity feeds
+    metadata/           Colleges & Categories management
+    pathways/           Pathways management & visual PathwayBuilderModal
+    payments/           Razorpay transaction ledger
+    students/           Learners directory & enrollment management
+  pages/
+    login.jsx           Phone OTP login page
+  store/
+    auth-slice.js       Auth state & JWT token persistence
+  store.js              RTK Query endpoints for /api/admin/*
+  App.jsx               App shell, topbar & navigation
+  App.css               Modern dark design system
 ```
-
-## Adding a Resource
-
-Add one entry to `src/config/resources.js` — table, form, and modals for the new resource appear automatically.
-
-See `AGENTS.md` for development conventions and known gotchas.
