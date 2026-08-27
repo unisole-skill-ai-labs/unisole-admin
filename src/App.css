@@ -49,6 +49,10 @@ body {
 }
 
 /* App Shell */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
 .app-shell {
   display: flex;
   flex-direction: column;

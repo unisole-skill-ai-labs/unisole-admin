@@ -522,7 +522,7 @@ function CourseModulesModal({ course, baseUrl, onClose }) {
   const handleRemove = async (moduleId) => {
     if (!window.confirm("Detach this module from the course?")) return;
     try {
-      await detachCourseModule({ baseUrl, courseId: course.id, moduleId }).unwrap();
+      await detachModule({ baseUrl, courseId: course.id, moduleId }).unwrap();
     } catch (err) {
       alert("Failed: " + (err?.data?.error || err.message));
     }
@@ -555,7 +555,7 @@ function CourseModulesModal({ course, baseUrl, onClose }) {
             </div>
             <div className="form-group flex-1">
               <label>Position #</label>
-              <input type="number" min="1" value={position} onChange={(e) => setPosition(e.target.value)} required />
+              <input type="number" min="1" value={position} onChange={(e) => setPosition(Number(e.target.value))} required />
             </div>
             <button type="submit" className="btn-primary align-self-end mb-1" disabled={!selectedModuleId}>
               <Plus size={16} /> Link Module
@@ -718,7 +718,7 @@ function ModuleLessonsModal({ moduleItem, baseUrl, onClose }) {
             </div>
             <div className="form-group flex-1">
               <label>Position #</label>
-              <input type="number" min="1" value={position} onChange={(e) => setPosition(e.target.value)} required />
+              <input type="number" min="1" value={position} onChange={(e) => setPosition(Number(e.target.value))} required />
             </div>
             <button type="submit" className="btn-primary align-self-end mb-1" disabled={!selectedLessonId}>
               <Plus size={16} /> Link Lesson

@@ -186,7 +186,7 @@ export default function PathwayBuilderModal({ pathway, baseUrl, onClose }) {
                   type="number"
                   min="1"
                   value={coursePosition}
-                  onChange={(e) => setCoursePosition(e.target.value)}
+                  onChange={(e) => setCoursePosition(Number(e.target.value))}
                   required
                 />
               </div>

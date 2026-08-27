@@ -17,6 +17,7 @@ import {
   DollarSign,
   Eye,
   RefreshCw,
+  X,
 } from "lucide-react";
 
 export default function PathwaysManager({ baseUrl }) {

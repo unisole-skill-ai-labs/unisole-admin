@@ -1,11 +1,14 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import { setCredentials } from "../store/auth-slice";
 import { ShieldCheck, Phone, KeyRound, ArrowRight, ArrowLeft, RefreshCw } from "lucide-react";
 
 export default function LoginPage() {
-  const baseUrl = useSelector((s) => s.settings.baseUrl);
+  const baseUrl = useSelector((s: any) => s.settings.baseUrl);
+  const isAuthenticated = useSelector((s: any) => s.auth.isAuthenticated);
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const [step, setStep] = useState("phone"); // 'phone' | 'otp'
   const [phone, setPhone] = useState("+919876543210");
@@ -13,6 +16,12 @@ export default function LoginPage() {
   const [devOtp, setDevOtp] = useState(null);
   const [error, setError] = useState(null);
   const [loading, setLoading] = useState(false);
+
+  useEffect(() => {
+    if (isAuthenticated) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [isAuthenticated, navigate]);
 
   const handleSendOtp = async (e) => {
     e?.preventDefault();

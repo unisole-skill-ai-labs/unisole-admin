@@ -23,7 +23,7 @@ export const { setBaseUrl } = settingsSlice.actions;
 const baseQuery = fetchBaseQuery({
   baseUrl: "",
   prepareHeaders: (headers, { getState }) => {
-    const token = getState().auth.token;
+    const token = (getState() as any)?.auth?.token;
     if (token) headers.set("Authorization", `Bearer ${token}`);
     return headers;
   },
@@ -404,3 +404,7 @@ export const store = configureStore({
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware().concat(adminApi.middleware),
 });
+
+export type RootState = ReturnType<typeof store.getState>;
+export type AppDispatch = typeof store.dispatch;
+
