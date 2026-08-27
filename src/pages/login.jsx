@@ -79,7 +79,7 @@ export default function LoginPage() {
           <div className="login-icon-badge">
             <ShieldCheck size={28} className="text-primary" />
           </div>
-          <h1>Unisole Admin</h1>
+          <h1>Unisole Admin hun</h1>
           <p className="subtitle">Secure administrative console</p>
         </div>
 
