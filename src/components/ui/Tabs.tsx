@@ -33,7 +33,7 @@ export function Tabs({ defaultValue, value, onValueChange, children, className =
 
 export function TabsList({ children, className = "" }: { children: React.ReactNode; className?: string }) {
   return (
-    <div className={cn("inline-flex items-center gap-1.5 p-1 bg-slate-950 border border-slate-800 rounded-xl", className)}>
+    <div className={cn("inline-flex items-center gap-1.5 p-1 bg-slate-100 dark:bg-slate-900 border border-slate-200/50 dark:border-slate-800/80 rounded-xl no-scrollbar", className)}>
       {children}
     </div>
   );
@@ -48,10 +48,10 @@ export function TabsTrigger({ value, children, className = "" }: { value: string
       type="button"
       onClick={() => changeValue(value)}
       className={cn(
-        "px-3.5 py-1.5 text-xs font-semibold rounded-lg transition-all",
+        "px-4 py-2 text-xs font-semibold rounded-lg transition-all duration-200 ease-out",
         isActive
-          ? "bg-blue-600 text-white shadow-sm"
-          : "text-slate-400 hover:text-slate-200 hover:bg-slate-900",
+          ? "bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 shadow-sm border border-slate-200/30 dark:border-slate-700/30"
+          : "text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800/30",
         className
       )}
     >
@@ -64,5 +64,5 @@ export function TabsContent({ value, children, className = "" }: { value: string
   const { activeValue } = useContext(TabsContext);
   if (activeValue !== value) return null;
 
-  return <div className={cn("mt-4 animate-fade-in", className)}>{children}</div>;
+  return <div className={cn("mt-4", className)}>{children}</div>;
 }
