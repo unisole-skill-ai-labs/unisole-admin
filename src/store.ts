@@ -50,6 +50,9 @@ export const adminApi = createApi({
     "Lessons",
     "Enrollments",
     "Payments",
+    "Presentations",
+    "Sessions",
+    "Leads",
   ],
   endpoints: (build) => ({
     // Students
@@ -341,6 +344,79 @@ export const adminApi = createApi({
       query: (baseUrl) => ({ url: `${baseUrl}/api/admin/payments` }),
       providesTags: ["Payments"],
     }),
+
+    // Presentations & Roadshows
+    getPresentations: build.query({
+      query: (baseUrl) => ({ url: `${baseUrl}/api/admin/presentations` }),
+      providesTags: ["Presentations"],
+    }),
+    getPresentation: build.query({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/presentations/${id}`,
+      }),
+      providesTags: ["Presentations"],
+    }),
+    createPresentation: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/presentations`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Presentations"],
+    }),
+    updatePresentation: build.mutation({
+      query: ({ baseUrl, id, body }) => ({
+        url: `${baseUrl}/api/admin/presentations/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Presentations"],
+    }),
+    deletePresentation: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/presentations/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Presentations"],
+    }),
+
+    // Live Sessions
+    getSessions: build.query({
+      query: ({ baseUrl, presentationId }) => ({
+        url: `${baseUrl}/api/admin/presentations/sessions/all${
+          presentationId ? `?presentationId=${presentationId}` : ""
+        }`,
+      }),
+      providesTags: ["Sessions"],
+    }),
+    getSession: build.query({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/presentations/sessions/${id}`,
+      }),
+      providesTags: ["Sessions"],
+    }),
+    launchSession: build.mutation({
+      query: ({ baseUrl, presentationId, body }) => ({
+        url: `${baseUrl}/api/admin/presentations/${presentationId}/launch`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Sessions"],
+    }),
+    updateSessionStatus: build.mutation({
+      query: ({ baseUrl, id, body }) => ({
+        url: `${baseUrl}/api/admin/presentations/sessions/${id}/status`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Sessions"],
+    }),
+    getSessionLeads: build.query({
+      query: ({ baseUrl, sessionId }) => ({
+        url: `${baseUrl}/api/admin/presentations/sessions/${sessionId}/leads`,
+      }),
+      providesTags: ["Leads"],
+    }),
   }),
 });
 
@@ -393,7 +469,19 @@ export const {
   useUpdateEnrollmentMutation,
   // Payments
   useGetPaymentsQuery,
+  // Presentations & Sessions
+  useGetPresentationsQuery,
+  useGetPresentationQuery,
+  useCreatePresentationMutation,
+  useUpdatePresentationMutation,
+  useDeletePresentationMutation,
+  useGetSessionsQuery,
+  useGetSessionQuery,
+  useLaunchSessionMutation,
+  useUpdateSessionStatusMutation,
+  useGetSessionLeadsQuery,
 } = adminApi;
+
 
 export const store = configureStore({
   reducer: {

@@ -9,12 +9,20 @@ import CurriculumPage from "./pages/admin/CurriculumPage";
 import MetadataPage from "./pages/admin/MetadataPage";
 import StudentsPage from "./pages/admin/StudentsPage";
 import PaymentsPage from "./pages/admin/PaymentsPage";
+import PresentationsPage from "./pages/admin/PresentationsPage";
+import PresentationBuilderPage from "./pages/admin/PresentationBuilderPage";
+import LiveProjectorPage from "./pages/admin/LiveProjectorPage";
+import SessionAnalyticsPage from "./pages/admin/SessionAnalyticsPage";
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
       <Route element={<RequireAdminAuth />}>
+        {/* Fullscreen Auditorium Projector Stage */}
+        <Route path="/presentations/live/:sessionId" element={<LiveProjectorPage />} />
+
+        {/* Admin Console Workspace */}
         <Route element={<AdminShell />}>
           <Route index element={<Navigate to="dashboard" replace />} />
           <Route path="dashboard" element={<DashboardPage />} />
@@ -23,6 +31,9 @@ export default function App() {
           <Route path="metadata" element={<MetadataPage />} />
           <Route path="students" element={<StudentsPage />} />
           <Route path="payments" element={<PaymentsPage />} />
+          <Route path="presentations" element={<PresentationsPage />} />
+          <Route path="presentations/builder/:id?" element={<PresentationBuilderPage />} />
+          <Route path="presentations/analytics/:sessionId" element={<SessionAnalyticsPage />} />
           <Route path="*" element={<Navigate to="dashboard" replace />} />
         </Route>
       </Route>
