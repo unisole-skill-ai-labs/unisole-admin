@@ -30,6 +30,7 @@ export default function LiveProjectorPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
+  const token = useSelector((s: any) => s.auth.token);
 
   const [session, setSession] = useState<any>(null);
   const [presentation, setPresentation] = useState<any>(null);
@@ -57,14 +58,19 @@ export default function LiveProjectorPage() {
   // Fetch initial session & presentation data
   useEffect(() => {
     if (!sessionId) return;
-    fetch(`${baseUrl}/api/admin/presentations/sessions/${sessionId}`)
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
+
+    fetch(`${baseUrl}/api/admin/presentations/sessions/${sessionId}`, {
+      headers: authHeaders,
+    })
       .then((res) => res.json())
       .then((data) => {
         if (data.data) {
           setSession(data.data);
           setCurrentSlideIndex(data.data.currentSlideIndex || 0);
           return fetch(
-            `${baseUrl}/api/admin/presentations/${data.data.presentationId}`
+            `${baseUrl}/api/admin/presentations/${data.data.presentationId}`,
+            { headers: authHeaders }
           );
         }
       })
@@ -75,7 +81,7 @@ export default function LiveProjectorPage() {
         }
       })
       .catch((err) => console.error("Error loading session:", err));
-  }, [baseUrl, sessionId]);
+  }, [baseUrl, sessionId, token]);
 
   // Connect Socket.io
   useEffect(() => {

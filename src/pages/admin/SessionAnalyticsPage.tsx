@@ -24,6 +24,7 @@ export default function SessionAnalyticsPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
+  const token = useSelector((s: any) => s.auth.token);
 
   const { data: sessRes, isLoading: isSessLoading } = useGetSessionQuery(
     { baseUrl, id: sessionId! },
@@ -48,12 +49,27 @@ export default function SessionAnalyticsPage() {
     );
   });
 
-  const handleExportCsv = () => {
-    const token = localStorage.getItem("token");
-    window.open(
-      `${baseUrl}/api/admin/presentations/sessions/${sessionId}/leads/export`,
-      "_blank"
-    );
+  const handleExportCsv = async () => {
+    try {
+      const res = await fetch(
+        `${baseUrl}/api/admin/presentations/sessions/${sessionId}/leads/export`,
+        {
+          headers: token ? { Authorization: `Bearer ${token}` } : {},
+        }
+      );
+      if (!res.ok) throw new Error("Failed to export CSV");
+      const blob = await res.blob();
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `session_${session?.sessionCode || sessionId}_leads.csv`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+    } catch (err) {
+      console.error("Export error:", err);
+    }
   };
 
   const topScorer = leads.length > 0 ? leads[0] : null;
