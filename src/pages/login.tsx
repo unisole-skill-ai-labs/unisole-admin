@@ -27,8 +27,8 @@ export default function LoginPage() {
 
   const [step, setStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState("+919876543210");
-  const [otp, setOtp] = useState("");
-  const [devOtp, setDevOtp] = useState<string | null>(null);
+  const [otp, setOtp] = useState("1234");
+  const [devOtp, setDevOtp] = useState<string | null>("1234");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -55,12 +55,15 @@ export default function LoginPage() {
         throw new Error(data.message || data.error || `HTTP ${res.status}`);
       }
 
-      if (data.dummyOtp) {
-        setDevOtp(data.dummyOtp);
-        setOtp(data.dummyOtp);
-      }
+      const receivedOtp = data.dummyOtp || "1234";
+      setDevOtp(receivedOtp);
+      setOtp(receivedOtp);
       setStep("otp");
     } catch (err: any) {
+      // In mock OTP mode fallback to 1234
+      setDevOtp("1234");
+      setOtp("1234");
+      setStep("otp");
       setError(err.message);
     } finally {
       setLoading(false);
@@ -72,11 +75,13 @@ export default function LoginPage() {
     setError(null);
     setLoading(true);
 
+    const submissionOtp = (otp || devOtp || "1234").trim();
+
     try {
       const res = await fetch(`${baseUrl}/api/auth/verify-otp`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, otp }),
+        body: JSON.stringify({ phone, otp: submissionOtp }),
       });
 
       const data = await res.json();
@@ -101,7 +106,7 @@ export default function LoginPage() {
       {/* Theme Toggle in Corner */}
       <button
         onClick={toggleTheme}
-        className="absolute top-5 right-5 p-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800 shadow-sm transition-all"
+        className="absolute top-5 right-5 p-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800 shadow-sm transition-all cursor-pointer"
         title="Toggle Dark/Light Mode"
       >
         {theme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-zinc-600" />}
@@ -125,6 +130,19 @@ export default function LoginPage() {
           </p>
         </div>
 
+        {/* Mock OTP Mode Banner */}
+        <div className="mb-4 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-300 text-xs flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
+            <span>
+              OTP Service in Mock Mode &bull; Default OTP: <strong>1234</strong>
+            </span>
+          </div>
+          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold">
+            1234
+          </span>
+        </div>
+
         {error && (
           <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-700 dark:text-rose-400 flex items-center gap-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
@@ -136,11 +154,11 @@ export default function LoginPage() {
           <button
             type="button"
             onClick={() => setOtp(devOtp)}
-            className="w-full mb-4 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between text-left font-mono"
+            className="w-full mb-4 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between text-left font-mono cursor-pointer"
           >
             <span className="flex items-center gap-1.5">
               <KeyRound className="w-3.5 h-3.5" />
-              Dev OTP: <strong>{devOtp}</strong>
+              Default OTP: <strong>{devOtp}</strong>
             </span>
             <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 underline">
               Click to Auto-fill
@@ -169,7 +187,7 @@ export default function LoginPage() {
                 />
               </div>
               <small className="block mt-1 text-[11px] text-zinc-400 font-mono">
-                Seeded master account: +91 9876543210
+                Master admin: +91 9876543210 (Default OTP: 1234)
               </small>
             </div>
 
@@ -194,7 +212,7 @@ export default function LoginPage() {
                 <button
                   type="button"
                   onClick={() => setStep("phone")}
-                  className="text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center gap-1"
+                  className="text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center gap-1 cursor-pointer"
                 >
                   <ArrowLeft className="w-3 h-3" /> Change Number
                 </button>
@@ -204,7 +222,7 @@ export default function LoginPage() {
                 type="text"
                 value={otp}
                 onChange={(e) => setOtp(e.target.value)}
-                placeholder="Enter 4-digit code"
+                placeholder="1234"
                 maxLength={6}
                 required
                 autoFocus
@@ -212,7 +230,7 @@ export default function LoginPage() {
                 className="text-center font-mono text-lg tracking-widest"
               />
               <small className="block mt-1 text-[11px] text-zinc-400 font-mono">
-                Sent to {phone}
+                Enter default code <strong>1234</strong> sent to {phone}
               </small>
             </div>
 
