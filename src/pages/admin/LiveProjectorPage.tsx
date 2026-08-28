@@ -334,7 +334,11 @@ export default function LiveProjectorPage() {
     );
   }
 
-  const joinUrl = `https://unisole.in/live/${session.sessionCode}`;
+  const seoBaseUrl =
+    (import.meta as any).env?.VITE_SEO_URL || "https://unisole.org";
+  const joinUrl =
+    session.joinUrl ||
+    `${seoBaseUrl.replace(/\/+$/, "")}/login?redirect=/live/${session.sessionCode}`;
 
   return (
     <div

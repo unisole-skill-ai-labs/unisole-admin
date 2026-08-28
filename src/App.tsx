@@ -13,14 +13,24 @@ import PresentationsPage from "./pages/admin/PresentationsPage";
 import PresentationBuilderPage from "./pages/admin/PresentationBuilderPage";
 import LiveProjectorPage from "./pages/admin/LiveProjectorPage";
 import SessionAnalyticsPage from "./pages/admin/SessionAnalyticsPage";
+import LiveAudiencePage from "./pages/live/LiveAudiencePage";
+import JoinSessionPage from "./pages/live/JoinSessionPage";
 
 export default function App() {
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
+      
+      {/* Public Audience Live Interaction Routes */}
+      <Route path="/live/:sessionCode" element={<LiveAudiencePage />} />
+      <Route path="/live" element={<JoinSessionPage />} />
+      <Route path="/join" element={<JoinSessionPage />} />
+
+      {/* Fullscreen Auditorium Projector Stage */}
+      <Route path="/presentations/live/:sessionId" element={<LiveProjectorPage />} />
+      <Route path="/live/projector/:sessionId" element={<LiveProjectorPage />} />
+
       <Route element={<RequireAdminAuth />}>
-        {/* Fullscreen Auditorium Projector Stage */}
-        <Route path="/presentations/live/:sessionId" element={<LiveProjectorPage />} />
 
         {/* Admin Console Workspace */}
         <Route element={<AdminShell />}>
