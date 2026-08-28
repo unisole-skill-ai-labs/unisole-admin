@@ -2,19 +2,34 @@ import React, { useEffect, useState } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import { setCredentials } from "../store/auth-slice";
-import { ShieldCheck, Phone, KeyRound, ArrowRight, ArrowLeft, RefreshCw } from "lucide-react";
+import { useTheme } from "../context/ThemeContext";
+import {
+  ShieldCheck,
+  Phone,
+  KeyRound,
+  ArrowRight,
+  ArrowLeft,
+  RefreshCw,
+  AlertCircle,
+  Sun,
+  Moon,
+  Sparkles,
+} from "lucide-react";
+import Input from "../components/ui/Input";
+import Button from "../components/ui/Button";
 
 export default function LoginPage() {
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
   const isAuthenticated = useSelector((s: any) => s.auth.isAuthenticated);
   const dispatch = useDispatch();
   const navigate = useNavigate();
+  const { theme, toggleTheme } = useTheme();
 
-  const [step, setStep] = useState("phone"); // 'phone' | 'otp'
+  const [step, setStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState("+919876543210");
   const [otp, setOtp] = useState("");
-  const [devOtp, setDevOtp] = useState(null);
-  const [error, setError] = useState(null);
+  const [devOtp, setDevOtp] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
@@ -23,7 +38,7 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSendOtp = async (e) => {
+  const handleSendOtp = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError(null);
     setLoading(true);
@@ -45,14 +60,14 @@ export default function LoginPage() {
         setOtp(data.dummyOtp);
       }
       setStep("otp");
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
     }
   };
 
-  const handleVerifyOtp = async (e) => {
+  const handleVerifyOtp = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError(null);
     setLoading(true);
@@ -70,11 +85,11 @@ export default function LoginPage() {
       }
 
       if (data.user?.role !== "ADMIN") {
-        throw new Error("Access denied. Admin account required.");
+        throw new Error("Access denied. Administrator privileges required.");
       }
 
       dispatch(setCredentials({ token: data.token, user: data.user }));
-    } catch (err) {
+    } catch (err: any) {
       setError(err.message);
     } finally {
       setLoading(false);
@@ -82,107 +97,147 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="login-container">
-      <div className="login-glass-card">
-        <div className="login-brand">
-          <div className="login-icon-badge">
-            <ShieldCheck size={28} className="text-primary" />
+    <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-zinc-50 via-zinc-100 to-indigo-50/30 dark:from-zinc-950 dark:via-black dark:to-zinc-950 relative overflow-hidden">
+      {/* Theme Toggle in Corner */}
+      <button
+        onClick={toggleTheme}
+        className="absolute top-5 right-5 p-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800 shadow-sm transition-all"
+        title="Toggle Dark/Light Mode"
+      >
+        {theme === "dark" ? <Sun className="w-4 h-4 text-amber-400" /> : <Moon className="w-4 h-4 text-zinc-600" />}
+      </button>
+
+      {/* Decorative Blur Spheres */}
+      <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-500/10 dark:bg-indigo-500/5 rounded-full blur-3xl pointer-events-none" />
+      <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-purple-500/10 dark:bg-purple-500/5 rounded-full blur-3xl pointer-events-none" />
+
+      {/* Login Card */}
+      <div className="w-full max-w-md p-6 sm:p-8 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-2xl border border-zinc-200/80 dark:border-zinc-800/80 rounded-3xl shadow-2xl relative z-10 animate-fade-in">
+        <div className="text-center mb-6">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 mb-3 shadow-inner">
+            <ShieldCheck className="w-7 h-7" />
           </div>
-          <h1>Unisole Admin panel</h1>
-          <p className="subtitle">Secure administrative console</p>
+          <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+            Unisole Admin Console
+          </h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
+            Secure administrative and operations gateway
+          </p>
         </div>
 
         {error && (
-          <div className="alert-error">
+          <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-700 dark:text-rose-400 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
             <span>{error}</span>
           </div>
         )}
 
         {devOtp && step === "otp" && (
-          <div className="dev-otp-banner" onClick={() => setOtp(devOtp)}>
-            <KeyRound size={16} />
-            <span>Dev OTP: <strong>{devOtp}</strong> (Click to auto-fill)</span>
-          </div>
+          <button
+            type="button"
+            onClick={() => setOtp(devOtp)}
+            className="w-full mb-4 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between text-left font-mono"
+          >
+            <span className="flex items-center gap-1.5">
+              <KeyRound className="w-3.5 h-3.5" />
+              Dev OTP: <strong>{devOtp}</strong>
+            </span>
+            <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 underline">
+              Click to Auto-fill
+            </span>
+          </button>
         )}
 
         {step === "phone" ? (
-          <form onSubmit={handleSendOtp} className="login-form">
-            <div className="form-group">
-              <label htmlFor="phone">Mobile Number</label>
-              <div className="input-with-icon">
-                <Phone size={18} className="input-icon" />
+          <form onSubmit={handleSendOtp} className="space-y-4">
+            <div>
+              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                Admin Mobile Number
+              </label>
+              <div className="relative">
+                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1 border-r border-zinc-200 dark:border-zinc-800 pr-2 font-mono">
+                  🇮🇳 +91
+                </div>
                 <input
-                  id="phone"
                   type="tel"
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="+91 9876543210"
+                  value={phone.replace(/^\+91/, "")}
+                  onChange={(e) => setPhone(`+91${e.target.value.replace(/\D/g, "")}`)}
+                  placeholder="9876543210"
                   required
                   autoFocus
+                  className="w-full pl-20 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono font-bold"
                 />
               </div>
-              <small className="help-text">Default seeded admin: +919876543210</small>
+              <small className="block mt-1 text-[11px] text-zinc-400 font-mono">
+                Seeded master account: +91 9876543210
+              </small>
             </div>
 
-            <button type="submit" className="btn-primary-large" disabled={loading}>
-              {loading ? (
-                <>
-                  <RefreshCw size={18} className="spin" /> Sending OTP...
-                </>
-              ) : (
-                <>
-                  Send OTP <ArrowRight size={18} />
-                </>
-              )}
-            </button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              className="w-full shadow-lg shadow-indigo-500/20"
+              loading={loading}
+              icon={ArrowRight}
+            >
+              Send Authentication Code
+            </Button>
           </form>
         ) : (
-          <form onSubmit={handleVerifyOtp} className="login-form">
-            <div className="form-group">
-              <div className="label-row">
-                <label htmlFor="otp">Verification Code</label>
+          <form onSubmit={handleVerifyOtp} className="space-y-4">
+            <div>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                  Verification Code
+                </label>
                 <button
                   type="button"
-                  className="btn-link"
                   onClick={() => setStep("phone")}
+                  className="text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center gap-1"
                 >
-                  <ArrowLeft size={14} /> Change Number
+                  <ArrowLeft className="w-3 h-3" /> Change Number
                 </button>
               </div>
-              <div className="input-with-icon">
-                <KeyRound size={18} className="input-icon" />
-                <input
-                  id="otp"
-                  type="text"
-                  value={otp}
-                  onChange={(e) => setOtp(e.target.value)}
-                  placeholder="Enter 4-digit OTP"
-                  maxLength={6}
-                  required
-                  autoFocus
-                />
-              </div>
-              <small className="help-text">Sent to {phone}</small>
+
+              <Input
+                type="text"
+                value={otp}
+                onChange={(e) => setOtp(e.target.value)}
+                placeholder="Enter 4-digit code"
+                maxLength={6}
+                required
+                autoFocus
+                icon={KeyRound}
+                className="text-center font-mono text-lg tracking-widest"
+              />
+              <small className="block mt-1 text-[11px] text-zinc-400 font-mono">
+                Sent to {phone}
+              </small>
             </div>
 
-            <button type="submit" className="btn-primary-large" disabled={loading || !otp}>
-              {loading ? (
-                <>
-                  <RefreshCw size={18} className="spin" /> Verifying...
-                </>
-              ) : (
-                "Verify & Sign In"
-              )}
-            </button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="lg"
+              className="w-full shadow-lg shadow-indigo-500/20"
+              loading={loading}
+              disabled={!otp}
+            >
+              Verify & Sign In to Admin
+            </Button>
 
-            <button
+            <Button
               type="button"
-              className="btn-secondary"
+              variant="outline"
+              size="sm"
+              className="w-full text-xs"
               onClick={handleSendOtp}
               disabled={loading}
+              icon={RefreshCw}
             >
               Resend Code
-            </button>
+            </Button>
           </form>
         )}
       </div>

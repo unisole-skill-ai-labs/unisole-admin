@@ -1,0 +1,168 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --background: 0 0% 100%; /* #ffffff */
+    --foreground: 240 10% 4%; /* #09090b */
+    
+    --card: 0 0% 100%;
+    --card-foreground: 240 10% 4%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 240 10% 4%;
+    
+    --primary: 238 84% 59%; /* #4f46e5 */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 240 5% 96%; /* #f4f4f5 */
+    --secondary-foreground: 240 6% 10%;
+    
+    --muted: 240 4% 46%; /* #71717a */
+    --muted-foreground: 240 4% 46%;
+    
+    --accent: 240 5% 96%;
+    --accent-foreground: 240 6% 10%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 6% 90%; /* #e4e4e7 */
+    --input: 240 6% 90%;
+    --ring: 238 84% 59%;
+
+    --radius: 0.625rem;
+    --radius-card: 1rem;
+  }
+
+  .dark {
+    --background: 240 10% 4%; /* #09090b */
+    --foreground: 0 0% 98%; /* #fafafa */
+    
+    --card: 240 10% 6%; /* #101014 */
+    --card-foreground: 0 0% 98%;
+    
+    --popover: 240 10% 6%;
+    --popover-foreground: 0 0% 98%;
+    
+    --primary: 238 84% 67%; /* #6366f1 */
+    --primary-foreground: 0 0% 100%;
+    
+    --secondary: 240 4% 12%; /* #1c1c21 */
+    --secondary-foreground: 0 0% 98%;
+    
+    --muted: 240 5% 65%; /* #a1a1aa */
+    --muted-foreground: 240 5% 65%;
+    
+    --accent: 240 4% 12%;
+    --accent-foreground: 0 0% 98%;
+    
+    --destructive: 0 63% 51%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 240 4% 16%; /* #27272a */
+    --input: 240 4% 16%;
+    --ring: 238 84% 67%;
+  }
+}
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+  body {
+    @apply bg-background text-foreground antialiased selection:bg-zinc-900 selection:text-white dark:selection:bg-zinc-100 dark:selection:text-zinc-900;
+    font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+    overflow-x: hidden;
+  }
+}
+
+/* Minimalist & Luxury Cards */
+.minimal-card, .luxury-card {
+  position: relative;
+  background: #ffffff;
+  border: 1px solid rgba(0, 0, 0, 0.08);
+  border-radius: 1rem;
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.dark .minimal-card, .dark .luxury-card {
+  background: #111114;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.4);
+}
+
+.minimal-card:hover, .luxury-card:hover {
+  border-color: rgba(0, 0, 0, 0.18);
+  box-shadow: 0 6px 18px -3px rgba(0, 0, 0, 0.05);
+}
+
+.dark .minimal-card:hover, .dark .luxury-card:hover {
+  border-color: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 6px 18px -3px rgba(0, 0, 0, 0.7);
+}
+
+/* Glass Panels */
+.glass-panel, .glass-card {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(0, 0, 0, 0.08);
+}
+
+.dark .glass-panel, .dark .glass-card {
+  background: rgba(16, 16, 20, 0.8);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+/* Minimalist Headline Typography */
+.gradient-heading {
+  background: linear-gradient(180deg, #09090b 0%, #3f3f46 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.dark .gradient-heading {
+  background: linear-gradient(180deg, #ffffff 0%, #a1a1aa 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.mono-tag {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.6875rem;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+}
+
+/* Custom Scrollbars */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+::-webkit-scrollbar {
+  width: 5px;
+  height: 5px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(161, 161, 170, 0.3);
+  border-radius: 9999px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(161, 161, 170, 0.5);
+}

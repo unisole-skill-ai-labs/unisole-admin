@@ -29,45 +29,70 @@ import {
   Clock,
   ExternalLink,
   RefreshCw,
+  AlertCircle,
+  Code2,
 } from "lucide-react";
+import Badge from "../ui/Badge";
+import Button from "../ui/Button";
+import Modal from "../ui/Modal";
+import Input from "../ui/Input";
 
-export default function CurriculumManager({ baseUrl }) {
-  const [activeTab, setActiveTab] = useState("courses"); // 'courses' | 'modules' | 'lessons'
+interface CurriculumManagerProps {
+  baseUrl: string;
+}
+
+export default function CurriculumManager({ baseUrl }: CurriculumManagerProps) {
+  const [activeTab, setActiveTab] = useState<"courses" | "modules" | "lessons">("courses");
 
   return (
-    <div className="view-container">
-      <div className="section-header">
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
         <div>
-          <h2>Curriculum & Content Management</h2>
-          <p className="text-muted">
-            Manage reusable educational components: Courses, Modules, and Lessons.
+          <h1 className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+            Curriculum & Content Hierarchy
+          </h1>
+          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-1">
+            Build and sequence reusable modular components: Courses, Modules, and Lessons
           </p>
         </div>
       </div>
 
       {/* Curriculum Tabs */}
-      <div className="tabs-nav">
+      <div className="flex items-center gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-900 rounded-2xl w-fit border border-zinc-200/80 dark:border-zinc-800">
         <button
-          className={`tab-btn ${activeTab === "courses" ? "active" : ""}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            activeTab === "courses"
+              ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm"
+              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+          }`}
           onClick={() => setActiveTab("courses")}
         >
-          <BookOpen size={16} /> Courses
+          <BookOpen className="w-4 h-4" /> Courses
         </button>
         <button
-          className={`tab-btn ${activeTab === "modules" ? "active" : ""}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            activeTab === "modules"
+              ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm"
+              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+          }`}
           onClick={() => setActiveTab("modules")}
         >
-          <FolderTree size={16} /> Modules
+          <FolderTree className="w-4 h-4" /> Modules
         </button>
         <button
-          className={`tab-btn ${activeTab === "lessons" ? "active" : ""}`}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+            activeTab === "lessons"
+              ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-sm"
+              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+          }`}
           onClick={() => setActiveTab("lessons")}
         >
-          <Video size={16} /> Lessons
+          <Video className="w-4 h-4" /> Lessons & Video Notes
         </button>
       </div>
 
-      <div className="tab-content mt-3">
+      <div>
         {activeTab === "courses" && <CoursesSection baseUrl={baseUrl} />}
         {activeTab === "modules" && <ModulesSection baseUrl={baseUrl} />}
         {activeTab === "lessons" && <LessonsSection baseUrl={baseUrl} />}
@@ -76,25 +101,23 @@ export default function CurriculumManager({ baseUrl }) {
   );
 }
 
-// ----------------------------------------------------
-// 1. COURSES SECTION
-// ----------------------------------------------------
-function CoursesSection({ baseUrl }) {
+// ─── 1. COURSES SECTION ───────────────────────────────────────────────────────
+function CoursesSection({ baseUrl }: { baseUrl: string }) {
   const { data: courses = [], isLoading, refetch } = useGetCoursesQuery(baseUrl);
   const [createCourse, { isLoading: isCreating }] = useCreateCourseMutation();
   const [updateCourse, { isLoading: isUpdating }] = useUpdateCourseMutation();
 
   const [search, setSearch] = useState("");
-  const [editingCourse, setEditingCourse] = useState(null); // null | 'create' | course
-  const [managingModulesCourse, setManagingModulesCourse] = useState(null);
+  const [editingCourse, setEditingCourse] = useState<any>(null);
+  const [managingModulesCourse, setManagingModulesCourse] = useState<any>(null);
 
   const filtered = courses.filter(
-    (c) =>
+    (c: any) =>
       c.title?.toLowerCase().includes(search.toLowerCase()) ||
       c.slug?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleSave = async (formData) => {
+  const handleSave = async (formData: any) => {
     if (editingCourse === "create") {
       await createCourse({ baseUrl, body: formData }).unwrap();
     } else {
@@ -104,63 +127,71 @@ function CoursesSection({ baseUrl }) {
   };
 
   return (
-    <div>
-      <div className="toolbar-card">
-        <div className="search-input-wrapper">
-          <Search size={16} className="text-muted" />
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+        <div className="relative w-full sm:max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
           <input
             type="text"
-            placeholder="Search courses..."
+            placeholder="Search courses by title..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden"
           />
         </div>
-        <div className="flex-center gap-2">
-          <button className="btn-secondary" onClick={refetch}>
-            <RefreshCw size={16} />
-          </button>
-          <button className="btn-primary" onClick={() => setEditingCourse("create")}>
-            <Plus size={16} /> Add Course
-          </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button variant="secondary" size="sm" onClick={refetch} icon={RefreshCw}>
+            Refresh
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => setEditingCourse("create")} icon={Plus}>
+            Add Course
+          </Button>
         </div>
       </div>
 
-      <div className="panel-card mt-3">
-        <div className="table-responsive">
-          <table className="data-table">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-xs">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr>
-                <th>Title & Slug</th>
-                <th>Status</th>
-                <th>Active</th>
-                <th className="text-right">Actions</th>
+              <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 text-zinc-400 font-mono">
+                <th className="py-3 px-4 font-semibold">Course Title & Slug</th>
+                <th className="py-3 px-4 font-semibold">Status</th>
+                <th className="py-3 px-4 font-semibold">Active</th>
+                <th className="py-3 px-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
               {isLoading ? (
-                <tr><td colSpan={4} className="text-center py-6 text-muted">Loading courses...</td></tr>
+                <tr><td colSpan={4} className="py-8 text-center text-zinc-400">Loading courses...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={4} className="text-center py-6 text-muted">No courses found.</td></tr>
+                <tr><td colSpan={4} className="py-8 text-center text-zinc-400">No courses found.</td></tr>
               ) : (
-                filtered.map((c) => (
-                  <tr key={c.id}>
-                    <td>
-                      <div className="font-semibold">{c.title}</div>
-                      <div className="text-muted font-mono text-xs">/{c.slug} · ID: {c.id}</div>
+                filtered.map((c: any) => (
+                  <tr key={c.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
+                    <td className="py-3.5 px-4">
+                      <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">{c.title}</div>
+                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">/{c.slug} · ID: {c.id}</div>
                     </td>
-                    <td><span className={`status-pill pill-${c.status?.toLowerCase()}`}>{c.status}</span></td>
-                    <td>{c.isActive ? <span className="text-emerald font-semibold">Yes</span> : <span className="text-muted">No</span>}</td>
-                    <td className="text-right">
-                      <div className="flex-end gap-1">
-                        <button
-                          className="btn-accent-sm"
+                    <td className="py-3.5 px-4">
+                      <Badge variant={c.status === "PUBLISHED" ? "emerald" : "default"} size="sm">{c.status}</Badge>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className={`text-[10px] font-bold ${c.isActive ? "text-emerald-500" : "text-zinc-400"}`}>
+                        {c.isActive ? "ACTIVE" : "INACTIVE"}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="secondary"
+                          size="sm"
                           onClick={() => setManagingModulesCourse(c)}
+                          icon={FolderTree}
+                          className="text-xs"
                         >
-                          <FolderTree size={14} /> Modules
-                        </button>
-                        <button className="btn-ghost-sm" onClick={() => setEditingCourse(c)}>
-                          <Edit2 size={14} />
-                        </button>
+                          Modules
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setEditingCourse(c)} icon={Edit2} />
                       </div>
                     </td>
                   </tr>
@@ -191,25 +222,23 @@ function CoursesSection({ baseUrl }) {
   );
 }
 
-// ----------------------------------------------------
-// 2. MODULES SECTION
-// ----------------------------------------------------
-function ModulesSection({ baseUrl }) {
+// ─── 2. MODULES SECTION ───────────────────────────────────────────────────────
+function ModulesSection({ baseUrl }: { baseUrl: string }) {
   const { data: modules = [], isLoading, refetch } = useGetModulesQuery(baseUrl);
   const [createModule, { isLoading: isCreating }] = useCreateModuleMutation();
   const [updateModule, { isLoading: isUpdating }] = useUpdateModuleMutation();
 
   const [search, setSearch] = useState("");
-  const [editingModule, setEditingModule] = useState(null);
-  const [managingLessonsModule, setManagingLessonsModule] = useState(null);
+  const [editingModule, setEditingModule] = useState<any>(null);
+  const [managingLessonsModule, setManagingLessonsModule] = useState<any>(null);
 
   const filtered = modules.filter(
-    (m) =>
+    (m: any) =>
       m.title?.toLowerCase().includes(search.toLowerCase()) ||
       m.slug?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleSave = async (formData) => {
+  const handleSave = async (formData: any) => {
     if (editingModule === "create") {
       await createModule({ baseUrl, body: formData }).unwrap();
     } else {
@@ -219,63 +248,71 @@ function ModulesSection({ baseUrl }) {
   };
 
   return (
-    <div>
-      <div className="toolbar-card">
-        <div className="search-input-wrapper">
-          <Search size={16} className="text-muted" />
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+        <div className="relative w-full sm:max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
           <input
             type="text"
             placeholder="Search modules..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden"
           />
         </div>
-        <div className="flex-center gap-2">
-          <button className="btn-secondary" onClick={refetch}>
-            <RefreshCw size={16} />
-          </button>
-          <button className="btn-primary" onClick={() => setEditingModule("create")}>
-            <Plus size={16} /> Add Module
-          </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button variant="secondary" size="sm" onClick={refetch} icon={RefreshCw}>
+            Refresh
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => setEditingModule("create")} icon={Plus}>
+            Add Module
+          </Button>
         </div>
       </div>
 
-      <div className="panel-card mt-3">
-        <div className="table-responsive">
-          <table className="data-table">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-xs">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr>
-                <th>Module Title & Slug</th>
-                <th>Status</th>
-                <th>Active</th>
-                <th className="text-right">Actions</th>
+              <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 text-zinc-400 font-mono">
+                <th className="py-3 px-4 font-semibold">Module Title & Slug</th>
+                <th className="py-3 px-4 font-semibold">Status</th>
+                <th className="py-3 px-4 font-semibold">Active</th>
+                <th className="py-3 px-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
               {isLoading ? (
-                <tr><td colSpan={4} className="text-center py-6 text-muted">Loading modules...</td></tr>
+                <tr><td colSpan={4} className="py-8 text-center text-zinc-400">Loading modules...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={4} className="text-center py-6 text-muted">No modules found.</td></tr>
+                <tr><td colSpan={4} className="py-8 text-center text-zinc-400">No modules found.</td></tr>
               ) : (
-                filtered.map((m) => (
-                  <tr key={m.id}>
-                    <td>
-                      <div className="font-semibold">{m.title}</div>
-                      <div className="text-muted font-mono text-xs">/{m.slug} · ID: {m.id}</div>
+                filtered.map((m: any) => (
+                  <tr key={m.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
+                    <td className="py-3.5 px-4">
+                      <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">{m.title}</div>
+                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">/{m.slug} · ID: {m.id}</div>
                     </td>
-                    <td><span className={`status-pill pill-${m.status?.toLowerCase()}`}>{m.status}</span></td>
-                    <td>{m.isActive ? <span className="text-emerald font-semibold">Yes</span> : <span className="text-muted">No</span>}</td>
-                    <td className="text-right">
-                      <div className="flex-end gap-1">
-                        <button
-                          className="btn-accent-sm"
+                    <td className="py-3.5 px-4">
+                      <Badge variant={m.status === "PUBLISHED" ? "emerald" : "default"} size="sm">{m.status}</Badge>
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <span className={`text-[10px] font-bold ${m.isActive ? "text-emerald-500" : "text-zinc-400"}`}>
+                        {m.isActive ? "ACTIVE" : "INACTIVE"}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <div className="flex items-center justify-end gap-1.5">
+                        <Button
+                          variant="secondary"
+                          size="sm"
                           onClick={() => setManagingLessonsModule(m)}
+                          icon={Video}
+                          className="text-xs"
                         >
-                          <Video size={14} /> Lessons
-                        </button>
-                        <button className="btn-ghost-sm" onClick={() => setEditingModule(m)}>
-                          <Edit2 size={14} />
-                        </button>
+                          Lessons
+                        </Button>
+                        <Button variant="ghost" size="sm" onClick={() => setEditingModule(m)} icon={Edit2} />
                       </div>
                     </td>
                   </tr>
@@ -306,24 +343,22 @@ function ModulesSection({ baseUrl }) {
   );
 }
 
-// ----------------------------------------------------
-// 3. LESSONS SECTION
-// ----------------------------------------------------
-function LessonsSection({ baseUrl }) {
+// ─── 3. LESSONS SECTION ───────────────────────────────────────────────────────
+function LessonsSection({ baseUrl }: { baseUrl: string }) {
   const { data: lessons = [], isLoading, refetch } = useGetLessonsQuery(baseUrl);
   const [createLesson, { isLoading: isCreating }] = useCreateLessonMutation();
   const [updateLesson, { isLoading: isUpdating }] = useUpdateLessonMutation();
 
   const [search, setSearch] = useState("");
-  const [editingLesson, setEditingLesson] = useState(null);
+  const [editingLesson, setEditingLesson] = useState<any>(null);
 
   const filtered = lessons.filter(
-    (l) =>
+    (l: any) =>
       l.title?.toLowerCase().includes(search.toLowerCase()) ||
       l.slug?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const handleSave = async (formData) => {
+  const handleSave = async (formData: any) => {
     if (editingLesson === "create") {
       await createLesson({ baseUrl, body: formData }).unwrap();
     } else {
@@ -333,75 +368,69 @@ function LessonsSection({ baseUrl }) {
   };
 
   return (
-    <div>
-      <div className="toolbar-card">
-        <div className="search-input-wrapper">
-          <Search size={16} className="text-muted" />
+    <div className="space-y-4">
+      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+        <div className="relative w-full sm:max-w-md">
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
           <input
             type="text"
-            placeholder="Search lessons..."
+            placeholder="Search lessons by title..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden"
           />
         </div>
-        <div className="flex-center gap-2">
-          <button className="btn-secondary" onClick={refetch}>
-            <RefreshCw size={16} />
-          </button>
-          <button className="btn-primary" onClick={() => setEditingLesson("create")}>
-            <Plus size={16} /> Add Lesson
-          </button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button variant="secondary" size="sm" onClick={refetch} icon={RefreshCw}>
+            Refresh
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => setEditingLesson("create")} icon={Plus}>
+            Add Lesson
+          </Button>
         </div>
       </div>
 
-      <div className="panel-card mt-3">
-        <div className="table-responsive">
-          <table className="data-table">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-xs">
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-xs">
             <thead>
-              <tr>
-                <th>Title & Slug</th>
-                <th>Duration</th>
-                <th>Video Link</th>
-                <th>Status</th>
-                <th className="text-right">Actions</th>
+              <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 text-zinc-400 font-mono">
+                <th className="py-3 px-4 font-semibold">Lesson Title & Slug</th>
+                <th className="py-3 px-4 font-semibold">Duration</th>
+                <th className="py-3 px-4 font-semibold">Media Type</th>
+                <th className="py-3 px-4 font-semibold">Active</th>
+                <th className="py-3 px-4 font-semibold text-right">Actions</th>
               </tr>
             </thead>
-            <tbody>
+            <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
               {isLoading ? (
-                <tr><td colSpan={5} className="text-center py-6 text-muted">Loading lessons...</td></tr>
+                <tr><td colSpan={5} className="py-8 text-center text-zinc-400">Loading lessons...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} className="text-center py-6 text-muted">No lessons found.</td></tr>
+                <tr><td colSpan={5} className="py-8 text-center text-zinc-400">No lessons found.</td></tr>
               ) : (
-                filtered.map((l) => (
-                  <tr key={l.id}>
-                    <td>
-                      <div className="font-semibold">{l.title}</div>
-                      <div className="text-muted font-mono text-xs">/{l.slug} · ID: {l.id}</div>
+                filtered.map((l: any) => (
+                  <tr key={l.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
+                    <td className="py-3.5 px-4">
+                      <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">{l.title}</div>
+                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">/{l.slug} · ID: {l.id}</div>
                     </td>
-                    <td>
-                      {l.durationMinutes ? (
-                        <span className="flex-center gap-1 text-xs">
-                          <Clock size={14} className="text-muted" /> {l.durationMinutes} min
-                        </span>
-                      ) : "—"}
+                    <td className="py-3.5 px-4 font-mono font-bold text-zinc-700 dark:text-zinc-300">
+                      {l.durationMinutes ? `${l.durationMinutes}m` : "—"}
                     </td>
-                    <td>
+                    <td className="py-3.5 px-4">
                       {l.videoUrl ? (
-                        <a
-                          href={l.videoUrl}
-                          target="_blank"
-                          rel="noreferrer"
-                          className="flex-center gap-1 text-primary text-xs"
-                        >
-                          <ExternalLink size={12} /> Link
-                        </a>
-                      ) : "—"}
+                        <Badge variant="brand" size="sm">Video Lesson</Badge>
+                      ) : (
+                        <Badge variant="default" size="sm">Reading / Code</Badge>
+                      )}
                     </td>
-                    <td><span className={`status-pill pill-${l.status?.toLowerCase()}`}>{l.status}</span></td>
-                    <td className="text-right">
-                      <button className="btn-ghost-sm" onClick={() => setEditingLesson(l)}>
-                        <Edit2 size={14} /> Edit
-                      </button>
+                    <td className="py-3.5 px-4">
+                      <span className={`text-[10px] font-bold ${l.isActive ? "text-emerald-500" : "text-zinc-400"}`}>
+                        {l.isActive ? "ACTIVE" : "INACTIVE"}
+                      </span>
+                    </td>
+                    <td className="py-3.5 px-4 text-right">
+                      <Button variant="ghost" size="sm" onClick={() => setEditingLesson(l)} icon={Edit2} />
                     </td>
                   </tr>
                 ))
@@ -423,344 +452,166 @@ function LessonsSection({ baseUrl }) {
   );
 }
 
-// ----------------------------------------------------
-// MODALS
-// ----------------------------------------------------
-function CourseModal({ course, isLoading, onClose, onSave }) {
-  const isEditing = !!course;
+// ─── Modals: Course, CourseModules, Module, ModuleLessons, Lesson ─────────────
+
+function CourseModal({ course, isLoading, onClose, onSave }: any) {
   const [title, setTitle] = useState(course?.title || "");
   const [slug, setSlug] = useState(course?.slug || "");
   const [shortDescription, setShortDescription] = useState(course?.shortDescription || "");
   const [description, setDescription] = useState(course?.description || "");
   const [status, setStatus] = useState(course?.status || "DRAFT");
-  const [isActive, setIsActive] = useState(course?.isActive ?? true);
+  const [isActive, setIsActive] = useState(course ? !!course.isActive : true);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave({ title, slug, shortDescription, description, status, isActive });
+  const handleTitleChange = (val: string) => {
+    setTitle(val);
+    if (!course) setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
   };
 
   return (
-    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-container">
-        <div className="modal-header">
-          <h2>{isEditing ? "Edit Course" : "Create Course"}</h2>
-          <button className="btn-icon" onClick={onClose}><X size={20} /></button>
+    <Modal isOpen={true} onClose={onClose} title={course ? "Edit Course" : "Add New Course"} maxWidth="max-w-lg">
+      <form onSubmit={(e) => { e.preventDefault(); onSave({ title, slug, shortDescription, description, status, isActive }); }} className="space-y-4">
+        <Input label="Course Title" value={title} onChange={(e) => handleTitleChange(e.target.value)} required />
+        <Input label="Slug" value={slug} onChange={(e) => setSlug(e.target.value)} required />
+        <div>
+          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">Overview</label>
+          <textarea rows={2} value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} className="w-full px-3.5 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs" />
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="form-grid">
-            <div className="form-group span-2">
-              <label>Course Title *</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  if (!isEditing) setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
-                }}
-                required
-              />
-            </div>
-            <div className="form-group span-2">
-              <label>Slug *</label>
-              <input type="text" value={slug} onChange={(e) => setSlug(e.target.value)} required />
-            </div>
-            {isEditing && (
-              <div className="form-group">
-                <label>Status</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                  <option value="DRAFT">DRAFT</option>
-                  <option value="PUBLISHED">PUBLISHED</option>
-                  <option value="ARCHIVED">ARCHIVED</option>
-                </select>
-              </div>
-            )}
-            <div className="form-group span-2">
-              <label>Short Description</label>
-              <input type="text" value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} />
-            </div>
-            <div className="form-group span-2">
-              <label>Full Description</label>
-              <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-            </div>
-          </div>
-          <div className="modal-footer mt-4">
-            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={isLoading}>
-              {isLoading ? "Saving..." : "Save Course"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button type="submit" variant="primary" size="sm" loading={isLoading}>Save Course</Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
-function CourseModulesModal({ course, baseUrl, onClose }) {
+function CourseModulesModal({ course, baseUrl, onClose }: any) {
   const { data: allModules = [] } = useGetModulesQuery(baseUrl);
-  const { data: attached = [], isFetching } = useGetCourseModulesQuery({ baseUrl, id: course.id });
-  const [attachModule] = useAttachCourseModuleMutation();
+  const { data: attachedModules = [] } = useGetCourseModulesQuery({ baseUrl, id: course.id });
+  const [attachModule, { isLoading: isAttaching }] = useAttachCourseModuleMutation();
   const [detachModule] = useDetachCourseModuleMutation();
 
   const [selectedModuleId, setSelectedModuleId] = useState("");
-  const [position, setPosition] = useState(
-    attached.length > 0 ? Math.max(...attached.map((m) => m.position || 0)) + 1 : 1
-  );
+  const [position, setPosition] = useState(attachedModules.length + 1);
 
-  const handleAdd = async (e) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedModuleId) return;
-    try {
-      await attachModule({ baseUrl, courseId: course.id, moduleId: selectedModuleId, position: Number(position) }).unwrap();
-      setSelectedModuleId("");
-      setPosition((p) => Number(p) + 1);
-    } catch (err) {
-      alert("Failed: " + (err?.data?.error || err.message));
-    }
+    await attachModule({ baseUrl, courseId: course.id, moduleId: selectedModuleId, position: Number(position) }).unwrap();
+    setSelectedModuleId("");
+    setPosition((p: number) => Number(p) + 1);
   };
-
-  const handleRemove = async (moduleId) => {
-    if (!window.confirm("Detach this module from the course?")) return;
-    try {
-      await detachModule({ baseUrl, courseId: course.id, moduleId }).unwrap();
-    } catch (err) {
-      alert("Failed: " + (err?.data?.error || err.message));
-    }
-  };
-
-  const sorted = [...attached].sort((a, b) => (a.position || 0) - (b.position || 0));
 
   return (
-    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-container-large">
-        <div className="modal-header">
-          <div>
-            <h2>Course Modules: {course.title}</h2>
-            <p className="text-muted text-xs">Organize and sequence modules inside this course.</p>
-          </div>
-          <button className="btn-icon" onClick={onClose}><X size={20} /></button>
+    <Modal isOpen={true} onClose={onClose} title={`Modules in Course: ${course.title}`} maxWidth="max-w-2xl">
+      <div className="space-y-4">
+        <div className="space-y-2 max-h-56 overflow-y-auto">
+          {attachedModules.length === 0 ? (
+            <p className="text-xs text-zinc-400 py-3 text-center">No modules linked to this course yet.</p>
+          ) : (
+            attachedModules.map((m: any) => (
+              <div key={m.id || m.moduleId} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <span className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center font-mono">{m.position || 1}</span>
+                  <div><h5 className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100">{m.title}</h5><span className="text-[10px] text-zinc-400 font-mono">/{m.slug}</span></div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => detachModule({ baseUrl, courseId: course.id, moduleId: m.id || m.moduleId })} className="text-rose-500 hover:text-rose-700 p-1"><Trash2 className="w-4 h-4" /></Button>
+              </div>
+            ))
+          )}
         </div>
-        <div className="modal-body-scroll">
-          <form onSubmit={handleAdd} className="inline-add-form">
-            <div className="form-group flex-2">
-              <label>Select Module</label>
-              <select value={selectedModuleId} onChange={(e) => setSelectedModuleId(e.target.value)} required>
-                <option value="">— Select Module to Attach —</option>
-                {allModules.map((m) => (
-                  <option key={m.id} value={m.id} disabled={attached.some((a) => a.moduleId === m.id)}>
-                    {m.title} ({m.slug})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group flex-1">
-              <label>Position #</label>
-              <input type="number" min="1" value={position} onChange={(e) => setPosition(Number(e.target.value))} required />
-            </div>
-            <button type="submit" className="btn-primary align-self-end mb-1" disabled={!selectedModuleId}>
-              <Plus size={16} /> Link Module
-            </button>
-          </form>
-
-          <div className="attached-items-list mt-3">
-            {isFetching ? (
-              <div className="py-4 text-center text-muted">Loading modules...</div>
-            ) : sorted.length === 0 ? (
-              <div className="empty-state-box">No modules linked to this course yet.</div>
-            ) : (
-              sorted.map((item) => {
-                const mod = allModules.find((m) => m.id === item.moduleId);
-                return (
-                  <div key={item.moduleId} className="sequence-item-card">
-                    <div className="sequence-badge">#{item.position}</div>
-                    <div className="sequence-info">
-                      <h4>{mod ? mod.title : item.moduleId}</h4>
-                      <span className="text-muted text-xs font-mono">ID: {item.moduleId}</span>
-                    </div>
-                    <button className="btn-danger-icon" onClick={() => handleRemove(item.moduleId)}>
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-        <div className="modal-footer">
-          <button className="btn-primary" onClick={onClose}>Done</button>
-        </div>
+        <form onSubmit={handleAdd} className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+          <select value={selectedModuleId} onChange={(e) => setSelectedModuleId(e.target.value)} className="flex-1 px-3 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs" required>
+            <option value="">Select module to link...</option>
+            {allModules.map((m: any) => <option key={m.id} value={m.id}>{m.title} (/{m.slug})</option>)}
+          </select>
+          <input type="number" min="1" value={position} onChange={(e) => setPosition(Number(e.target.value))} className="w-20 px-3 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono text-center" />
+          <Button type="submit" variant="primary" size="sm" loading={isAttaching} icon={Plus}>Link</Button>
+        </form>
       </div>
-    </div>
+    </Modal>
   );
 }
 
-function ModuleModal({ moduleItem, isLoading, onClose, onSave }) {
-  const isEditing = !!moduleItem;
+function ModuleModal({ moduleItem, isLoading, onClose, onSave }: any) {
   const [title, setTitle] = useState(moduleItem?.title || "");
   const [slug, setSlug] = useState(moduleItem?.slug || "");
   const [description, setDescription] = useState(moduleItem?.description || "");
   const [status, setStatus] = useState(moduleItem?.status || "DRAFT");
-  const [isActive, setIsActive] = useState(moduleItem?.isActive ?? true);
+  const [isActive, setIsActive] = useState(moduleItem ? !!moduleItem.isActive : true);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave({ title, slug, description, status, isActive });
+  const handleTitleChange = (val: string) => {
+    setTitle(val);
+    if (!moduleItem) setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
   };
 
   return (
-    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-container">
-        <div className="modal-header">
-          <h2>{isEditing ? "Edit Module" : "Create Module"}</h2>
-          <button className="btn-icon" onClick={onClose}><X size={20} /></button>
+    <Modal isOpen={true} onClose={onClose} title={moduleItem ? "Edit Module" : "Add New Module"} maxWidth="max-w-lg">
+      <form onSubmit={(e) => { e.preventDefault(); onSave({ title, slug, description, status, isActive }); }} className="space-y-4">
+        <Input label="Module Title" value={title} onChange={(e) => handleTitleChange(e.target.value)} required />
+        <Input label="Slug" value={slug} onChange={(e) => setSlug(e.target.value)} required />
+        <div>
+          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">Description</label>
+          <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3.5 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs" />
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="form-grid">
-            <div className="form-group span-2">
-              <label>Module Title *</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  if (!isEditing) setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
-                }}
-                required
-              />
-            </div>
-            <div className="form-group span-2">
-              <label>Slug *</label>
-              <input type="text" value={slug} onChange={(e) => setSlug(e.target.value)} required />
-            </div>
-            {isEditing && (
-              <div className="form-group">
-                <label>Status</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                  <option value="DRAFT">DRAFT</option>
-                  <option value="PUBLISHED">PUBLISHED</option>
-                  <option value="ARCHIVED">ARCHIVED</option>
-                </select>
-              </div>
-            )}
-            <div className="form-group span-2">
-              <label>Description</label>
-              <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} />
-            </div>
-          </div>
-          <div className="modal-footer mt-4">
-            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={isLoading}>
-              {isLoading ? "Saving..." : "Save Module"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button type="submit" variant="primary" size="sm" loading={isLoading}>Save Module</Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
 
-function ModuleLessonsModal({ moduleItem, baseUrl, onClose }) {
+function ModuleLessonsModal({ moduleItem, baseUrl, onClose }: any) {
   const { data: allLessons = [] } = useGetLessonsQuery(baseUrl);
-  const { data: attached = [], isFetching } = useGetModuleLessonsQuery({ baseUrl, id: moduleItem.id });
-  const [attachLesson] = useAttachModuleLessonMutation();
+  const { data: attachedLessons = [] } = useGetModuleLessonsQuery({ baseUrl, id: moduleItem.id });
+  const [attachLesson, { isLoading: isAttaching }] = useAttachModuleLessonMutation();
   const [detachLesson] = useDetachModuleLessonMutation();
 
   const [selectedLessonId, setSelectedLessonId] = useState("");
-  const [position, setPosition] = useState(
-    attached.length > 0 ? Math.max(...attached.map((l) => l.position || 0)) + 1 : 1
-  );
+  const [position, setPosition] = useState(attachedLessons.length + 1);
 
-  const handleAdd = async (e) => {
+  const handleAdd = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedLessonId) return;
-    try {
-      await attachLesson({ baseUrl, moduleId: moduleItem.id, lessonId: selectedLessonId, position: Number(position) }).unwrap();
-      setSelectedLessonId("");
-      setPosition((p) => Number(p) + 1);
-    } catch (err) {
-      alert("Failed: " + (err?.data?.error || err.message));
-    }
+    await attachLesson({ baseUrl, moduleId: moduleItem.id, lessonId: selectedLessonId, position: Number(position) }).unwrap();
+    setSelectedLessonId("");
+    setPosition((p: number) => Number(p) + 1);
   };
-
-  const handleRemove = async (lessonId) => {
-    if (!window.confirm("Detach this lesson from the module?")) return;
-    try {
-      await detachLesson({ baseUrl, moduleId: moduleItem.id, lessonId }).unwrap();
-    } catch (err) {
-      alert("Failed: " + (err?.data?.error || err.message));
-    }
-  };
-
-  const sorted = [...attached].sort((a, b) => (a.position || 0) - (b.position || 0));
 
   return (
-    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-container-large">
-        <div className="modal-header">
-          <div>
-            <h2>Module Lessons: {moduleItem.title}</h2>
-            <p className="text-muted text-xs">Organize lesson sequences inside this module.</p>
-          </div>
-          <button className="btn-icon" onClick={onClose}><X size={20} /></button>
+    <Modal isOpen={true} onClose={onClose} title={`Lessons in Module: ${moduleItem.title}`} maxWidth="max-w-2xl">
+      <div className="space-y-4">
+        <div className="space-y-2 max-h-56 overflow-y-auto">
+          {attachedLessons.length === 0 ? (
+            <p className="text-xs text-zinc-400 py-3 text-center">No lessons linked to this module yet.</p>
+          ) : (
+            attachedLessons.map((l: any) => (
+              <div key={l.id || l.lessonId} className="flex items-center justify-between p-3 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <span className="w-6 h-6 rounded-lg bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center font-mono">{l.position || 1}</span>
+                  <div><h5 className="font-extrabold text-xs text-zinc-900 dark:text-zinc-100">{l.title}</h5><span className="text-[10px] text-zinc-400 font-mono">/{l.slug}</span></div>
+                </div>
+                <Button variant="ghost" size="sm" onClick={() => detachLesson({ baseUrl, moduleId: moduleItem.id, lessonId: l.id || l.lessonId })} className="text-rose-500 hover:text-rose-700 p-1"><Trash2 className="w-4 h-4" /></Button>
+              </div>
+            ))
+          )}
         </div>
-        <div className="modal-body-scroll">
-          <form onSubmit={handleAdd} className="inline-add-form">
-            <div className="form-group flex-2">
-              <label>Select Lesson</label>
-              <select value={selectedLessonId} onChange={(e) => setSelectedLessonId(e.target.value)} required>
-                <option value="">— Select Lesson to Attach —</option>
-                {allLessons.map((l) => (
-                  <option key={l.id} value={l.id} disabled={attached.some((a) => a.lessonId === l.id)}>
-                    {l.title} ({l.slug})
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="form-group flex-1">
-              <label>Position #</label>
-              <input type="number" min="1" value={position} onChange={(e) => setPosition(Number(e.target.value))} required />
-            </div>
-            <button type="submit" className="btn-primary align-self-end mb-1" disabled={!selectedLessonId}>
-              <Plus size={16} /> Link Lesson
-            </button>
-          </form>
-
-          <div className="attached-items-list mt-3">
-            {isFetching ? (
-              <div className="py-4 text-center text-muted">Loading lessons...</div>
-            ) : sorted.length === 0 ? (
-              <div className="empty-state-box">No lessons linked to this module yet.</div>
-            ) : (
-              sorted.map((item) => {
-                const les = allLessons.find((l) => l.id === item.lessonId);
-                return (
-                  <div key={item.lessonId} className="sequence-item-card">
-                    <div className="sequence-badge">#{item.position}</div>
-                    <div className="sequence-info">
-                      <h4>{les ? les.title : item.lessonId}</h4>
-                      <span className="text-muted text-xs font-mono">
-                        {les?.durationMinutes ? `${les.durationMinutes} mins · ` : ""}ID: {item.lessonId}
-                      </span>
-                    </div>
-                    <button className="btn-danger-icon" onClick={() => handleRemove(item.lessonId)}>
-                      <Trash2 size={16} />
-                    </button>
-                  </div>
-                );
-              })
-            )}
-          </div>
-        </div>
-        <div className="modal-footer">
-          <button className="btn-primary" onClick={onClose}>Done</button>
-        </div>
+        <form onSubmit={handleAdd} className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+          <select value={selectedLessonId} onChange={(e) => setSelectedLessonId(e.target.value)} className="flex-1 px-3 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs" required>
+            <option value="">Select lesson to link...</option>
+            {allLessons.map((l: any) => <option key={l.id} value={l.id}>{l.title} (/{l.slug})</option>)}
+          </select>
+          <input type="number" min="1" value={position} onChange={(e) => setPosition(Number(e.target.value))} className="w-20 px-3 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono text-center" />
+          <Button type="submit" variant="primary" size="sm" loading={isAttaching} icon={Plus}>Link</Button>
+        </form>
       </div>
-    </div>
+    </Modal>
   );
 }
 
-function LessonModal({ lesson, isLoading, onClose, onSave }) {
-  const isEditing = !!lesson;
+function LessonModal({ lesson, isLoading, onClose, onSave }: any) {
   const [title, setTitle] = useState(lesson?.title || "");
   const [slug, setSlug] = useState(lesson?.slug || "");
   const [videoUrl, setVideoUrl] = useState(lesson?.videoUrl || "");
@@ -768,98 +619,37 @@ function LessonModal({ lesson, isLoading, onClose, onSave }) {
   const [description, setDescription] = useState(lesson?.description || "");
   const [content, setContent] = useState(lesson?.content || "");
   const [status, setStatus] = useState(lesson?.status || "DRAFT");
-  const [isActive, setIsActive] = useState(lesson?.isActive ?? true);
+  const [isActive, setIsActive] = useState(lesson ? !!lesson.isActive : true);
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
-    onSave({
-      title,
-      slug,
-      videoUrl: videoUrl || null,
-      durationMinutes: durationMinutes ? Number(durationMinutes) : null,
-      description,
-      content,
-      status,
-      isActive,
-    });
+  const handleTitleChange = (val: string) => {
+    setTitle(val);
+    if (!lesson) setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
   };
 
   return (
-    <div className="modal-backdrop" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-container-large">
-        <div className="modal-header">
-          <h2>{isEditing ? "Edit Lesson" : "Create Lesson"}</h2>
-          <button className="btn-icon" onClick={onClose}><X size={20} /></button>
+    <Modal isOpen={true} onClose={onClose} title={lesson ? `Edit Lesson: ${lesson.title}` : "Add New Lesson"} maxWidth="max-w-2xl">
+      <form onSubmit={(e) => { e.preventDefault(); onSave({ title, slug, videoUrl: videoUrl || null, durationMinutes: durationMinutes ? Number(durationMinutes) : null, description, content, status, isActive }); }} className="space-y-4">
+        <Input label="Lesson Title" value={title} onChange={(e) => handleTitleChange(e.target.value)} required />
+        <Input label="Slug" value={slug} onChange={(e) => setSlug(e.target.value)} required />
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          <Input label="Video Stream URL (YouTube or MP4)" value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)} placeholder="https://www.youtube.com/watch?v=..." />
+          <Input label="Duration (Minutes)" type="number" min="0" value={durationMinutes} onChange={(e) => setDurationMinutes(e.target.value)} placeholder="e.g. 15" />
         </div>
-        <form onSubmit={handleSubmit}>
-          <div className="form-grid">
-            <div className="form-group span-2">
-              <label>Lesson Title *</label>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => {
-                  setTitle(e.target.value);
-                  if (!isEditing) setSlug(e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
-                }}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label>Slug *</label>
-              <input type="text" value={slug} onChange={(e) => setSlug(e.target.value)} required />
-            </div>
-            <div className="form-group">
-              <label>Duration (Minutes)</label>
-              <input
-                type="number"
-                min="0"
-                value={durationMinutes}
-                onChange={(e) => setDurationMinutes(e.target.value)}
-                placeholder="e.g. 15"
-              />
-            </div>
-            <div className="form-group span-2">
-              <label>Video URL (Stream / YouTube / Vimeo / MP4)</label>
-              <input
-                type="url"
-                value={videoUrl}
-                onChange={(e) => setVideoUrl(e.target.value)}
-                placeholder="https://..."
-              />
-            </div>
-            {isEditing && (
-              <div className="form-group">
-                <label>Status</label>
-                <select value={status} onChange={(e) => setStatus(e.target.value)}>
-                  <option value="DRAFT">DRAFT</option>
-                  <option value="PUBLISHED">PUBLISHED</option>
-                  <option value="ARCHIVED">ARCHIVED</option>
-                </select>
-              </div>
-            )}
-            <div className="form-group span-2">
-              <label>Short Description</label>
-              <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} />
-            </div>
-            <div className="form-group span-2">
-              <label>Lesson Content / Markdown Body</label>
-              <textarea
-                rows={5}
-                value={content}
-                onChange={(e) => setContent(e.target.value)}
-                placeholder="Notes, transcript, or markdown reading material..."
-              />
-            </div>
-          </div>
-          <div className="modal-footer mt-4">
-            <button type="button" className="btn-secondary" onClick={onClose}>Cancel</button>
-            <button type="submit" className="btn-primary" disabled={isLoading}>
-              {isLoading ? "Saving..." : "Save Lesson"}
-            </button>
-          </div>
-        </form>
-      </div>
-    </div>
+        <div>
+          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">Overview / Abstract</label>
+          <textarea rows={2} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3.5 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs" />
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5 flex items-center gap-1.5">
+            <Code2 className="w-3.5 h-3.5 text-indigo-500" /> Study Notes & Code Snippets
+          </label>
+          <textarea rows={6} value={content} onChange={(e) => setContent(e.target.value)} placeholder="Enter markdown or code notes..." className="w-full px-3.5 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono" />
+        </div>
+        <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
+          <Button type="submit" variant="primary" size="sm" loading={isLoading}>Save Lesson</Button>
+        </div>
+      </form>
+    </Modal>
   );
 }
