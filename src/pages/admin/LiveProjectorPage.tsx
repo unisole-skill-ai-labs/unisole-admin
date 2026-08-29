@@ -224,12 +224,13 @@ export default function LiveProjectorPage() {
   const handlePrevSlide = useCallback(() => {
     if (currentSlideIndex > 0 && socketRef.current && session?.sessionCode) {
       const target = currentSlideIndex - 1;
-      const prevSlide = slides[target];
+      const prevMax = slides[target]?.maxBuildSteps ?? 0;
       setCurrentSlideIndex(target);
-      setBuildStep(prevSlide?.maxBuildSteps ?? 0);
+      setBuildStep(prevMax);
       socketRef.current.emit("admin:change_slide", {
         sessionCode: session.sessionCode,
         slideIndex: target,
+        buildStep: prevMax,
       });
     }
   }, [currentSlideIndex, session?.sessionCode, slides]);
@@ -246,6 +247,7 @@ export default function LiveProjectorPage() {
       socketRef.current.emit("admin:change_slide", {
         sessionCode: session.sessionCode,
         slideIndex: target,
+        buildStep: 0,
       });
     }
   }, [currentSlideIndex, slides.length, session?.sessionCode]);
@@ -253,19 +255,35 @@ export default function LiveProjectorPage() {
   // Progressive Step & Slide Advance
   const handleNextAction = useCallback(() => {
     if (buildStep < maxSteps) {
-      setBuildStep((prev) => prev + 1);
+      const nextStep = buildStep + 1;
+      setBuildStep(nextStep);
+      if (socketRef.current && session?.sessionCode) {
+        socketRef.current.emit("admin:change_slide", {
+          sessionCode: session.sessionCode,
+          slideIndex: currentSlideIndex,
+          buildStep: nextStep,
+        });
+      }
     } else {
       handleNextSlide();
     }
-  }, [buildStep, maxSteps, handleNextSlide]);
+  }, [buildStep, maxSteps, handleNextSlide, currentSlideIndex, session?.sessionCode]);
 
   const handlePrevAction = useCallback(() => {
     if (buildStep > 0) {
-      setBuildStep((prev) => prev - 1);
+      const prevStep = buildStep - 1;
+      setBuildStep(prevStep);
+      if (socketRef.current && session?.sessionCode) {
+        socketRef.current.emit("admin:change_slide", {
+          sessionCode: session.sessionCode,
+          slideIndex: currentSlideIndex,
+          buildStep: prevStep,
+        });
+      }
     } else {
       handlePrevSlide();
     }
-  }, [buildStep, handlePrevSlide]);
+  }, [buildStep, handlePrevSlide, currentSlideIndex, session?.sessionCode]);
 
   const handleStartQuestion = useCallback(() => {
     if (!currentSlide || !socketRef.current || !session?.sessionCode) return;
