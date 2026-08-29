@@ -665,6 +665,38 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["DailyLogs"],
     }),
+    getCompanyProgress: build.query({
+      query: (baseUrl) => ({
+        url: `${baseUrl}/api/admin/team/company-progress`,
+      }),
+      providesTags: ["TeamMembers", "Tasks", "DailyLogs", "LeaderRadar"],
+    }),
+    getMemberPerformance: build.query({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/team/members/${id}/performance`,
+      }),
+      providesTags: (_res, _err, { id }) => [{ type: "TeamMembers", id }, "Tasks", "DailyLogs"],
+    }),
+    getTeamLeaderboard: build.query({
+      query: (baseUrl) => ({
+        url: `${baseUrl}/api/admin/team/leaderboard`,
+      }),
+      providesTags: ["TeamMembers", "Tasks", "DailyLogs"],
+    }),
+    getStandupSummary: build.query({
+      query: ({ baseUrl, date }) => ({
+        url: `${baseUrl}/api/admin/team/standup-summary`,
+        params: date ? { date } : undefined,
+      }),
+      providesTags: ["DailyLogs", "TeamMembers"],
+    }),
+    nudgeTeamMember: build.mutation({
+      query: ({ baseUrl, id, body }) => ({
+        url: `${baseUrl}/api/admin/team/members/${id}/nudge`,
+        method: "POST",
+        body,
+      }),
+    }),
   }),
 });
 
@@ -762,6 +794,12 @@ export const {
   useDeleteTemplateMutation,
   useGetDailyLogsQuery,
   useSubmitDailyLogMutation,
+  // Super Admin Executive Analytics
+  useGetCompanyProgressQuery,
+  useGetMemberPerformanceQuery,
+  useGetTeamLeaderboardQuery,
+  useGetStandupSummaryQuery,
+  useNudgeTeamMemberMutation,
 } = adminApi;
 
 export const store = configureStore({

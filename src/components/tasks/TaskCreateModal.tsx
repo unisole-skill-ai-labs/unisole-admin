@@ -16,6 +16,8 @@ interface TaskCreateModalProps {
   teamMembers: any[];
   templates: any[];
   defaultStatus?: string;
+  defaultAssigneeId?: string;
+  defaultDepartmentId?: string;
   onClose: () => void;
   onSubmit: (taskData: any) => void;
 }
@@ -26,6 +28,8 @@ export default function TaskCreateModal({
   teamMembers,
   templates,
   defaultStatus = "TODO",
+  defaultAssigneeId = "",
+  defaultDepartmentId = "",
   onClose,
   onSubmit,
 }: TaskCreateModalProps) {
@@ -34,8 +38,8 @@ export default function TaskCreateModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM");
-  const [departmentId, setDepartmentId] = useState("");
-  const [assigneeId, setAssigneeId] = useState("");
+  const [departmentId, setDepartmentId] = useState(defaultDepartmentId);
+  const [assigneeId, setAssigneeId] = useState(defaultAssigneeId);
   const [templateId, setTemplateId] = useState("");
   const [dueDate, setDueDate] = useState("");
   const [estimatedHours, setEstimatedHours] = useState<number>(2);
