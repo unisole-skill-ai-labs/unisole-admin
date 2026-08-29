@@ -436,7 +436,7 @@ export default function LiveProjectorPage() {
     (import.meta as any).env?.VITE_SEO_URL || "https://unisole.org";
   const joinUrl =
     session.joinUrl ||
-    `${seoBaseUrl.replace(/\/+$/, "")}/login?redirect=/live/${session.sessionCode}`;
+    `${seoBaseUrl.replace(/\/+$/, "")}/live/${session.sessionCode}`;
 
   return (
     <div

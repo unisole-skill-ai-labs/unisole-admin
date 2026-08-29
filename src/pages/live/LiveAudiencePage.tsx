@@ -80,7 +80,7 @@ export default function LiveAudiencePage() {
     window.location.href = `${seoBaseUrl.replace(
       /\/+$/,
       ""
-    )}/login?redirect=/live/${code}`;
+    )}/live/${code}`;
   }, [code]);
 
   // Connect Socket.io once lead is registered
