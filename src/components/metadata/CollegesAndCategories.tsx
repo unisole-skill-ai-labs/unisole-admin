@@ -1,4 +1,5 @@
 import React, { useState } from "react";
+import { Link } from "react-router-dom";
 import {
   useGetCollegesQuery,
   useCreateCollegeMutation,
@@ -21,6 +22,7 @@ import {
   Building2,
   CheckCircle,
   Layers,
+  Sparkles,
 } from "lucide-react";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
@@ -43,50 +45,54 @@ export default function CollegesAndCategories({ baseUrl }: CollegesAndCategories
             Governance & Entity Metadata
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 font-medium mt-1">
-            Manage partner universities, academic branches/specializations, and domain curriculum categories
+            Manage partner universities, academic branches & departments, and domain pathway categories.
           </p>
         </div>
       </div>
 
       {/* Tabs */}
-      <div className="flex items-center gap-1.5 p-1 bg-zinc-100 dark:bg-zinc-900 rounded-2xl w-fit border border-zinc-200/80 dark:border-zinc-800">
+      <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
         <button
+          onClick={() => setActiveTab("colleges")}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === "colleges"
-              ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-xs"
-              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+              ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
           }`}
-          onClick={() => setActiveTab("colleges")}
         >
-          <GraduationCap className="w-4 h-4" /> Partner Colleges
+          <Building2 className="w-4 h-4" />
+          <span>Partner Universities & Colleges</span>
         </button>
+
         <button
+          onClick={() => setActiveTab("branches")}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === "branches"
-              ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-xs"
-              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+              ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
           }`}
-          onClick={() => setActiveTab("branches")}
         >
-          <BookOpen className="w-4 h-4" /> Academic Branches
+          <BookOpen className="w-4 h-4" />
+          <span>Academic Branches</span>
         </button>
+
         <button
+          onClick={() => setActiveTab("categories")}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer ${
             activeTab === "categories"
-              ? "bg-white dark:bg-zinc-800 text-indigo-600 dark:text-indigo-400 shadow-xs"
-              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100"
+              ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
           }`}
-          onClick={() => setActiveTab("categories")}
         >
-          <Tag className="w-4 h-4" /> Domain Categories
+          <Tag className="w-4 h-4" />
+          <span>Domain Categories</span>
         </button>
       </div>
 
-      <div>
-        {activeTab === "colleges" && <CollegesSection baseUrl={baseUrl} />}
-        {activeTab === "branches" && <BranchesSection baseUrl={baseUrl} />}
-        {activeTab === "categories" && <CategoriesSection baseUrl={baseUrl} />}
-      </div>
+      {/* Tab Content */}
+      {activeTab === "colleges" && <CollegesSection baseUrl={baseUrl} />}
+      {activeTab === "branches" && <BranchesSection baseUrl={baseUrl} />}
+      {activeTab === "categories" && <CategoriesSection baseUrl={baseUrl} />}
     </div>
   );
 }
@@ -103,8 +109,8 @@ function CollegesSection({ baseUrl }: { baseUrl: string }) {
   const filtered = colleges.filter(
     (c: any) =>
       c.name?.toLowerCase().includes(search.toLowerCase()) ||
-      c.slug?.toLowerCase().includes(search.toLowerCase()) ||
-      c.shortName?.toLowerCase().includes(search.toLowerCase())
+      c.shortName?.toLowerCase().includes(search.toLowerCase()) ||
+      c.slug?.toLowerCase().includes(search.toLowerCase())
   );
 
   const handleSave = async (formData: any) => {
@@ -123,7 +129,7 @@ function CollegesSection({ baseUrl }: { baseUrl: string }) {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
           <input
             type="text"
-            placeholder="Search colleges by name or code..."
+            placeholder="Search universities by name, short code, or slug..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden"
@@ -139,13 +145,13 @@ function CollegesSection({ baseUrl }: { baseUrl: string }) {
             onClick={() => setEditingCollege("create")}
             icon={Plus}
           >
-            Add College
+            Add University
           </Button>
         </div>
       </div>
 
       {isLoading ? (
-        <div className="p-12 text-center text-xs text-zinc-400">Loading partner colleges...</div>
+        <div className="p-12 text-center text-xs text-zinc-400">Loading universities...</div>
       ) : filtered.length === 0 ? (
         <div className="p-12 text-center bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl">
           <Building2 className="w-8 h-8 mx-auto text-zinc-400 mb-2" />
@@ -184,7 +190,16 @@ function CollegesSection({ baseUrl }: { baseUrl: string }) {
               </div>
 
               <div className="pt-4 mt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-400">
-                <span className="font-mono text-[10px]">ID: {college.id}</span>
+                <Link to={`/colleges/${college.id}`}>
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    icon={Sparkles}
+                    className="text-indigo-600 dark:text-indigo-400 font-bold hover:bg-indigo-50 dark:hover:bg-indigo-950/40"
+                  >
+                    Campus Hub
+                  </Button>
+                </Link>
                 <Button
                   variant="ghost"
                   size="sm"

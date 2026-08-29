@@ -13,6 +13,7 @@ import PresentationsPage from "./pages/admin/PresentationsPage";
 import PresentationBuilderPage from "./pages/admin/PresentationBuilderPage";
 import LiveProjectorPage from "./pages/admin/LiveProjectorPage";
 import SessionAnalyticsPage from "./pages/admin/SessionAnalyticsPage";
+import CollegeDetailPage from "./pages/admin/CollegeDetailPage";
 import LiveAudiencePage from "./pages/live/LiveAudiencePage";
 import JoinSessionPage from "./pages/live/JoinSessionPage";
 
@@ -39,6 +40,8 @@ export default function App() {
           <Route path="pathways" element={<PathwaysPage />} />
           <Route path="curriculum" element={<CurriculumPage />} />
           <Route path="metadata" element={<MetadataPage />} />
+          <Route path="colleges" element={<MetadataPage />} />
+          <Route path="colleges/:id" element={<CollegeDetailPage />} />
           <Route path="students" element={<StudentsPage />} />
           <Route path="payments" element={<PaymentsPage />} />
           <Route path="presentations" element={<PresentationsPage />} />

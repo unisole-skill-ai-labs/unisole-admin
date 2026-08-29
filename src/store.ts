@@ -98,10 +98,20 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Colleges"],
     }),
+    getCollegeAnalytics: build.query({
+      query: ({ baseUrl, id }) => ({ url: `${baseUrl}/api/admin/colleges/${id}/analytics` }),
+      providesTags: (_res, _err, { id }) => [{ type: "Colleges", id }, "Branches", "Sessions", "Leads"],
+    }),
 
     // Branches
     getBranches: build.query({
-      query: (baseUrl) => ({ url: `${baseUrl}/api/admin/branches` }),
+      query: (arg) => {
+        const baseUrl = typeof arg === "string" ? arg : arg.baseUrl;
+        const collegeId = typeof arg === "object" ? arg.collegeId : undefined;
+        return {
+          url: `${baseUrl}/api/admin/branches${collegeId ? `?collegeId=${collegeId}` : ""}`,
+        };
+      },
       providesTags: ["Branches"],
     }),
     createBranch: build.mutation({
@@ -457,6 +467,7 @@ export const {
   useDeactivateStudentMutation,
   // Colleges
   useGetCollegesQuery,
+  useGetCollegeAnalyticsQuery,
   useCreateCollegeMutation,
   useUpdateCollegeMutation,
   // Branches
