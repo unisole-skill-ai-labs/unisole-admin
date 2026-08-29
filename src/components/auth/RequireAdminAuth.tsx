@@ -22,18 +22,32 @@ export default function RequireAdminAuth() {
       headers: { Authorization: `Bearer ${token}` },
     })
       .then((response) => {
-        if (!response.ok) throw new Error("Unauthorized");
+        if (response.status === 401 || response.status === 403) {
+          if (!cancelled) {
+            dispatch(logout());
+            setAuthChecked(true);
+          }
+          return null;
+        }
+        if (!response.ok) {
+          // Other status (e.g. 500 / 502 / restarting) - keep local session intact
+          if (!cancelled) setAuthChecked(true);
+          return null;
+        }
         return response.json();
       })
-      .then((user) => {
-        if (!cancelled && !["SUPER_ADMIN", "ADMIN", "MEMBER"].includes(user.role)) {
+      .then((resData) => {
+        if (!resData || cancelled) return;
+        const user = resData.data || resData;
+        const role = user?.role;
+        if (role && !["SUPER_ADMIN", "ADMIN", "MEMBER"].includes(role)) {
           dispatch(logout());
         }
-        if (!cancelled) setAuthChecked(true);
+        setAuthChecked(true);
       })
       .catch(() => {
+        // Network failure / temporary connection hiccup -> DO NOT log out, keep session valid!
         if (!cancelled) {
-          dispatch(logout());
           setAuthChecked(true);
         }
       });
