@@ -25,6 +25,10 @@ import {
   FileText,
   HelpCircle,
   Zap,
+  UserX,
+  UserCheck,
+  Search,
+  ShieldAlert,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
@@ -41,6 +45,10 @@ export default function LiveProjectorPage() {
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [buildStep, setBuildStep] = useState(0);
   const [attendeeCount, setAttendeeCount] = useState(0);
+  const [attendees, setAttendees] = useState<any[]>([]);
+  const [attendeesDrawerOpen, setAttendeesDrawerOpen] = useState(false);
+  const [attendeeSearch, setAttendeeSearch] = useState("");
+  const [joinToast, setJoinToast] = useState<{ name: string; id: string } | null>(null);
   const [notesOpen, setNotesOpen] = useState(false);
   const [quizState, setQuizState] = useState<any>({
     isQuizActive: false,
@@ -112,6 +120,9 @@ export default function LiveProjectorPage() {
       if (typeof state.attendeeCount === "number") {
         setAttendeeCount(state.attendeeCount);
       }
+      if (Array.isArray(state.attendees)) {
+        setAttendees(state.attendees);
+      }
       if (state.quizState) {
         setQuizState(state.quizState);
       }
@@ -122,6 +133,27 @@ export default function LiveProjectorPage() {
 
     socket.on("attendee_count", ({ count }) => {
       setAttendeeCount(count);
+    });
+
+    socket.on("attendee_joined", ({ attendee, attendees: list, count }) => {
+      setAttendeeCount(count);
+      if (list) setAttendees(list);
+      if (attendee?.name) {
+        setJoinToast({ name: attendee.name, id: attendee.leadId || Math.random().toString() });
+        setTimeout(() => {
+          setJoinToast((prev) => (prev?.id === attendee.leadId ? null : prev));
+        }, 4000);
+      }
+    });
+
+    socket.on("attendee_left", ({ attendees: list, count }) => {
+      setAttendeeCount(count);
+      if (list) setAttendees(list);
+    });
+
+    socket.on("attendee_kicked", ({ attendees: list, count }) => {
+      setAttendeeCount(count);
+      if (list) setAttendees(list);
     });
 
     socket.on("slide_updated", ({ slideIndex, buildStep: bStep, quizState }) => {
@@ -308,6 +340,17 @@ export default function LiveProjectorPage() {
     });
   }, [currentSlide, session?.sessionCode]);
 
+  const handleKickAttendee = useCallback(
+    (leadId: string) => {
+      if (!socketRef.current || !session?.sessionCode) return;
+      socketRef.current.emit("admin:kick_attendee", {
+        sessionCode: session.sessionCode,
+        leadId,
+      });
+    },
+    [session?.sessionCode]
+  );
+
   const handleShowLeaderboard = useCallback(() => {
     if (!socketRef.current || !session?.sessionCode) return;
     socketRef.current.emit("admin:show_leaderboard", {
@@ -354,6 +397,9 @@ export default function LiveProjectorPage() {
       } else if (e.key === "n" || e.key === "N") {
         e.preventDefault();
         setNotesOpen((prev) => !prev);
+      } else if (e.key === "u" || e.key === "U") {
+        e.preventDefault();
+        setAttendeesDrawerOpen((prev) => !prev);
       } else if (e.key === "f" || e.key === "F") {
         e.preventDefault();
         handleToggleFullscreen();
@@ -440,13 +486,20 @@ export default function LiveProjectorPage() {
           </div>
         </div>
 
-        {/* Center: Live Audience Connection Badge */}
+        {/* Center: Live Audience Connection Badge with Drawer Trigger */}
         <div className="flex items-center gap-3">
-          <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-bold shadow-lg shadow-emerald-500/10">
+          <button
+            onClick={() => setAttendeesDrawerOpen(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 hover:border-emerald-500/50 text-emerald-400 text-xs font-bold shadow-lg shadow-emerald-500/10 cursor-pointer transition-all"
+            title="View Joined Students / Manage Attendees (U)"
+          >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
             <Users className="w-3.5 h-3.5" />
             <span>{attendeeCount} Students Live</span>
-          </div>
+            <span className="text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded font-mono text-emerald-300">
+              U
+            </span>
+          </button>
 
           <button
             onClick={() => setQrModalOpen(true)}
@@ -709,6 +762,7 @@ export default function LiveProjectorPage() {
         {/* Right: Shortcuts Guide Tooltip */}
         <div className="hidden md:flex items-center gap-3 text-[11px] font-mono text-zinc-400">
           <span>[Space/→] Step</span>
+          <span>[U] Attendees</span>
           <span>[N] Notes</span>
           <span>[Q] Start</span>
           <span>[R] Reveal</span>
@@ -716,6 +770,142 @@ export default function LiveProjectorPage() {
           <span>[F] Fullscreen</span>
         </div>
       </footer>
+
+      {/* Real-Time Member Joined Notification Toast */}
+      {joinToast && (
+        <div className="fixed bottom-20 left-6 z-50 animate-bounce">
+          <div className="flex items-center gap-3 px-4 py-2.5 rounded-2xl bg-emerald-950/90 border border-emerald-500/50 text-emerald-100 shadow-2xl backdrop-blur-xl">
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/20 flex items-center justify-center text-emerald-400 font-bold shrink-0">
+              <UserCheck className="w-4 h-4" />
+            </div>
+            <div className="text-xs">
+              <span className="font-bold text-white block">{joinToast.name}</span>
+              <span className="text-[11px] text-emerald-300">just joined the presentation</span>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Joined Attendees Drawer (Key 'U') */}
+      {attendeesDrawerOpen && (
+        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end animate-fade-in">
+          <div className="w-full max-w-md bg-zinc-950 border-l border-white/10 h-full p-6 flex flex-col shadow-2xl space-y-4">
+            {/* Header */}
+            <div className="flex items-center justify-between pb-3 border-b border-white/10">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-indigo-500/20 text-indigo-400">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-base text-white">Joined Students</h3>
+                  <p className="text-xs text-zinc-400">
+                    {attendees.length} active attendee{attendees.length === 1 ? "" : "s"}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAttendeesDrawerOpen(false)}
+                className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Search Input */}
+            <div className="relative">
+              <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search by student name or phone..."
+                value={attendeeSearch}
+                onChange={(e) => setAttendeeSearch(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-white/5 border border-white/10 rounded-2xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
+              />
+            </div>
+
+            {/* Attendees List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {attendees
+                .filter(
+                  (att: any) =>
+                    !attendeeSearch ||
+                    att.name?.toLowerCase().includes(attendeeSearch.toLowerCase()) ||
+                    att.phone?.includes(attendeeSearch)
+                )
+                .length === 0 ? (
+                <div className="text-center py-12 space-y-2 text-zinc-500">
+                  <Users className="w-8 h-8 mx-auto opacity-40" />
+                  <p className="text-xs">No matching students found</p>
+                </div>
+              ) : (
+                attendees
+                  .filter(
+                    (att: any) =>
+                      !attendeeSearch ||
+                      att.name?.toLowerCase().includes(attendeeSearch.toLowerCase()) ||
+                      att.phone?.includes(attendeeSearch)
+                  )
+                  .map((att: any, idx: number) => {
+                    const initials = att.name
+                      ? att.name
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")
+                          .substring(0, 2)
+                          .toUpperCase()
+                      : "ST";
+
+                    return (
+                      <div
+                        key={att.leadId || idx}
+                        className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-3 hover:border-white/20 transition-all shadow-sm"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* Avatar */}
+                          <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-xs shrink-0 shadow">
+                            {initials}
+                          </div>
+                          {/* Details */}
+                          <div className="min-w-0">
+                            <h4 className="font-bold text-xs text-zinc-100 truncate">
+                              {att.name || "Anonymous Student"}
+                            </h4>
+                            <p className="text-[10px] font-mono text-zinc-400 truncate">
+                              {att.phone || "No phone"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Score Badge */}
+                          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            {att.totalScore ?? 0} pts
+                          </span>
+
+                          {/* Kick Button */}
+                          <button
+                            onClick={() => handleKickAttendee(att.leadId)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/30 text-[11px] font-bold transition-all cursor-pointer"
+                            title={`Kick ${att.name || "student"} from session`}
+                          >
+                            <UserX className="w-3.5 h-3.5" />
+                            <span>Kick</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+
+            {/* Footer Summary */}
+            <div className="pt-3 border-t border-white/10 flex items-center justify-between text-xs text-zinc-400">
+              <span>Press <strong className="text-zinc-200">U</strong> or click outside to close</span>
+              <span>Total: {attendees.length}</span>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* QR Code Enlarged Modal */}
       <Modal
