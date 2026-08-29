@@ -249,6 +249,21 @@ export default function TasksPage() {
     }
   };
 
+  const handleEditTask = async (taskId: string, updates: any) => {
+    try {
+      const res = await updateTask({
+        baseUrl,
+        id: taskId,
+        body: updates,
+      }).unwrap();
+      if (selectedTask?.id === taskId) {
+        setSelectedTask(res.data);
+      }
+    } catch (err: any) {
+      alert(err?.data?.error || "Failed to update task details");
+    }
+  };
+
   const handleDeleteTask = async (taskId: string) => {
     try {
       await deleteTask({ baseUrl, id: taskId }).unwrap();
@@ -484,6 +499,7 @@ export default function TasksPage() {
         onReviewTask={handleReviewTask}
         onAddComment={handleAddComment}
         onDeleteTask={handleDeleteTask}
+        onEditTask={handleEditTask}
       />
 
       <TaskCreateModal

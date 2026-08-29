@@ -34,7 +34,7 @@ export default function LoginPage() {
 
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/dashboard", { replace: true });
+      navigate("/tasks", { replace: true });
     }
   }, [isAuthenticated, navigate]);
 
@@ -89,8 +89,8 @@ export default function LoginPage() {
         throw new Error(data.message || data.error || `HTTP ${res.status}`);
       }
 
-      if (data.user?.role !== "ADMIN") {
-        throw new Error("Access denied. Administrator privileges required.");
+      if (!["SUPER_ADMIN", "ADMIN", "MEMBER"].includes(data.user?.role)) {
+        throw new Error("Access denied. Internal staff privileges required.");
       }
 
       dispatch(setCredentials({ token: data.token, user: data.user }));
@@ -99,6 +99,11 @@ export default function LoginPage() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleQuickSelect = (phoneNumber: string) => {
+    setPhone(`+91${phoneNumber}`);
+    setOtp("1234");
   };
 
   return (
@@ -126,7 +131,7 @@ export default function LoginPage() {
             Unisole Admin Console
           </h1>
           <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-            Secure administrative and operations gateway
+            Operations, Team Management & Platform Console
           </p>
         </div>
 
@@ -135,42 +140,70 @@ export default function LoginPage() {
           <div className="flex items-center gap-2">
             <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
             <span>
-              OTP Service in Mock Mode &bull; Default OTP: <strong>1234</strong>
+              Mock OTP Mode Active &bull; Default OTP: <strong>1234</strong>
             </span>
           </div>
-          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-amber-500/20 text-amber-700 dark:text-amber-300 font-bold">
-            1234
-          </span>
         </div>
 
-        {error && (
-          <div className="mb-4 p-3 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 text-xs text-rose-700 dark:text-rose-400 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0" />
-            <span>{error}</span>
+        {/* Quick Demo Profile Chips */}
+        {step === "phone" && (
+          <div className="mb-5 p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800">
+            <span className="text-[10px] font-mono uppercase font-bold text-zinc-400 block mb-2">
+              ⚡ 1-Click Demo Profiles:
+            </span>
+            <div className="grid grid-cols-2 gap-1.5 text-left">
+              <button
+                type="button"
+                onClick={() => handleQuickSelect("9876543210")}
+                className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-amber-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span className="font-bold truncate">Girish (Super)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickSelect("9816012345")}
+                className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-amber-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span className="w-2 h-2 rounded-full bg-amber-500" />
+                <span className="font-bold truncate">Ajay Mokta (Super)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickSelect("9811122233")}
+                className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-indigo-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span className="w-2 h-2 rounded-full bg-indigo-500" />
+                <span className="font-bold truncate">Priya (Admin)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleQuickSelect("9844455566")}
+                className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-emerald-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                <span className="font-bold truncate">Sneha (Member)</span>
+              </button>
+            </div>
           </div>
         )}
 
-        {devOtp && step === "otp" && (
-          <button
-            type="button"
-            onClick={() => setOtp(devOtp)}
-            className="w-full mb-4 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 text-xs text-amber-800 dark:text-amber-300 flex items-center justify-between text-left font-mono cursor-pointer"
-          >
-            <span className="flex items-center gap-1.5">
-              <KeyRound className="w-3.5 h-3.5" />
-              Default OTP: <strong>{devOtp}</strong>
-            </span>
-            <span className="text-[10px] uppercase font-bold text-amber-600 dark:text-amber-400 underline">
-              Click to Auto-fill
-            </span>
-          </button>
+        {/* Error Message */}
+        {error && (
+          <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{error}</span>
+          </div>
         )}
 
         {step === "phone" ? (
           <form onSubmit={handleSendOtp} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                Admin Mobile Number
+                Staff Mobile Number
               </label>
               <div className="relative">
                 <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1 border-r border-zinc-200 dark:border-zinc-800 pr-2 font-mono">
@@ -186,9 +219,6 @@ export default function LoginPage() {
                   className="w-full pl-20 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono font-bold"
                 />
               </div>
-              <small className="block mt-1 text-[11px] text-zinc-400 font-mono">
-                Master admin: +91 9876543210 (Default OTP: 1234)
-              </small>
             </div>
 
             <Button
@@ -230,7 +260,7 @@ export default function LoginPage() {
                 className="text-center font-mono text-lg tracking-widest"
               />
               <small className="block mt-1 text-[11px] text-zinc-400 font-mono">
-                Enter default code <strong>1234</strong> sent to {phone}
+                Enter code <strong>1234</strong> for {phone}
               </small>
             </div>
 
@@ -242,7 +272,7 @@ export default function LoginPage() {
               loading={loading}
               disabled={!otp}
             >
-              Verify & Sign In to Admin
+              Verify & Sign In
             </Button>
 
             <Button

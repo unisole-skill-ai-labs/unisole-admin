@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Clock,
@@ -14,6 +14,8 @@ import {
   Sparkles,
   ShieldCheck,
   RotateCcw,
+  Edit2,
+  Save,
 } from "lucide-react";
 import Button from "../ui/Button";
 
@@ -32,6 +34,7 @@ interface TaskDrawerProps {
   onReviewTask: (taskId: string, decision: "APPROVED" | "CHANGES_REQUESTED", notes?: string) => void;
   onAddComment: (taskId: string, content: string) => void;
   onDeleteTask: (taskId: string) => void;
+  onEditTask?: (taskId: string, updates: any) => void;
 }
 
 export default function TaskDrawer({
@@ -49,9 +52,28 @@ export default function TaskDrawer({
   onReviewTask,
   onAddComment,
   onDeleteTask,
+  onEditTask,
 }: TaskDrawerProps) {
   if (!task) return null;
 
+  const isLeader = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
+  const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
+
+  // Edit Mode state
+  const [isEditing, setIsEditing] = useState(false);
+  const [editTitle, setEditTitle] = useState(task.title || "");
+  const [editDesc, setEditDesc] = useState(task.description || "");
+  const [editPriority, setEditPriority] = useState(task.priority || "MEDIUM");
+  const [editAssigneeId, setEditAssigneeId] = useState(task.assigneeId || "");
+  const [editDeptId, setEditDeptId] = useState(task.departmentId || "");
+  const [editDueDate, setEditDueDate] = useState(
+    task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : ""
+  );
+  const [editEstHours, setEditEstHours] = useState(task.estimatedHours || 2);
+  const [editEntityType, setEditEntityType] = useState(task.relatedEntityType || "");
+  const [editEntityName, setEditEntityName] = useState(task.relatedEntityName || "");
+
+  // Interactive inputs state
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [commentText, setCommentText] = useState("");
   const [proofInput, setProofInput] = useState(task.submissionProofUrl || "");
@@ -60,8 +82,40 @@ export default function TaskDrawer({
   const [blockerReason, setBlockerReason] = useState(task.blockedReason || "");
   const [showBlockerInput, setShowBlockerInput] = useState(false);
 
-  const isLeader = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
-  const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
+  useEffect(() => {
+    setEditTitle(task.title || "");
+    setEditDesc(task.description || "");
+    setEditPriority(task.priority || "MEDIUM");
+    setEditAssigneeId(task.assigneeId || "");
+    setEditDeptId(task.departmentId || "");
+    setEditDueDate(
+      task.dueDate ? new Date(task.dueDate).toISOString().slice(0, 16) : ""
+    );
+    setEditEstHours(task.estimatedHours || 2);
+    setEditEntityType(task.relatedEntityType || "");
+    setEditEntityName(task.relatedEntityName || "");
+    setProofInput(task.submissionProofUrl || "");
+    setProofNotes(task.submissionNotes || "");
+    setBlockerReason(task.blockedReason || "");
+    setIsEditing(false);
+  }, [task.id]);
+
+  const handleSaveEdit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTitle.trim() || !onEditTask) return;
+    onEditTask(task.id, {
+      title: editTitle.trim(),
+      description: editDesc.trim() || null,
+      priority: editPriority,
+      assigneeId: editAssigneeId || null,
+      departmentId: editDeptId || null,
+      dueDate: editDueDate ? new Date(editDueDate).toISOString() : null,
+      estimatedHours: Number(editEstHours) || 2,
+      relatedEntityType: editEntityType || null,
+      relatedEntityName: editEntityName.trim() || null,
+    });
+    setIsEditing(false);
+  };
 
   const handleAddSubtask = (e: React.FormEvent) => {
     e.preventDefault();
@@ -106,6 +160,21 @@ export default function TaskDrawer({
           <div className="flex items-center gap-2">
             {isLeader && (
               <button
+                onClick={() => setIsEditing(!isEditing)}
+                className={`p-2 rounded-xl transition-colors cursor-pointer ${
+                  isEditing
+                    ? "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center gap-1.5"
+                    : "text-zinc-500 hover:text-indigo-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                }`}
+                title="Edit Task Details"
+              >
+                <Edit2 className="w-4 h-4" />
+                {isEditing && <span>Editing</span>}
+              </button>
+            )}
+
+            {isLeader && (
+              <button
                 onClick={() => {
                   if (confirm("Are you sure you want to delete this task?")) {
                     onDeleteTask(task.id);
@@ -128,77 +197,250 @@ export default function TaskDrawer({
 
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
-          {/* Title & Status */}
-          <div>
-            <div className="flex items-center justify-between gap-3 mb-2">
-              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase font-mono tracking-wider">
-                Priority: {task.priority}
-              </span>
+          {/* EDIT FORM MODE (Super Admin / Admin) */}
+          {isEditing ? (
+            <form onSubmit={handleSaveEdit} className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/80 border border-indigo-200 dark:border-indigo-900/60 space-y-4 text-xs">
+              <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
+                <span className="font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Quick Edit Task
+                </span>
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="text-zinc-400 hover:text-zinc-600 font-bold"
+                >
+                  Cancel
+                </button>
+              </div>
 
-              {/* Status Switcher */}
-              <select
-                value={task.status}
-                onChange={(e) => onUpdateStatus(task.id, e.target.value)}
-                className="text-xs font-bold px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-              >
-                <option value="TODO">To Do</option>
-                <option value="IN_PROGRESS">In Progress</option>
-                <option value="BLOCKED">🚨 Blocked / Stuck</option>
-                <option value="SUBMITTED_FOR_REVIEW">Submitted for Review</option>
-                <option value="CHANGES_REQUESTED">Changes Requested</option>
-                <option value="COMPLETED">Completed</option>
-              </select>
+              <div>
+                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Task Title <span className="text-rose-500">*</span>
+                </label>
+                <input
+                  type="text"
+                  required
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-bold"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Description / Instructions
+                </label>
+                <textarea
+                  rows={2}
+                  value={editDesc}
+                  onChange={(e) => setEditDesc(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Assignee
+                  </label>
+                  <select
+                    value={editAssigneeId}
+                    onChange={(e) => setEditAssigneeId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                  >
+                    <option value="">Unassigned</option>
+                    {teamMembers.map((m) => (
+                      <option key={m.id} value={m.id}>
+                        {m.name || m.phone} ({m.role})
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Department
+                  </label>
+                  <select
+                    value={editDeptId}
+                    onChange={(e) => setEditDeptId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                  >
+                    <option value="">General</option>
+                    {departments.map((d) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Priority
+                  </label>
+                  <select
+                    value={editPriority}
+                    onChange={(e) => setEditPriority(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-bold"
+                  >
+                    <option value="LOW">Low</option>
+                    <option value="MEDIUM">Medium</option>
+                    <option value="HIGH">High</option>
+                    <option value="URGENT">🔴 Urgent</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Due Date
+                  </label>
+                  <input
+                    type="datetime-local"
+                    value={editDueDate}
+                    onChange={(e) => setEditDueDate(e.target.value)}
+                    className="w-full px-2 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Est. Hours
+                  </label>
+                  <input
+                    type="number"
+                    min="0.5"
+                    step="0.5"
+                    value={editEstHours}
+                    onChange={(e) => setEditEstHours(Number(e.target.value))}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Connected Entity Type
+                  </label>
+                  <select
+                    value={editEntityType}
+                    onChange={(e) => setEditEntityType(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                  >
+                    <option value="">None</option>
+                    <option value="COLLEGE">University / College</option>
+                    <option value="PATHWAY">Pathway / Course</option>
+                    <option value="PRESENTATION">Presentation Session</option>
+                    <option value="TECH">Engineering Bug / Feature</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Connected Entity Name
+                  </label>
+                  <input
+                    type="text"
+                    value={editEntityName}
+                    onChange={(e) => setEditEntityName(e.target.value)}
+                    placeholder="e.g. IIT Delhi"
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                  />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setIsEditing(false)}
+                  className="px-3 py-1.5 rounded-xl text-zinc-600 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                >
+                  Cancel
+                </button>
+                <Button type="submit" variant="primary" className="text-xs font-bold px-4">
+                  <Save className="w-3.5 h-3.5 mr-1" />
+                  Save Changes
+                </Button>
+              </div>
+            </form>
+          ) : (
+            <div>
+              <div className="flex items-center justify-between gap-3 mb-2">
+                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase font-mono tracking-wider">
+                  Priority: {task.priority}
+                </span>
+
+                {/* Status Switcher */}
+                <select
+                  value={task.status}
+                  onChange={(e) => onUpdateStatus(task.id, e.target.value)}
+                  className="text-xs font-bold px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                >
+                  <option value="TODO">To Do</option>
+                  <option value="IN_PROGRESS">In Progress</option>
+                  <option value="BLOCKED">🚨 Blocked / Stuck</option>
+                  <option value="SUBMITTED_FOR_REVIEW">Submitted for Review</option>
+                  <option value="CHANGES_REQUESTED">Changes Requested</option>
+                  <option value="COMPLETED">Completed</option>
+                </select>
+              </div>
+
+              <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 leading-snug">
+                {task.title}
+              </h2>
+
+              {task.description && (
+                <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                  {task.description}
+                </p>
+              )}
             </div>
-
-            <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 leading-snug">
-              {task.title}
-            </h2>
-
-            {task.description && (
-              <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                {task.description}
-              </p>
-            )}
-          </div>
+          )}
 
           {/* Key Metadata Grid */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 text-xs">
-            <div>
-              <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
-                Assignee
-              </span>
-              <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                {task.assigneeName || "Unassigned"}
-              </span>
-            </div>
+          {!isEditing && (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 text-xs">
+              <div>
+                <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
+                  Assignee
+                </span>
+                <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                  {task.assigneeName || "Unassigned"}
+                </span>
+              </div>
 
-            <div>
-              <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
-                Due Date
-              </span>
-              <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                {task.dueDate
-                  ? new Date(task.dueDate).toLocaleDateString("en-IN", {
-                      month: "short",
-                      day: "numeric",
-                      year: "numeric",
-                    })
-                  : "No deadline"}
-              </span>
-            </div>
+              <div>
+                <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
+                  Due Date
+                </span>
+                <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                  {task.dueDate
+                    ? new Date(task.dueDate).toLocaleDateString("en-IN", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                      })
+                    : "No deadline"}
+                </span>
+              </div>
 
-            <div>
-              <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
-                Estimated Hours
-              </span>
-              <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                {task.estimatedHours ? `${task.estimatedHours} hrs` : "N/A"}
-              </span>
+              <div>
+                <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
+                  Estimated Hours
+                </span>
+                <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                  {task.estimatedHours ? `${task.estimatedHours} hrs` : "N/A"}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
 
           {/* Linked Platform Entity */}
-          {task.relatedEntityName && (
+          {!isEditing && task.relatedEntityName && (
             <div className="p-3.5 rounded-2xl bg-indigo-50/40 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-900/60 flex items-center gap-3">
               <Link2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <div className="text-xs">
@@ -218,64 +460,84 @@ export default function TaskDrawer({
                 <span>Task is Currently Blocked</span>
               </div>
               <p className="text-xs text-rose-900 dark:text-rose-200 font-medium">
-                "{task.blockedReason || "Awaiting team support"}"
+                {task.blockedReason || "No blocker details provided."}
               </p>
+              {isLeader && (
+                <button
+                  onClick={() => onUpdateStatus(task.id, "IN_PROGRESS", "Unblocked by leadership")}
+                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-colors"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Mark as Unblocked (Resume Work)</span>
+                </button>
+              )}
             </div>
           )}
 
-          {/* 📬 Leader Review Panel (When task is Submitted for Review or Leader is reviewing) */}
-          {task.status === "SUBMITTED_FOR_REVIEW" && (
-            <div className="p-4 rounded-2xl bg-amber-50/60 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900 space-y-3">
-              <div className="flex items-center gap-2 text-amber-800 dark:text-amber-300 font-black text-xs uppercase tracking-wider">
-                <ShieldCheck className="w-4 h-4" />
-                <span>Submission Awaiting Quality Sign-off</span>
+          {/* 🚀 SUBMISSION REVIEW GATE (For Leaders & Submitters) */}
+          {task.submissionProofUrl && (
+            <div className="p-5 rounded-3xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 space-y-3">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-indigo-900 dark:text-indigo-200 uppercase font-mono tracking-wider flex items-center gap-1.5">
+                  <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                  Submission Proof & Quality Gate
+                </span>
+                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-indigo-200 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 font-bold">
+                  {task.status}
+                </span>
               </div>
 
-              {task.submissionProofUrl && (
-                <div className="text-xs flex items-center gap-2 text-zinc-700 dark:text-zinc-300">
-                  <span>Proof URL:</span>
+              {/* Proof Link Card */}
+              <div className="p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-indigo-100 dark:border-indigo-900/60 flex items-center justify-between">
+                <div className="flex items-center gap-2.5 overflow-hidden">
+                  <Link2 className="w-4 h-4 text-indigo-500 shrink-0" />
                   <a
                     href={task.submissionProofUrl}
                     target="_blank"
                     rel="noreferrer"
-                    className="text-indigo-600 dark:text-indigo-400 font-bold underline inline-flex items-center gap-1"
+                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline truncate"
                   >
-                    <span>{task.submissionProofUrl}</span>
-                    <ExternalLink className="w-3 h-3" />
+                    {task.submissionProofUrl}
                   </a>
                 </div>
-              )}
+                <a
+                  href={task.submissionProofUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-lg shrink-0"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
 
               {task.submissionNotes && (
-                <p className="text-xs text-zinc-600 dark:text-zinc-400 italic">
-                  Notes: "{task.submissionNotes}"
+                <p className="text-xs text-zinc-700 dark:text-zinc-300 italic">
+                  "{task.submissionNotes}"
                 </p>
               )}
 
-              {/* Leader Action Buttons */}
-              {isLeader && (
-                <div className="pt-2 border-t border-amber-200/80 dark:border-amber-900/60 space-y-2">
-                  <input
-                    type="text"
-                    placeholder="Optional feedback notes for the team member..."
-                    value={reviewFeedback}
-                    onChange={(e) => setReviewFeedback(e.target.value)}
-                    className="w-full px-3 py-2 text-xs rounded-xl border border-amber-300 dark:border-amber-800 bg-white dark:bg-zinc-900"
-                  />
-                  <div className="flex items-center gap-2">
+              {/* Review Decision Buttons (Leaders) */}
+              {isLeader && task.status === "SUBMITTED_FOR_REVIEW" && (
+                <div className="pt-3 border-t border-indigo-200/60 dark:border-indigo-900/60 space-y-2">
+                  <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block">
+                    Leadership Review Decision:
+                  </span>
+                  <div className="flex gap-2">
                     <Button
-                      onClick={() => onReviewTask(task.id, "APPROVED", reviewFeedback)}
+                      onClick={() => onReviewTask(task.id, "APPROVED")}
                       variant="primary"
-                      className="bg-emerald-600 hover:bg-emerald-700 text-xs font-bold"
+                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-xs font-bold shadow-xs"
                     >
-                      <CheckCircle2 className="w-3.5 h-3.5 mr-1" />
-                      Approve & Mark Complete
+                      <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                      Approve & Complete
                     </Button>
                     <button
-                      onClick={() => onReviewTask(task.id, "CHANGES_REQUESTED", reviewFeedback)}
-                      className="px-3 py-2 rounded-xl text-xs font-bold text-amber-800 dark:text-amber-300 bg-amber-100 dark:bg-amber-900/40 hover:bg-amber-200 transition-colors"
+                      onClick={() => {
+                        const note = prompt("Please enter what changes are needed:");
+                        if (note) onReviewTask(task.id, "CHANGES_REQUESTED", note);
+                      }}
+                      className="px-3.5 py-2 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 text-xs font-bold transition-colors cursor-pointer"
                     >
-                      <RotateCcw className="w-3.5 h-3.5 inline mr-1" />
                       Request Changes
                     </button>
                   </div>
@@ -284,51 +546,46 @@ export default function TaskDrawer({
             </div>
           )}
 
-          {/* SOP Subtasks Checklist */}
+          {/* 📋 SOP Checklist (Subtasks) */}
           <div className="space-y-3">
             <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 font-mono">
-                  SOP Subtasks ({task.subtasks?.length || 0})
-                </span>
-                {task.subtasks?.length > 0 && (
-                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                    {progressPercent}%
-                  </span>
-                )}
-              </div>
+              <h3 className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase font-mono tracking-wider">
+                SOP Step Checklist ({task.subtasks?.length || 0})
+              </h3>
+              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
+                {progressPercent}% Complete
+              </span>
             </div>
 
-            {/* Checklist progress bar */}
-            {task.subtasks?.length > 0 && (
-              <div className="w-full h-1.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-                <div
-                  className="h-full bg-indigo-600 rounded-full transition-all duration-300"
-                  style={{ width: `${progressPercent}%` }}
-                />
-              </div>
-            )}
+            {/* Progress Bar */}
+            <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+              <div
+                className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-300 rounded-full"
+                style={{ width: `${progressPercent}%` }}
+              />
+            </div>
 
+            {/* Items */}
             <div className="space-y-1.5">
               {task.subtasks?.map((st: any) => (
                 <div
                   key={st.id}
-                  className="flex items-center justify-between gap-2 p-2 rounded-xl hover:bg-zinc-50 dark:hover:bg-zinc-800/60 group text-xs"
+                  className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50/80 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 group hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
                 >
                   <button
                     onClick={() => onToggleSubtask(task.id, st.id, !st.isCompleted)}
-                    className="flex items-center gap-2.5 flex-1 text-left cursor-pointer"
+                    className="flex items-center gap-3 text-left flex-1 cursor-pointer"
                   >
                     {st.isCompleted ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
                     ) : (
-                      <Circle className="w-4 h-4 text-zinc-400 shrink-0" />
+                      <Circle className="w-4 h-4 text-zinc-400 shrink-0 group-hover:text-indigo-500 transition-colors" />
                     )}
                     <span
-                      className={`leading-relaxed ${
+                      className={`text-xs ${
                         st.isCompleted
-                          ? "line-through text-zinc-400 dark:text-zinc-500"
-                          : "text-zinc-800 dark:text-zinc-200"
+                          ? "line-through text-zinc-400 font-medium"
+                          : "text-zinc-800 dark:text-zinc-200 font-medium"
                       }`}
                     >
                       {st.title}
@@ -337,109 +594,86 @@ export default function TaskDrawer({
 
                   <button
                     onClick={() => onDeleteSubtask(task.id, st.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-rose-500 transition-opacity"
+                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-rose-500 transition-all cursor-pointer"
                   >
-                    <Trash2 className="w-3.5 h-3.5" />
+                    <X className="w-3.5 h-3.5" />
                   </button>
                 </div>
               ))}
             </div>
 
-            {/* Add subtask input */}
+            {/* Add Subtask Form */}
             <form onSubmit={handleAddSubtask} className="flex gap-2 pt-1">
               <input
                 type="text"
-                placeholder="+ Add next step / checklist item..."
+                placeholder="+ Add next checklist step..."
                 value={newSubtaskTitle}
                 onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950/50"
+                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-2 focus:ring-indigo-500"
               />
               <button
                 type="submit"
-                className="px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 transition-colors"
+                disabled={!newSubtaskTitle.trim()}
+                className="px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
               >
-                Add
+                Add Step
               </button>
             </form>
           </div>
 
-          {/* Member Submission Section (If not completed yet) */}
-          {task.status !== "COMPLETED" && (
-            <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200/80 dark:border-zinc-800 space-y-3">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 font-mono">
-                Submit Work for Review
-              </h4>
-              <input
-                type="url"
-                placeholder="Proof Link (Google Doc, Figma, Canva, Staging URL)..."
-                value={proofInput}
-                onChange={(e) => setProofInput(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
-              />
-              <input
-                type="text"
-                placeholder="Optional submission notes for reviewer..."
-                value={proofNotes}
-                onChange={(e) => setProofNotes(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900"
-              />
-              <Button
-                onClick={() => onSubmitProof(task.id, proofInput, proofNotes)}
-                variant="primary"
-                className="w-full text-xs font-bold"
-              >
-                <Send className="w-3.5 h-3.5 mr-1.5" />
-                Submit for Leader Review
-              </Button>
-            </div>
-          )}
+          {/* 💬 Activity Trail & Comments */}
+          <div className="space-y-3 pt-4 border-t border-zinc-200/80 dark:border-zinc-800">
+            <h3 className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase font-mono tracking-wider flex items-center gap-1.5">
+              <MessageSquare className="w-3.5 h-3.5" />
+              Activity & Comments
+            </h3>
 
-          {/* Comments & Activity Log */}
-          <div className="space-y-3 pt-2">
-            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-900 dark:text-zinc-100 font-mono flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-zinc-400" />
-              <span>Activity & Comments ({task.comments?.length || 0})</span>
-            </h4>
-
-            <div className="space-y-2.5 max-h-60 overflow-y-auto pr-1">
-              {task.comments?.map((c: any) => (
-                <div
-                  key={c.id}
-                  className="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/80 text-xs"
-                >
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="font-bold text-zinc-900 dark:text-zinc-200">
-                      {c.userName || "Team Member"}
-                    </span>
-                    <span className="text-[10px] text-zinc-400">
-                      {new Date(c.createdAt).toLocaleTimeString([], {
-                        hour: "2-digit",
-                        minute: "2-digit",
-                      })}
-                    </span>
+            <div className="space-y-2.5 max-h-48 overflow-y-auto">
+              {task.comments?.length === 0 ? (
+                <p className="text-xs text-zinc-400 italic">No comments or activity yet.</p>
+              ) : (
+                task.comments?.map((c: any) => (
+                  <div
+                    key={c.id}
+                    className="p-3 rounded-2xl bg-zinc-50/60 dark:bg-zinc-950/40 border border-zinc-100 dark:border-zinc-800/80 text-xs"
+                  >
+                    <div className="flex items-center justify-between mb-1">
+                      <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                        {c.userName || "Team Member"}
+                      </span>
+                      <span className="text-[10px] text-zinc-400 font-mono">
+                        {new Date(c.createdAt).toLocaleTimeString([], {
+                          hour: "2-digit",
+                          minute: "2-digit",
+                        })}
+                      </span>
+                    </div>
+                    <p className="text-zinc-600 dark:text-zinc-300 whitespace-pre-wrap">
+                      {c.content}
+                    </p>
                   </div>
-                  <p className="text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
-                    {c.content}
-                  </p>
-                </div>
-              ))}
+                ))
+              )}
             </div>
 
-            {/* Post comment */}
+            {/* Add Comment Input */}
             <form onSubmit={handleAddComment} className="flex gap-2">
               <input
                 type="text"
-                placeholder="Write a comment or note..."
+                placeholder="Post an update or comment..."
                 value={commentText}
                 onChange={(e) => setCommentText(e.target.value)}
-                className="flex-1 px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900"
+                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-2 focus:ring-indigo-500"
               />
-              <button
+              <Button
                 type="submit"
-                className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors cursor-pointer"
+                variant="primary"
+                size="sm"
+                disabled={!commentText.trim()}
+                className="text-xs"
               >
-                Send
-              </button>
+                <Send className="w-3.5 h-3.5" />
+              </Button>
             </form>
           </div>
         </div>

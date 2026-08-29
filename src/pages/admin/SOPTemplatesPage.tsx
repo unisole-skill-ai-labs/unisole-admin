@@ -4,6 +4,8 @@ import {
   useGetTemplatesQuery,
   useGetDepartmentsQuery,
   useCreateTemplateMutation,
+  useUpdateTemplateMutation,
+  useDeleteTemplateMutation,
 } from "../../store";
 import {
   FileCheck2,
@@ -14,6 +16,8 @@ import {
   X,
   Layers,
   CheckCircle2,
+  Edit2,
+  Trash2,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 
@@ -21,11 +25,13 @@ export default function SOPTemplatesPage() {
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
   const currentUser = useSelector((s: any) => s.auth.user);
   const isLeader = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
+  const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
 
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [editingTemplate, setEditingTemplate] = useState<any | null>(null);
 
-  // New Template Form State
+  // Form State (Shared for Create / Edit)
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [departmentId, setDepartmentId] = useState("");
@@ -44,6 +50,39 @@ export default function SOPTemplatesPage() {
   const templates = templatesRes?.data || [];
 
   const [createTemplate] = useCreateTemplateMutation();
+  const [updateTemplate] = useUpdateTemplateMutation();
+  const [deleteTemplate] = useDeleteTemplateMutation();
+
+  const handleOpenCreate = () => {
+    setEditingTemplate(null);
+    setTitle("");
+    setDescription("");
+    setDepartmentId("");
+    setEstimatedHours(2);
+    setGuidelinesUrl("");
+    setChecklistItems([]);
+    setIsCreateOpen(true);
+  };
+
+  const handleOpenEdit = (tmpl: any) => {
+    setEditingTemplate(tmpl);
+    setTitle(tmpl.title || "");
+    setDescription(tmpl.description || "");
+    setDepartmentId(tmpl.departmentId || "");
+    setEstimatedHours(tmpl.estimatedHours || 2);
+    setGuidelinesUrl(tmpl.guidelinesUrl || "");
+    setChecklistItems(Array.isArray(tmpl.defaultChecklist) ? tmpl.defaultChecklist : []);
+    setIsCreateOpen(true);
+  };
+
+  const handleDelete = async (tmplId: string) => {
+    if (!confirm("Are you sure you want to delete this SOP Template?")) return;
+    try {
+      await deleteTemplate({ baseUrl, id: tmplId }).unwrap();
+    } catch (err: any) {
+      alert(err?.data?.error || "Failed to delete template");
+    }
+  };
 
   const handleAddStep = (e: React.FormEvent) => {
     e.preventDefault();
@@ -56,29 +95,42 @@ export default function SOPTemplatesPage() {
     setChecklistItems(checklistItems.filter((_, i) => i !== idx));
   };
 
-  const handleCreate = async (e: React.FormEvent) => {
+  const handleSave = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!title.trim()) return;
 
     try {
-      await createTemplate({
-        baseUrl,
-        body: {
-          title: title.trim(),
-          description: description.trim() || undefined,
-          departmentId: departmentId || undefined,
-          defaultChecklist: checklistItems,
-          guidelinesUrl: guidelinesUrl.trim() || undefined,
-          estimatedHours: Number(estimatedHours) || 2,
-        },
-      }).unwrap();
+      if (editingTemplate) {
+        await updateTemplate({
+          baseUrl,
+          id: editingTemplate.id,
+          body: {
+            title: title.trim(),
+            description: description.trim() || null,
+            departmentId: departmentId || null,
+            defaultChecklist: checklistItems,
+            guidelinesUrl: guidelinesUrl.trim() || null,
+            estimatedHours: Number(estimatedHours) || 2,
+          },
+        }).unwrap();
+      } else {
+        await createTemplate({
+          baseUrl,
+          body: {
+            title: title.trim(),
+            description: description.trim() || undefined,
+            departmentId: departmentId || undefined,
+            defaultChecklist: checklistItems,
+            guidelinesUrl: guidelinesUrl.trim() || undefined,
+            estimatedHours: Number(estimatedHours) || 2,
+          },
+        }).unwrap();
+      }
 
       setIsCreateOpen(false);
-      setTitle("");
-      setDescription("");
-      setChecklistItems([]);
+      setEditingTemplate(null);
     } catch (err: any) {
-      alert(err?.data?.error || "Failed to create SOP template");
+      alert(err?.data?.error || "Failed to save SOP template");
     }
   };
 
@@ -100,7 +152,7 @@ export default function SOPTemplatesPage() {
 
         {isLeader && (
           <Button
-            onClick={() => setIsCreateOpen(true)}
+            onClick={handleOpenCreate}
             variant="primary"
             className="flex items-center gap-2 text-xs font-black shadow-md shadow-indigo-600/20"
           >
@@ -111,10 +163,10 @@ export default function SOPTemplatesPage() {
       </div>
 
       {/* Filter by Department */}
-      <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => setDepartmentFilter("")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
             !departmentFilter
               ? "bg-indigo-600 text-white"
               : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100"
@@ -126,7 +178,7 @@ export default function SOPTemplatesPage() {
           <button
             key={dept.id}
             onClick={() => setDepartmentFilter(dept.id)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
               departmentFilter === dept.id
                 ? "bg-indigo-600 text-white"
                 : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100"
@@ -155,7 +207,7 @@ export default function SOPTemplatesPage() {
                 className="p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
               >
                 <div>
-                  {/* Top: Dept Pill & Est. Time */}
+                  {/* Top: Dept Pill, Est. Time & Edit/Delete for Super Admin */}
                   <div className="flex items-center justify-between mb-3">
                     <span
                       className="px-2.5 py-0.5 rounded-md text-[10px] font-bold"
@@ -167,9 +219,31 @@ export default function SOPTemplatesPage() {
                       {tmpl.departmentName || "General Operations"}
                     </span>
 
-                    <div className="flex items-center gap-1 text-[11px] text-zinc-500">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>~{tmpl.estimatedHours || 2} hours</span>
+                    <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1 text-[11px] text-zinc-500">
+                        <Clock className="w-3.5 h-3.5" />
+                        <span>~{tmpl.estimatedHours || 2}h</span>
+                      </div>
+
+                      {isLeader && (
+                        <button
+                          onClick={() => handleOpenEdit(tmpl)}
+                          className="p-1 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                          title="Edit SOP"
+                        >
+                          <Edit2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+
+                      {isSuperAdmin && (
+                        <button
+                          onClick={() => handleDelete(tmpl.id)}
+                          className="p-1 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                          title="Delete SOP"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      )}
                     </div>
                   </div>
 
@@ -219,13 +293,13 @@ export default function SOPTemplatesPage() {
         )}
       </div>
 
-      {/* Create SOP Template Modal */}
+      {/* Create / Edit SOP Template Modal */}
       {isCreateOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
           <div className="w-full max-w-lg bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100">
-                Create Standard Operating Procedure (SOP)
+                {editingTemplate ? "Edit SOP Template" : "Create Standard Operating Procedure"}
               </h3>
               <button
                 onClick={() => setIsCreateOpen(false)}
@@ -235,7 +309,7 @@ export default function SOPTemplatesPage() {
               </button>
             </div>
 
-            <form onSubmit={handleCreate} className="space-y-3.5 text-xs">
+            <form onSubmit={handleSave} className="space-y-3.5 text-xs">
               <div>
                 <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
                   SOP Title <span className="text-rose-500">*</span>
@@ -349,7 +423,7 @@ export default function SOPTemplatesPage() {
                   Cancel
                 </button>
                 <Button type="submit" variant="primary">
-                  Save Template
+                  {editingTemplate ? "Save Changes" : "Save Template"}
                 </Button>
               </div>
             </form>

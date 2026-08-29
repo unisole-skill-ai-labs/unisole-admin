@@ -568,13 +568,28 @@ export const adminApi = createApi({
       }),
       providesTags: ["TeamMembers"],
     }),
+    createTeamMember: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/team/members`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["TeamMembers", "LeaderRadar", "Departments"],
+    }),
     updateTeamMember: build.mutation({
       query: ({ baseUrl, id, body }) => ({
         url: `${baseUrl}/api/admin/team/members/${id}`,
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["TeamMembers", "LeaderRadar"],
+      invalidatesTags: ["TeamMembers", "LeaderRadar", "Departments"],
+    }),
+    deleteTeamMember: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/team/members/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["TeamMembers", "LeaderRadar", "Departments"],
     }),
     getDepartments: build.query({
       query: (baseUrl) => ({
@@ -590,6 +605,21 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Departments"],
     }),
+    updateDepartment: build.mutation({
+      query: ({ baseUrl, id, body }) => ({
+        url: `${baseUrl}/api/admin/team/departments/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Departments", "TeamMembers"],
+    }),
+    deleteDepartment: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/team/departments/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Departments", "TeamMembers"],
+    }),
     getTemplates: build.query({
       query: ({ baseUrl, departmentId }) => ({
         url: `${baseUrl}/api/admin/templates`,
@@ -602,6 +632,21 @@ export const adminApi = createApi({
         url: `${baseUrl}/api/admin/templates`,
         method: "POST",
         body,
+      }),
+      invalidatesTags: ["Templates"],
+    }),
+    updateTemplate: build.mutation({
+      query: ({ baseUrl, id, body }) => ({
+        url: `${baseUrl}/api/admin/templates/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Templates"],
+    }),
+    deleteTemplate: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/templates/${id}`,
+        method: "DELETE",
       }),
       invalidatesTags: ["Templates"],
     }),
@@ -704,11 +749,17 @@ export const {
   useAddTaskCommentMutation,
   useGetLeaderRadarQuery,
   useGetTeamMembersQuery,
+  useCreateTeamMemberMutation,
   useUpdateTeamMemberMutation,
+  useDeleteTeamMemberMutation,
   useGetDepartmentsQuery,
   useCreateDepartmentMutation,
+  useUpdateDepartmentMutation,
+  useDeleteDepartmentMutation,
   useGetTemplatesQuery,
   useCreateTemplateMutation,
+  useUpdateTemplateMutation,
+  useDeleteTemplateMutation,
   useGetDailyLogsQuery,
   useSubmitDailyLogMutation,
 } = adminApi;
