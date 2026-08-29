@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useRef } from "react";
 import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { setBaseUrl } from "../../store";
 import { logout } from "../../store/auth-slice";
 import { useTheme } from "../../context/ThemeContext";
 import {
@@ -13,7 +12,6 @@ import {
   CreditCard,
   LogOut,
   Shield,
-  Server,
   Sun,
   Moon,
   Menu,
@@ -22,22 +20,18 @@ import {
   CheckCircle2,
   AlertCircle,
   Sparkles,
-  Settings,
 } from "lucide-react";
-import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 
 export default function AdminShell() {
-  const baseUrl = useSelector((s: any) => s.settings.baseUrl);
+  const baseUrl = useSelector((s: any) => s.settings?.baseUrl || import.meta.env.VITE_API_BASE_URL || "http://localhost:3000");
   const user = useSelector((s: any) => s.auth.user);
   const dispatch = useDispatch();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
 
-  const [baseInput, setBaseInput] = useState(baseUrl);
   const [health, setHealth] = useState<{ ok: boolean; data?: any; error?: string } | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
-  const [urlModalOpen, setUrlModalOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
 
@@ -81,13 +75,6 @@ export default function AdminShell() {
     };
   }, [baseUrl]);
 
-  const handleUpdateUrl = (e: React.FormEvent) => {
-    e.preventDefault();
-    const cleanUrl = baseInput.trim().replace(/\/+$/, "") || "http://localhost:3000";
-    dispatch(setBaseUrl(cleanUrl));
-    setUrlModalOpen(false);
-  };
-
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground antialiased transition-colors duration-200">
       {/* Topbar Header */}
@@ -119,9 +106,7 @@ export default function AdminShell() {
 
           {/* Engine Health Indicator */}
           <div
-            onClick={() => setUrlModalOpen(true)}
-            className="cursor-pointer ml-2 hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold border transition-all hover:scale-102 bg-zinc-50 dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800"
-            title="Click to configure backend API base URL"
+            className="ml-2 hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold border bg-zinc-50 dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800"
           >
             <span
               className={`w-2 h-2 rounded-full ${
@@ -138,19 +123,8 @@ export default function AdminShell() {
           </div>
         </div>
 
-        {/* Right: API URL, Theme Toggle, Admin User Profile */}
+        {/* Right: Theme Toggle, Admin User Profile */}
         <div className="flex items-center gap-2.5">
-          {/* API URL Config Button */}
-          <button
-            onClick={() => setUrlModalOpen(true)}
-            className="hidden md:flex items-center gap-2 px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-900 hover:bg-zinc-200/70 dark:hover:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-400 border border-zinc-200/60 dark:border-zinc-800 transition-colors font-mono"
-            title="Configure Backend API URL"
-          >
-            <Server className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="max-w-[130px] truncate">{baseUrl}</span>
-            <Settings className="w-3 h-3 text-zinc-400" />
-          </button>
-
           {/* Theme Switcher */}
           <button
             onClick={toggleTheme}
@@ -196,26 +170,13 @@ export default function AdminShell() {
                   </span>
                 </div>
 
-                <div className="py-1">
-                  <button
-                    onClick={() => {
-                      setProfileOpen(false);
-                      setUrlModalOpen(true);
-                    }}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors text-left"
-                  >
-                    <Server className="w-4 h-4 text-indigo-500" />
-                    <span>API Endpoint Settings</span>
-                  </button>
-                </div>
-
                 <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800">
                   <button
                     onClick={() => dispatch(logout())}
                     className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors text-left"
                   >
                     <LogOut className="w-4 h-4" />
-                    <span>Sign Out</span>
+                    <span>Logout</span>
                   </button>
                 </div>
               </div>
@@ -360,54 +321,6 @@ export default function AdminShell() {
           </div>
         </main>
       </div>
-
-      {/* Backend API Base URL Config Modal */}
-      <Modal
-        isOpen={urlModalOpen}
-        onClose={() => setUrlModalOpen(false)}
-        title="Configure Backend Engine Endpoint"
-      >
-        <form onSubmit={handleUpdateUrl} className="space-y-4">
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-            Update the REST API endpoint used by this admin console to communicate with the Unisole Engine.
-          </p>
-
-          <div>
-            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-              API Base URL
-            </label>
-            <input
-              type="url"
-              value={baseInput}
-              onChange={(e) => setBaseInput(e.target.value)}
-              placeholder="http://localhost:3000"
-              required
-              className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm font-mono text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
-            />
-          </div>
-
-          <div className="flex items-center justify-between text-xs text-zinc-500 pt-1">
-            <span>Status:</span>
-            <span className={`font-mono font-bold ${health?.ok ? "text-emerald-500" : "text-rose-500"}`}>
-              {health?.ok ? "Live & Reachable" : "Unreachable / Offline"}
-            </span>
-          </div>
-
-          <div className="pt-2 flex items-center justify-end gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              onClick={() => setUrlModalOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary" size="sm">
-              Save & Reconnect
-            </Button>
-          </div>
-        </form>
-      </Modal>
     </div>
   );
 }

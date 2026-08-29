@@ -43,6 +43,7 @@ export const adminApi = createApi({
   tagTypes: [
     "Students",
     "Colleges",
+    "Branches",
     "Categories",
     "Pathways",
     "Courses",
@@ -96,6 +97,35 @@ export const adminApi = createApi({
         body,
       }),
       invalidatesTags: ["Colleges"],
+    }),
+
+    // Branches
+    getBranches: build.query({
+      query: (baseUrl) => ({ url: `${baseUrl}/api/admin/branches` }),
+      providesTags: ["Branches"],
+    }),
+    createBranch: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/branches`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Branches"],
+    }),
+    updateBranch: build.mutation({
+      query: ({ baseUrl, id, body }) => ({
+        url: `${baseUrl}/api/admin/branches/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Branches"],
+    }),
+    deleteBranch: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/branches/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Branches"],
     }),
 
     // Categories
@@ -429,6 +459,11 @@ export const {
   useGetCollegesQuery,
   useCreateCollegeMutation,
   useUpdateCollegeMutation,
+  // Branches
+  useGetBranchesQuery,
+  useCreateBranchMutation,
+  useUpdateBranchMutation,
+  useDeleteBranchMutation,
   // Categories
   useGetCategoriesQuery,
   useCreateCategoryMutation,
