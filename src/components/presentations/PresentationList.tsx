@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
+import { io, Socket } from "socket.io-client";
 import {
   useGetPresentationsQuery,
   useCreatePresentationMutation,
@@ -24,6 +25,8 @@ import {
   ExternalLink,
   Copy,
   Check,
+  UserX,
+  Search,
 } from "lucide-react";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
@@ -57,6 +60,75 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
     joinUrl: string;
   } | null>(null);
   const [copied, setCopied] = useState(false);
+  const [attendees, setAttendees] = useState<any[]>([]);
+  const [attendeeCount, setAttendeeCount] = useState(0);
+  const [attendeeSearch, setAttendeeSearch] = useState("");
+  const socketRef = useRef<Socket | null>(null);
+
+  // Connect socket whenever launch modal is open with active session
+  useEffect(() => {
+    if (!launchModalOpen || !launchedData?.session?.sessionCode) {
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+      setAttendees([]);
+      setAttendeeCount(0);
+      return;
+    }
+
+    const socketUrl = baseUrl.replace(/\/+$/, "");
+    const socket = io(socketUrl, {
+      transports: ["websocket", "polling"],
+    });
+    socketRef.current = socket;
+
+    socket.emit("admin:join", {
+      sessionCode: launchedData.session.sessionCode,
+      sessionId: launchedData.session.id,
+    });
+
+    socket.on("sync_state", (state) => {
+      if (Array.isArray(state.attendees)) {
+        setAttendees(state.attendees);
+      }
+      if (typeof state.attendeeCount === "number") {
+        setAttendeeCount(state.attendeeCount);
+      }
+    });
+
+    socket.on("attendee_count", ({ count }) => {
+      setAttendeeCount(count);
+    });
+
+    socket.on("attendee_joined", ({ attendees: list, count }) => {
+      setAttendeeCount(count);
+      if (list) setAttendees(list);
+    });
+
+    socket.on("attendee_left", ({ attendees: list, count }) => {
+      setAttendeeCount(count);
+      if (list) setAttendees(list);
+    });
+
+    socket.on("attendee_kicked", ({ attendees: list, count }) => {
+      setAttendeeCount(count);
+      if (list) setAttendees(list);
+    });
+
+    return () => {
+      socket.disconnect();
+      socketRef.current = null;
+    };
+  }, [launchModalOpen, launchedData?.session?.sessionCode, launchedData?.session?.id, baseUrl]);
+
+  const handleKickAttendee = (leadId: string) => {
+    if (!socketRef.current || !launchedData?.session?.sessionCode) return;
+    socketRef.current.emit("admin:kick_attendee", {
+      sessionCode: launchedData.session.sessionCode,
+      leadId,
+    });
+  };
 
   const presentations = presRes?.data || [];
   const sessions = sessionsRes?.data || [];
@@ -450,6 +522,7 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
             ? "🚀 Live Session Ready to Present"
             : "Launch College Roadshow Session"
         }
+        maxWidth={launchedData ? "max-w-5xl" : "max-w-lg"}
       >
         {!launchedData ? (
           <form onSubmit={handleLaunchSession} className="space-y-4">
@@ -513,50 +586,47 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
             </div>
           </form>
         ) : (
-          <div className="space-y-5 text-center">
-            <div className="inline-block p-3 rounded-2xl bg-white shadow-lg border border-zinc-200 dark:border-zinc-700 mx-auto">
-              <img
-                src={launchedData.qrCodeDataUrl}
-                alt="Session QR Code"
-                className="w-48 h-48 rounded-xl object-contain mx-auto"
-              />
-            </div>
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+            {/* Left Panel: QR Code, Join Code & Link */}
+            <div className="lg:col-span-5 flex flex-col items-center text-center space-y-4 p-5 rounded-3xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-white/10 shadow-inner">
+              <div className="relative group">
+                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur-md opacity-30 group-hover:opacity-60 transition duration-500" />
+                <div className="relative p-3 rounded-2xl bg-white shadow-xl border border-zinc-200 dark:border-zinc-700">
+                  <img
+                    src={launchedData.qrCodeDataUrl}
+                    alt="Session QR Code"
+                    className="w-44 h-44 sm:w-52 sm:h-52 rounded-xl object-contain mx-auto"
+                  />
+                </div>
+              </div>
 
-            <div>
-              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest block mb-1">
-                Audience Session Code
-              </span>
-              <span className="text-3xl font-black text-indigo-600 dark:text-indigo-400 font-mono tracking-wider">
-                {launchedData.session.sessionCode}
-              </span>
-            </div>
+              <div className="space-y-0.5">
+                <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-widest block">
+                  Audience Session Code
+                </span>
+                <span className="text-3xl sm:text-4xl font-black text-indigo-600 dark:text-indigo-400 font-mono tracking-wider">
+                  {launchedData.session.sessionCode}
+                </span>
+              </div>
 
-            <div className="flex items-center gap-2 p-2.5 bg-zinc-100 dark:bg-zinc-950 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-600 dark:text-zinc-400">
-              <span className="truncate flex-1 text-left">
-                {launchedData.joinUrl}
-              </span>
-              <button
-                type="button"
-                onClick={() => copyToClipboard(launchedData.joinUrl)}
-                className="p-1.5 rounded-lg hover:bg-zinc-200 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-colors"
-                title="Copy Join Link"
-              >
-                {copied ? (
-                  <Check className="w-4 h-4 text-emerald-500" />
-                ) : (
-                  <Copy className="w-4 h-4" />
-                )}
-              </button>
-            </div>
+              <div className="flex items-center gap-2 p-2 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs font-mono text-zinc-600 dark:text-zinc-400 w-full shadow-sm">
+                <span className="truncate flex-1 text-left">
+                  {launchedData.joinUrl}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => copyToClipboard(launchedData.joinUrl)}
+                  className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-600 dark:text-zinc-300 transition-colors cursor-pointer"
+                  title="Copy Join Link"
+                >
+                  {copied ? (
+                    <Check className="w-4 h-4 text-emerald-500" />
+                  ) : (
+                    <Copy className="w-4 h-4" />
+                  )}
+                </button>
+              </div>
 
-            <div className="pt-3 flex items-center justify-center gap-3">
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setLaunchModalOpen(false)}
-              >
-                Close
-              </Button>
               <Button
                 variant="primary"
                 size="sm"
@@ -564,11 +634,147 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
                   setLaunchModalOpen(false);
                   navigate(`/presentations/live/${launchedData.session.id}`);
                 }}
-                className="bg-indigo-600 hover:bg-indigo-500 shadow-md flex items-center gap-1.5"
+                className="w-full bg-indigo-600 hover:bg-indigo-500 shadow-md flex items-center justify-center gap-2 py-2.5"
               >
-                <Play className="w-3.5 h-3.5 fill-current" />
+                <Play className="w-4 h-4 fill-current" />
                 <span>Open Projector View Now</span>
               </Button>
+            </div>
+
+            {/* Right Panel: Live Real-Time Joined Attendees Stream & Kick Controls */}
+            <div className="lg:col-span-7 flex flex-col space-y-3 h-[420px] sm:h-[480px]">
+              {/* Header / Counter & Search */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-zinc-200 dark:border-white/10">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                  <h4 className="font-extrabold text-sm text-zinc-900 dark:text-white flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-emerald-500" />
+                    <span>Real-Time Joined Feed ({attendees.length})</span>
+                  </h4>
+                </div>
+
+                {/* Search Bar */}
+                <div className="relative max-w-xs w-full">
+                  <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Filter attendees..."
+                    value={attendeeSearch}
+                    onChange={(e) => setAttendeeSearch(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 bg-zinc-50 dark:bg-white/5 border border-zinc-200 dark:border-white/10 rounded-xl text-xs text-zinc-900 dark:text-white placeholder-zinc-400 focus:outline-none focus:border-indigo-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Live Feed List */}
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+                {attendees
+                  .filter(
+                    (att: any) =>
+                      !attendeeSearch ||
+                      att.name?.toLowerCase().includes(attendeeSearch.toLowerCase()) ||
+                      att.phone?.includes(attendeeSearch)
+                  )
+                  .length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3 text-zinc-400">
+                    <div className="w-12 h-12 rounded-2xl bg-zinc-100 dark:bg-white/5 border border-zinc-200 dark:border-white/10 flex items-center justify-center text-zinc-400 animate-pulse">
+                      <QrCode className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h5 className="font-bold text-xs text-zinc-800 dark:text-zinc-200">
+                        Waiting for Students to Join
+                      </h5>
+                      <p className="text-[11px] text-zinc-500 max-w-xs mt-0.5">
+                        As students scan the QR code and join the presentation, they will appear here live with instant kick controls.
+                      </p>
+                    </div>
+                  </div>
+                ) : (
+                  attendees
+                    .filter(
+                      (att: any) =>
+                        !attendeeSearch ||
+                        att.name?.toLowerCase().includes(attendeeSearch.toLowerCase()) ||
+                        att.phone?.includes(attendeeSearch)
+                    )
+                    .map((att: any, idx: number) => {
+                      const initials = att.name
+                        ? att.name
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")
+                            .substring(0, 2)
+                            .toUpperCase()
+                        : "ST";
+
+                      return (
+                        <div
+                          key={att.leadId || idx}
+                          className="p-3 rounded-2xl bg-white dark:bg-zinc-900/80 border border-zinc-200 dark:border-white/10 flex items-center justify-between gap-3 hover:border-indigo-500/40 transition-all shadow-sm animate-fade-in"
+                        >
+                          <div className="flex items-center gap-3 min-w-0">
+                            {/* Avatar with online pulse */}
+                            <div className="relative shrink-0">
+                              <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-xs shadow">
+                                {initials}
+                              </div>
+                              <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-white dark:border-zinc-900" />
+                            </div>
+
+                            {/* Student Details */}
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-2">
+                                <h4 className="font-bold text-xs text-zinc-900 dark:text-zinc-100 truncate">
+                                  {att.name || "Anonymous Student"}
+                                </h4>
+                                {idx === attendees.length - 1 && (
+                                  <span className="px-1.5 py-0.2 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-300 font-mono text-[9px] font-bold shrink-0">
+                                    NEW
+                                  </span>
+                                )}
+                              </div>
+                              <p className="text-[10px] font-mono text-zinc-500 dark:text-zinc-400 truncate">
+                                {att.phone || "No phone"}
+                              </p>
+                            </div>
+                          </div>
+
+                          <div className="flex items-center gap-2 shrink-0">
+                            {/* Score Badge */}
+                            <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg bg-indigo-500/10 dark:bg-indigo-500/20 text-indigo-600 dark:text-indigo-300 border border-indigo-500/20 dark:border-indigo-500/30">
+                              {att.totalScore ?? 0} pts
+                            </span>
+
+                            {/* Instant Kick Button */}
+                            <button
+                              type="button"
+                              onClick={() => handleKickAttendee(att.leadId)}
+                              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/10 hover:bg-rose-500 dark:bg-rose-500/15 text-rose-600 dark:text-rose-300 hover:text-white border border-rose-500/30 text-[11px] font-bold transition-all cursor-pointer active:scale-95 shadow-sm"
+                              title={`Kick ${att.name || "student"} from session`}
+                            >
+                              <UserX className="w-3.5 h-3.5" />
+                              <span>Kick</span>
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+
+              {/* Bottom Controls */}
+              <div className="pt-2 border-t border-zinc-200 dark:border-white/10 flex items-center justify-between">
+                <span className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  Total Live: <strong className="text-zinc-900 dark:text-white">{attendees.length}</strong>
+                </span>
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => setLaunchModalOpen(false)}
+                >
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
         )}
