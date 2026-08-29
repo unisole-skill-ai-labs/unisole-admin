@@ -907,44 +907,190 @@ export default function LiveProjectorPage() {
         </div>
       )}
 
-      {/* QR Code Enlarged Modal */}
+      {/* Dual-Panel QR Code & Real-Time Joined Students Lobby Modal */}
       <Modal
         isOpen={qrModalOpen}
         onClose={() => setQrModalOpen(false)}
         title="📱 Scan QR Code to Join Live Presentation"
+        maxWidth="max-w-5xl"
       >
-        <div className="text-center space-y-5 p-2">
-          <div className="inline-block p-4 rounded-3xl bg-white shadow-2xl mx-auto">
-            <img
-              src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-                joinUrl
-              )}`}
-              alt="Scan QR"
-              className="w-56 h-56 rounded-xl object-contain mx-auto"
-            />
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          {/* Left Panel: QR Code, Join Code & URL */}
+          <div className="lg:col-span-5 flex flex-col items-center text-center space-y-4 p-5 rounded-3xl bg-zinc-950/70 border border-white/10 shadow-inner">
+            <div className="relative group">
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur-md opacity-40 group-hover:opacity-75 transition duration-500" />
+              <div className="relative p-3.5 rounded-2xl bg-white shadow-2xl">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
+                    joinUrl
+                  )}`}
+                  alt="Scan QR"
+                  className="w-44 h-44 sm:w-52 sm:h-52 rounded-xl object-contain mx-auto"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-1">
+              <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-widest block">
+                Session Join Code
+              </span>
+              <span className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-violet-300 font-mono tracking-wider">
+                {session.sessionCode}
+              </span>
+            </div>
+
+            <div className="p-2.5 rounded-2xl bg-white/5 border border-white/10 w-full text-center space-y-1">
+              <p className="text-[10px] text-zinc-400 font-mono">
+                Direct Join URL:
+              </p>
+              <a
+                href={joinUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="text-xs font-bold text-indigo-400 hover:text-indigo-300 underline font-mono break-all block"
+              >
+                {joinUrl}
+              </a>
+            </div>
+
+            <p className="text-[11px] text-zinc-400">
+              Students can open camera to scan or navigate directly to the URL.
+            </p>
           </div>
 
-          <div>
-            <span className="text-xs font-bold text-zinc-400 uppercase tracking-widest block mb-1">
-              Join Code
-            </span>
-            <span className="text-4xl font-black text-indigo-600 dark:text-indigo-400 font-mono tracking-wider">
-              {session.sessionCode}
-            </span>
+          {/* Right Panel: Real-Time Joined Students List & Kick Controls */}
+          <div className="lg:col-span-7 flex flex-col space-y-3 h-[420px] sm:h-[480px]">
+            {/* Header / Counter & Search */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-2 border-b border-white/10">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                <h4 className="font-extrabold text-sm text-white flex items-center gap-1.5">
+                  <Users className="w-4 h-4 text-emerald-400" />
+                  <span>Real-Time Joined Feed ({attendees.length})</span>
+                </h4>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative max-w-xs w-full">
+                <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Filter attendees..."
+                  value={attendeeSearch}
+                  onChange={(e) => setAttendeeSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                />
+              </div>
+            </div>
+
+            {/* Live Feed List */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1">
+              {attendees
+                .filter(
+                  (att: any) =>
+                    !attendeeSearch ||
+                    att.name?.toLowerCase().includes(attendeeSearch.toLowerCase()) ||
+                    att.phone?.includes(attendeeSearch)
+                )
+                .length === 0 ? (
+                <div className="h-full flex flex-col items-center justify-center text-center p-6 space-y-3 text-zinc-500">
+                  <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center text-zinc-400 animate-pulse">
+                    <QrCode className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h5 className="font-bold text-xs text-zinc-300">Waiting for Students to Join</h5>
+                    <p className="text-[11px] text-zinc-500 max-w-xs mt-0.5">
+                      As students scan the QR code and join the presentation, they will appear here live with instant kick controls.
+                    </p>
+                  </div>
+                </div>
+              ) : (
+                attendees
+                  .filter(
+                    (att: any) =>
+                      !attendeeSearch ||
+                      att.name?.toLowerCase().includes(attendeeSearch.toLowerCase()) ||
+                      att.phone?.includes(attendeeSearch)
+                  )
+                  .map((att: any, idx: number) => {
+                    const initials = att.name
+                      ? att.name
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")
+                          .substring(0, 2)
+                          .toUpperCase()
+                      : "ST";
+
+                    return (
+                      <div
+                        key={att.leadId || idx}
+                        className="p-3 rounded-2xl bg-zinc-900/80 border border-white/10 flex items-center justify-between gap-3 hover:border-indigo-500/40 transition-all shadow-md animate-fade-in"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          {/* Avatar with online pulse */}
+                          <div className="relative shrink-0">
+                            <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white font-bold text-xs shadow">
+                              {initials}
+                            </div>
+                            <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-zinc-900" />
+                          </div>
+
+                          {/* Student Details */}
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-2">
+                              <h4 className="font-bold text-xs text-zinc-100 truncate">
+                                {att.name || "Anonymous Student"}
+                              </h4>
+                              {idx === attendees.length - 1 && (
+                                <span className="px-1.5 py-0.2 rounded-md bg-emerald-500/20 text-emerald-300 font-mono text-[9px] font-bold shrink-0">
+                                  NEW
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-[10px] font-mono text-zinc-400 truncate">
+                              {att.phone || "No phone"}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Score Badge */}
+                          <span className="text-[11px] font-mono font-bold px-2 py-0.5 rounded-lg bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                            {att.totalScore ?? 0} pts
+                          </span>
+
+                          {/* Instant Kick Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleKickAttendee(att.leadId)}
+                            className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-rose-500/15 hover:bg-rose-500 text-rose-300 hover:text-white border border-rose-500/30 text-[11px] font-bold transition-all cursor-pointer active:scale-95 shadow-sm"
+                            title={`Kick ${att.name || "student"} from session`}
+                          >
+                            <UserX className="w-3.5 h-3.5" />
+                            <span>Kick</span>
+                          </button>
+                        </div>
+                      </div>
+                    );
+                  })
+              )}
+            </div>
+
+            {/* Bottom Controls */}
+            <div className="pt-2 border-t border-white/10 flex items-center justify-between">
+              <span className="text-[11px] text-zinc-400">
+                Total Live: <strong className="text-white">{attendees.length}</strong>
+              </span>
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => setQrModalOpen(false)}
+              >
+                Done / Start Presentation
+              </Button>
+            </div>
           </div>
-
-          <p className="text-xs text-zinc-500 dark:text-zinc-400 font-mono">
-            Or visit: <strong className="text-zinc-800 dark:text-zinc-200">{joinUrl}</strong>
-          </p>
-
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={() => setQrModalOpen(false)}
-            className="w-full"
-          >
-            Done / Return to Presentation
-          </Button>
         </div>
       </Modal>
     </div>
