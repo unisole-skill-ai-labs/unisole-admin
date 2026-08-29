@@ -1,6 +1,7 @@
 import React, { useState } from "react";
 import {
   useGetStudentsQuery,
+  useCreateStudentMutation,
   useUpdateStudentMutation,
   useDeactivateStudentMutation,
   useGetEnrollmentsQuery,
@@ -84,10 +85,12 @@ export default function StudentsAndEnrollments({ baseUrl }: StudentsAndEnrollmen
 // ─── 1. STUDENTS SECTION ───────────────────────────────────────────────────────
 function StudentsSection({ baseUrl }: { baseUrl: string }) {
   const { data: students = [], isLoading, refetch } = useGetStudentsQuery(baseUrl);
+  const [createStudent, { isLoading: isCreating }] = useCreateStudentMutation();
   const [updateStudent, { isLoading: isUpdating }] = useUpdateStudentMutation();
   const [deactivateStudent, { isLoading: isDeactivating }] = useDeactivateStudentMutation();
 
   const [search, setSearch] = useState("");
+  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
 
   const filtered = students.filter(
@@ -96,6 +99,15 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
       s.phone?.includes(search) ||
       s.id?.toLowerCase().includes(search.toLowerCase())
   );
+
+  const handleCreate = async (formData: any) => {
+    try {
+      await createStudent({ baseUrl, body: formData }).unwrap();
+      setIsCreateModalOpen(false);
+    } catch (err: any) {
+      alert("Failed to create user: " + (err?.data?.error || err.message));
+    }
+  };
 
   const handleDeactivate = async (student: any) => {
     if (!window.confirm(`Deactivate account for ${student.name || student.phone}?`)) return;
@@ -128,9 +140,14 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
             className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden"
           />
         </div>
-        <Button variant="secondary" size="sm" onClick={refetch} icon={RefreshCw}>
-          Refresh
-        </Button>
+        <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button variant="secondary" size="sm" onClick={refetch} icon={RefreshCw}>
+            Refresh
+          </Button>
+          <Button variant="primary" size="sm" onClick={() => setIsCreateModalOpen(true)} icon={Plus}>
+            Add User / Admin
+          </Button>
+        </div>
       </div>
 
       <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-xs">
@@ -188,6 +205,14 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
           </table>
         </div>
       </div>
+
+      {isCreateModalOpen && (
+        <CreateUserModal
+          isLoading={isCreating}
+          onClose={() => setIsCreateModalOpen(false)}
+          onSave={handleCreate}
+        />
+      )}
 
       {editingStudent && (
         <StudentModal
@@ -405,6 +430,79 @@ function EditEnrollmentModal({ enrollment, isLoading, onClose, onSave }: any) {
         <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
           <Button type="submit" variant="primary" size="sm" loading={isLoading}>Update Status</Button>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+
+function CreateUserModal({ isLoading, onClose, onSave }: any) {
+  const [name, setName] = useState("");
+  const [phone, setPhone] = useState("+91");
+  const [role, setRole] = useState("STUDENT");
+  const [isActive, setIsActive] = useState(true);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    onSave({ name: name.trim() || undefined, phone: phone.trim(), role, isActive });
+  };
+
+  return (
+    <Modal isOpen={true} onClose={onClose} title="Add New User / Admin" maxWidth="max-w-md">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        <Input
+          label="Full Name"
+          placeholder="e.g. Rahul Sharma"
+          value={name}
+          onChange={(e) => setName(e.target.value)}
+        />
+        <div>
+          <Input
+            label="Mobile Number *"
+            type="tel"
+            placeholder="+919876543210"
+            value={phone}
+            onChange={(e) => setPhone(e.target.value)}
+            required
+          />
+          <p className="text-[11px] text-zinc-400 dark:text-zinc-500 mt-1">
+            E.164 format with country code (e.g. +919876543210)
+          </p>
+        </div>
+        <div>
+          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+            System Role *
+          </label>
+          <select
+            value={role}
+            onChange={(e) => setRole(e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-semibold"
+          >
+            <option value="STUDENT">STUDENT (Learner)</option>
+            <option value="MEMBER">MEMBER (Team Associate)</option>
+            <option value="ADMIN">ADMIN (Platform Manager)</option>
+            <option value="SUPER_ADMIN">SUPER_ADMIN (Co-Founder)</option>
+          </select>
+        </div>
+        <div className="flex items-center gap-2 pt-1">
+          <input
+            type="checkbox"
+            id="newUserActive"
+            checked={isActive}
+            onChange={(e) => setIsActive(e.target.checked)}
+            className="rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 h-4 w-4"
+          />
+          <label htmlFor="newUserActive" className="text-xs font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer">
+            Account Active immediately
+          </label>
+        </div>
+        <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" size="sm" loading={isLoading} disabled={!phone}>
+            Create Account
+          </Button>
         </div>
       </form>
     </Modal>

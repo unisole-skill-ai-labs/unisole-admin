@@ -67,6 +67,14 @@ export const adminApi = createApi({
       query: (baseUrl) => ({ url: `${baseUrl}/api/admin/students` }),
       providesTags: ["Students"],
     }),
+    createStudent: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/students`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Students"],
+    }),
     updateStudent: build.mutation({
       query: ({ baseUrl, id, body }) => ({
         url: `${baseUrl}/api/admin/students/${id}`,
@@ -703,6 +711,7 @@ export const adminApi = createApi({
 export const {
   // Students
   useGetStudentsQuery,
+  useCreateStudentMutation,
   useUpdateStudentMutation,
   useDeactivateStudentMutation,
   // Colleges
