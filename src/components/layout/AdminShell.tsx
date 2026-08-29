@@ -17,20 +17,15 @@ import {
   Menu,
   X,
   ChevronDown,
-  CheckCircle2,
-  AlertCircle,
   Sparkles,
 } from "lucide-react";
-import Button from "../ui/Button";
 
 export default function AdminShell() {
-  const baseUrl = useSelector((s: any) => s.settings?.baseUrl || import.meta.env.VITE_API_BASE_URL || "http://localhost:3000");
   const user = useSelector((s: any) => s.auth.user);
   const dispatch = useDispatch();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
 
-  const [health, setHealth] = useState<{ ok: boolean; data?: any; error?: string } | null>(null);
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
@@ -52,38 +47,15 @@ export default function AdminShell() {
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  useEffect(() => {
-    let cancelled = false;
-
-    const checkHealth = () => {
-      fetch(`${baseUrl}/health`)
-        .then((response) => response.json())
-        .then((data) => {
-          if (!cancelled) setHealth({ ok: true, data });
-        })
-        .catch((error) => {
-          if (!cancelled) setHealth({ ok: false, error: String(error) });
-        });
-    };
-
-    checkHealth();
-    const interval = setInterval(checkHealth, 20000);
-
-    return () => {
-      cancelled = true;
-      clearInterval(interval);
-    };
-  }, [baseUrl]);
-
   return (
     <div className="min-h-screen flex flex-col bg-background text-foreground antialiased transition-colors duration-200">
       {/* Topbar Header */}
       <header className="sticky top-0 z-40 bg-white/80 dark:bg-zinc-950/80 backdrop-blur-xl border-b border-zinc-200/80 dark:border-zinc-800/80 h-16 px-4 sm:px-6 flex items-center justify-between shadow-xs">
-        {/* Left: Mobile Toggle & Brand & Engine Status */}
+        {/* Left: Mobile Toggle & Brand */}
         <div className="flex items-center gap-4">
           <button
             onClick={() => setMobileSidebarOpen((prev) => !prev)}
-            className="lg:hidden p-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors"
+            className="lg:hidden p-2 rounded-xl text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors cursor-pointer"
           >
             {mobileSidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
@@ -102,24 +74,6 @@ export default function AdminShell() {
                 Operations Console
               </span>
             </div>
-          </div>
-
-          {/* Engine Health Indicator */}
-          <div
-            className="ml-2 hidden sm:inline-flex items-center gap-2 px-2.5 py-1 rounded-full text-xs font-semibold border bg-zinc-50 dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800"
-          >
-            <span
-              className={`w-2 h-2 rounded-full ${
-                !health
-                  ? "bg-amber-400 animate-pulse"
-                  : health.ok
-                  ? "bg-emerald-500 animate-pulse"
-                  : "bg-rose-500"
-              }`}
-            />
-            <span className="text-[11px] text-zinc-600 dark:text-zinc-300 font-mono">
-              {!health ? "Connecting..." : health.ok ? "Engine Online" : "Engine Offline"}
-            </span>
           </div>
         </div>
 
