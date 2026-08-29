@@ -54,6 +54,12 @@ export const adminApi = createApi({
     "Presentations",
     "Sessions",
     "Leads",
+    "Tasks",
+    "TeamMembers",
+    "Departments",
+    "Templates",
+    "DailyLogs",
+    "LeaderRadar",
   ],
   endpoints: (build) => ({
     // Students
@@ -457,6 +463,163 @@ export const adminApi = createApi({
       }),
       providesTags: ["Leads"],
     }),
+    // ==================== TEAM & TASK MANAGEMENT ====================
+    getTasks: build.query({
+      query: ({ baseUrl, params }) => ({
+        url: `${baseUrl}/api/admin/tasks`,
+        params,
+      }),
+      providesTags: ["Tasks"],
+    }),
+    getTaskById: build.query({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/tasks/${id}`,
+      }),
+      providesTags: ["Tasks"],
+    }),
+    createTask: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/tasks`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers"],
+    }),
+    updateTask: build.mutation({
+      query: ({ baseUrl, id, body }) => ({
+        url: `${baseUrl}/api/admin/tasks/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers"],
+    }),
+    deleteTask: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/tasks/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers"],
+    }),
+    toggleSubtask: build.mutation({
+      query: ({ baseUrl, taskId, subtaskId, isCompleted }) => ({
+        url: `${baseUrl}/api/admin/tasks/${taskId}/subtasks/${subtaskId}`,
+        method: "PATCH",
+        body: { isCompleted },
+      }),
+      invalidatesTags: ["Tasks"],
+    }),
+    addSubtask: build.mutation({
+      query: ({ baseUrl, taskId, title }) => ({
+        url: `${baseUrl}/api/admin/tasks/${taskId}/subtasks`,
+        method: "POST",
+        body: { title },
+      }),
+      invalidatesTags: ["Tasks"],
+    }),
+    deleteSubtask: build.mutation({
+      query: ({ baseUrl, taskId, subtaskId }) => ({
+        url: `${baseUrl}/api/admin/tasks/${taskId}/subtasks/${subtaskId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Tasks"],
+    }),
+    submitTaskProof: build.mutation({
+      query: ({ baseUrl, taskId, body }) => ({
+        url: `${baseUrl}/api/admin/tasks/${taskId}/submit`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers"],
+    }),
+    flagTaskBlocked: build.mutation({
+      query: ({ baseUrl, taskId, body }) => ({
+        url: `${baseUrl}/api/admin/tasks/${taskId}/block`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers"],
+    }),
+    reviewTask: build.mutation({
+      query: ({ baseUrl, taskId, body }) => ({
+        url: `${baseUrl}/api/admin/tasks/${taskId}/review`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers"],
+    }),
+    addTaskComment: build.mutation({
+      query: ({ baseUrl, taskId, body }) => ({
+        url: `${baseUrl}/api/admin/tasks/${taskId}/comments`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Tasks"],
+    }),
+    getLeaderRadar: build.query({
+      query: (baseUrl) => ({
+        url: `${baseUrl}/api/admin/tasks/radar`,
+      }),
+      providesTags: ["LeaderRadar"],
+    }),
+    getTeamMembers: build.query({
+      query: ({ baseUrl, search }) => ({
+        url: `${baseUrl}/api/admin/team/members`,
+        params: search ? { search } : undefined,
+      }),
+      providesTags: ["TeamMembers"],
+    }),
+    updateTeamMember: build.mutation({
+      query: ({ baseUrl, id, body }) => ({
+        url: `${baseUrl}/api/admin/team/members/${id}`,
+        method: "PATCH",
+        body,
+      }),
+      invalidatesTags: ["TeamMembers", "LeaderRadar"],
+    }),
+    getDepartments: build.query({
+      query: (baseUrl) => ({
+        url: `${baseUrl}/api/admin/team/departments`,
+      }),
+      providesTags: ["Departments"],
+    }),
+    createDepartment: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/team/departments`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Departments"],
+    }),
+    getTemplates: build.query({
+      query: ({ baseUrl, departmentId }) => ({
+        url: `${baseUrl}/api/admin/templates`,
+        params: departmentId ? { departmentId } : undefined,
+      }),
+      providesTags: ["Templates"],
+    }),
+    createTemplate: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/templates`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Templates"],
+    }),
+    getDailyLogs: build.query({
+      query: ({ baseUrl, date, userId }) => ({
+        url: `${baseUrl}/api/admin/daily-logs`,
+        params: { date, userId },
+      }),
+      providesTags: ["DailyLogs"],
+    }),
+    submitDailyLog: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/daily-logs`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["DailyLogs"],
+    }),
   }),
 });
 
@@ -526,8 +689,29 @@ export const {
   useLaunchSessionMutation,
   useUpdateSessionStatusMutation,
   useGetSessionLeadsQuery,
+  // Team & Tasks
+  useGetTasksQuery,
+  useGetTaskByIdQuery,
+  useCreateTaskMutation,
+  useUpdateTaskMutation,
+  useDeleteTaskMutation,
+  useToggleSubtaskMutation,
+  useAddSubtaskMutation,
+  useDeleteSubtaskMutation,
+  useSubmitTaskProofMutation,
+  useFlagTaskBlockedMutation,
+  useReviewTaskMutation,
+  useAddTaskCommentMutation,
+  useGetLeaderRadarQuery,
+  useGetTeamMembersQuery,
+  useUpdateTeamMemberMutation,
+  useGetDepartmentsQuery,
+  useCreateDepartmentMutation,
+  useGetTemplatesQuery,
+  useCreateTemplateMutation,
+  useGetDailyLogsQuery,
+  useSubmitDailyLogMutation,
 } = adminApi;
-
 
 export const store = configureStore({
   reducer: {
@@ -541,4 +725,6 @@ export const store = configureStore({
 
 export type RootState = ReturnType<typeof store.getState>;
 export type AppDispatch = typeof store.dispatch;
+
+
 

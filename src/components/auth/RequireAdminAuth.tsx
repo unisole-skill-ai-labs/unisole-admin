@@ -26,7 +26,7 @@ export default function RequireAdminAuth() {
         return response.json();
       })
       .then((user) => {
-        if (!cancelled && user.role !== "ADMIN") {
+        if (!cancelled && !["SUPER_ADMIN", "ADMIN", "MEMBER"].includes(user.role)) {
           dispatch(logout());
         }
         if (!cancelled) setAuthChecked(true);

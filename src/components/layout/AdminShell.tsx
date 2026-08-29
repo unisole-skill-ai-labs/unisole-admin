@@ -3,6 +3,7 @@ import { NavLink, Outlet, useLocation } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../store/auth-slice";
 import { useTheme } from "../../context/ThemeContext";
+import { useGetLeaderRadarQuery } from "../../store";
 import {
   LayoutDashboard,
   Compass,
@@ -18,10 +19,17 @@ import {
   X,
   ChevronDown,
   Sparkles,
+  CheckSquare,
+  UsersRound,
+  FileCheck2,
+  CalendarCheck,
+  AlertCircle,
+  Clock,
 } from "lucide-react";
 
 export default function AdminShell() {
   const user = useSelector((s: any) => s.auth.user);
+  const baseUrl = useSelector((s: any) => s.settings.baseUrl);
   const dispatch = useDispatch();
   const location = useLocation();
   const { theme, toggleTheme } = useTheme();
@@ -29,6 +37,15 @@ export default function AdminShell() {
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   const profileDropdownRef = useRef<HTMLDivElement>(null);
+
+  const { data: radarRes } = useGetLeaderRadarQuery(baseUrl, {
+    pollingInterval: 30000,
+  });
+  const radar = radarRes?.data || null;
+
+  const isSuperAdmin = user?.role === "SUPER_ADMIN";
+  const isAdmin = user?.role === "ADMIN" || isSuperAdmin;
+  const isMember = user?.role === "MEMBER";
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -39,7 +56,10 @@ export default function AdminShell() {
   // Click outside to close profile dropdown
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (profileDropdownRef.current && !profileDropdownRef.current.contains(event.target as Node)) {
+      if (
+        profileDropdownRef.current &&
+        !profileDropdownRef.current.contains(event.target as Node)
+      ) {
         setProfileOpen(false);
       }
     };
@@ -98,14 +118,32 @@ export default function AdminShell() {
               onClick={() => setProfileOpen((prev) => !prev)}
               className="flex items-center gap-2 p-1.5 pr-2.5 rounded-full hover:bg-zinc-100 dark:hover:bg-zinc-900 transition-colors border border-zinc-200/80 dark:border-zinc-800"
             >
-              <div className="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 flex items-center justify-center text-white text-xs font-bold shadow-xs">
+              <div
+                className={`w-7 h-7 rounded-full flex items-center justify-center text-white text-xs font-bold shadow-xs ${
+                  isSuperAdmin
+                    ? "bg-gradient-to-tr from-amber-500 to-orange-600"
+                    : isMember
+                    ? "bg-gradient-to-tr from-emerald-600 to-teal-600"
+                    : "bg-gradient-to-tr from-indigo-600 to-violet-600"
+                }`}
+              >
                 {(user?.name || user?.phone || "A").charAt(0).toUpperCase()}
               </div>
               <div className="hidden sm:flex flex-col text-left">
                 <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 max-w-[100px] truncate leading-tight">
-                  {user?.name || "Admin"}
+                  {user?.name || "Team Member"}
                 </span>
-                <span className="text-[9px] text-zinc-400 font-mono">ADMIN</span>
+                <span
+                  className={`text-[9px] font-mono font-bold ${
+                    isSuperAdmin
+                      ? "text-amber-500"
+                      : isMember
+                      ? "text-emerald-500"
+                      : "text-indigo-500"
+                  }`}
+                >
+                  {user?.role || "MEMBER"}
+                </span>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
             </button>
@@ -114,20 +152,32 @@ export default function AdminShell() {
               <div className="absolute right-0 mt-2 w-56 bg-white dark:bg-zinc-900 rounded-2xl shadow-xl border border-zinc-200/80 dark:border-zinc-800 p-1.5 animate-fade-in z-50">
                 <div className="px-3 py-2.5 border-b border-zinc-100 dark:border-zinc-800">
                   <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                    {user?.name || "Administrator"}
+                    {user?.name || "Internal Staff"}
                   </p>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono truncate">
-                    {user?.phone ? `+91 ${user.phone}` : "Platform Master"}
+                    {user?.phone ? `+91 ${user.phone}` : "Platform Account"}
                   </p>
-                  <span className="inline-block mt-1.5 px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 text-[10px] font-bold">
-                    ADMINISTRATOR
+                  <span
+                    className={`inline-block mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                      isSuperAdmin
+                        ? "bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400"
+                        : isMember
+                        ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-400"
+                        : "bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400"
+                    }`}
+                  >
+                    {isSuperAdmin
+                      ? "SUPER ADMIN"
+                      : isMember
+                      ? "TEAM MEMBER"
+                      : "TEAM LEAD"}
                   </span>
                 </div>
 
                 <div className="pt-1 border-t border-zinc-100 dark:border-zinc-800">
                   <button
                     onClick={() => dispatch(logout())}
-                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors text-left"
+                    className="w-full flex items-center gap-2.5 px-3 py-2 rounded-xl text-xs font-semibold text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors text-left cursor-pointer"
                   >
                     <LogOut className="w-4 h-4" />
                     <span>Logout</span>
@@ -147,10 +197,83 @@ export default function AdminShell() {
             mobileSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
           }`}
         >
-          {/* Nav Group 1 */}
+          {/* Operations & Team Workstream */}
+          <div className="space-y-1">
+            <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2 flex items-center justify-between">
+              <span>Operations & Team</span>
+              {radar?.blockedCount ? (
+                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+              ) : null}
+            </div>
+
+            <NavLink
+              to="/tasks"
+              className={({ isActive }) =>
+                `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                }`
+              }
+            >
+              <div className="flex items-center gap-3">
+                <CheckSquare className="w-4 h-4" />
+                <span>Tasks & Deadlines</span>
+              </div>
+              {radar?.reviewQueueCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-md bg-amber-500 text-white text-[10px] font-bold">
+                  {radar.reviewQueueCount}
+                </span>
+              )}
+            </NavLink>
+
+            <NavLink
+              to="/team"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                }`
+              }
+            >
+              <UsersRound className="w-4 h-4" />
+              <span>Team & Workload</span>
+            </NavLink>
+
+            <NavLink
+              to="/templates"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                }`
+              }
+            >
+              <FileCheck2 className="w-4 h-4" />
+              <span>SOP Checklists</span>
+            </NavLink>
+
+            <NavLink
+              to="/standup"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                }`
+              }
+            >
+              <CalendarCheck className="w-4 h-4" />
+              <span>Daily Standup EOD</span>
+            </NavLink>
+          </div>
+
+          {/* Platform Operations */}
           <div className="space-y-1">
             <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
-              Platform Operations
+              Platform & Content
             </div>
 
             <NavLink
@@ -211,61 +334,65 @@ export default function AdminShell() {
             </NavLink>
           </div>
 
-          {/* Nav Group 2 */}
-          <div className="space-y-1">
-            <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
-              Entities & Governance
+          {/* Entities & Governance (Hidden for simple Member view) */}
+          {!isMember && (
+            <div className="space-y-1">
+              <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
+                Entities & Governance
+              </div>
+
+              <NavLink
+                to="/metadata"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    isActive || location.pathname.startsWith("/colleges")
+                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                  }`
+                }
+              >
+                <GraduationCap className="w-4 h-4" />
+                <span>Universities & Metadata</span>
+              </NavLink>
+
+              <NavLink
+                to="/students"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    isActive
+                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                  }`
+                }
+              >
+                <Users className="w-4 h-4" />
+                <span>Learners & Enrollments</span>
+              </NavLink>
             </div>
+          )}
 
-            <NavLink
-              to="/metadata"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive || location.pathname.startsWith("/colleges")
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <GraduationCap className="w-4 h-4" />
-              <span>Universities & Metadata</span>
-            </NavLink>
+          {/* Finance & Ledger (Super Admin & Admin Only) */}
+          {isAdmin && (
+            <div className="space-y-1">
+              <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
+                Finance & Ledger
+              </div>
 
-            <NavLink
-              to="/students"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <Users className="w-4 h-4" />
-              <span>Learners & Enrollments</span>
-            </NavLink>
-          </div>
-
-          {/* Nav Group 3 */}
-          <div className="space-y-1">
-            <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
-              Finance & Ledger
+              <NavLink
+                to="/payments"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    isActive
+                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                  }`
+                }
+              >
+                <CreditCard className="w-4 h-4" />
+                <span>Billing & Payments</span>
+              </NavLink>
             </div>
-
-            <NavLink
-              to="/payments"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <CreditCard className="w-4 h-4" />
-              <span>Billing & Payments</span>
-            </NavLink>
-          </div>
+          )}
         </aside>
 
         {/* Main Content Workspace */}
@@ -278,3 +405,4 @@ export default function AdminShell() {
     </div>
   );
 }
+
