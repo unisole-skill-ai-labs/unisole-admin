@@ -124,9 +124,11 @@ export default function LiveProjectorPage() {
       setAttendeeCount(count);
     });
 
-    socket.on("slide_updated", ({ slideIndex, quizState }) => {
+    socket.on("slide_updated", ({ slideIndex, buildStep: bStep, quizState }) => {
       setCurrentSlideIndex(slideIndex);
-      setBuildStep(0);
+      if (typeof bStep === "number") {
+        setBuildStep(bStep);
+      }
       if (quizState) setQuizState(quizState);
     });
 
@@ -585,6 +587,7 @@ export default function LiveProjectorPage() {
         ) : (
           /* Render Active Slide with Progressive Build Step */
           <SlideRenderer
+            key={`slide-${currentSlideIndex}`}
             slide={currentSlide}
             buildStep={buildStep}
             presentationTitle={presentation.title}

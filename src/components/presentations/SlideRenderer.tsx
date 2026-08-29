@@ -31,6 +31,9 @@ interface SlideRendererProps {
   quizState?: any;
   remainingTime?: number | null;
   leaderboard?: any[];
+  onSelectOption?: (optionIndex: number) => void;
+  selectedOption?: number | null;
+  isSubmitted?: boolean;
 }
 
 export default function SlideRenderer({
@@ -41,10 +44,13 @@ export default function SlideRenderer({
   quizState = {},
   remainingTime = null,
   leaderboard = [],
+  onSelectOption,
+  selectedOption = null,
+  isSubmitted = false,
 }: SlideRendererProps) {
   if (!slide) return null;
 
-  const currentStep = buildStep;
+  const currentStep = buildStep ?? 0;
 
   switch (slide.type) {
     // ==========================================
@@ -55,36 +61,36 @@ export default function SlideRenderer({
         <div className="w-full max-w-5xl mx-auto text-center space-y-6 sm:space-y-8 animate-fade-in">
           {/* Badge */}
           <div
-            className={`inline-flex items-center gap-2 px-5 py-2 rounded-full bg-gradient-to-r from-indigo-500/20 to-violet-500/20 border border-indigo-500/40 text-xs sm:text-sm font-bold text-indigo-300 shadow-lg shadow-indigo-500/10 transition-all duration-700 ${
-              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+            className={`inline-flex items-center gap-2 px-4 sm:px-5 py-2 rounded-full bg-gradient-to-r from-indigo-500/20 to-violet-500/20 border border-indigo-500/40 text-xs sm:text-sm font-bold text-indigo-300 shadow-lg shadow-indigo-500/10 transition-all duration-300 ease-out ${
+              currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
           >
-            <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse" />
-            <span>{slide.badge || "INDUSTRIAL TRAINING & INTERNSHIP OPPORTUNITY PROGRAM"}</span>
+            <Sparkles className="w-4 h-4 text-indigo-400 animate-pulse shrink-0" />
+            <span className="truncate">{slide.badge || "INDUSTRIAL TRAINING & INTERNSHIP OPPORTUNITY PROGRAM"}</span>
           </div>
 
           {/* Main Title & Subtitle */}
           <div className="space-y-4">
-            <h1 className="text-4xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-indigo-300 drop-shadow-sm">
+            <h1 className="text-3xl sm:text-6xl lg:text-7xl font-black tracking-tight leading-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-indigo-300 drop-shadow-sm">
               {slide.title || "UNISOLE AI CAMPUS PROGRAM"}
             </h1>
             <p
-              className={`text-lg sm:text-2xl text-zinc-300 font-medium max-w-3xl mx-auto leading-relaxed transition-all duration-700 ${
-                currentStep >= 2 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+              className={`text-sm sm:text-2xl text-zinc-300 font-medium max-w-3xl mx-auto leading-relaxed transition-all duration-300 ease-out ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
               {slide.subtitle || "For College Students Across Himachal Pradesh"}
             </p>
           </div>
 
-          {/* Bottom Lab Tagline */}
+          {/* Org Pill */}
           <div
-            className={`pt-6 transition-all duration-700 ${
-              currentStep >= 3 ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            className={`pt-2 transition-all duration-300 ease-out ${
+              currentStep >= 2 ? "opacity-100 scale-100" : "opacity-0 scale-95"
             }`}
           >
-            <div className="inline-flex items-center gap-3 px-6 py-3 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md text-xs sm:text-sm font-bold tracking-widest uppercase text-indigo-400">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-ping" />
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-zinc-400">
+              <span className="w-2 h-2 rounded-full bg-indigo-500" />
               <span>{slide.org || "UNISOLE SKILL AI LABS"}</span>
             </div>
           </div>
@@ -93,69 +99,86 @@ export default function SlideRenderer({
     }
 
     // ==========================================
-    // 2. FOUNDER BIO SLIDE
+    // 2. FOUNDER PROFILE
     // ==========================================
     case "FOUNDER_BIO": {
+      const creds = slide.credentials || [
+        "NIT Hamirpur Alumnus",
+        "NASA Space Apps Challenge",
+        "3rd — National Startup Summit",
+        "ICAR-IARI Incubation Grantee",
+        "Speaker & Mentor on Applied AI",
+      ];
+
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
-          {/* Header */}
-          <div className="flex items-center gap-3">
+        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in">
+          <div className="flex items-center gap-2">
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "FOUNDER"}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
-            {/* Left: Avatar / Bio Profile */}
-            <div
-              className={`lg:col-span-5 p-6 sm:p-8 rounded-3xl bg-gradient-to-b from-white/10 to-white/5 border border-white/10 backdrop-blur-xl space-y-4 text-center sm:text-left transition-all duration-700 ${
-                currentStep >= 0 ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-6"
-              }`}
-            >
-              <div className="w-24 h-24 rounded-3xl bg-gradient-to-tr from-indigo-600 to-violet-500 flex items-center justify-center text-white text-3xl font-black shadow-xl shadow-indigo-500/20 mx-auto sm:mx-0">
-                {slide.initials || "AM"}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
+            {/* Left: Avatar & Credentials */}
+            <div className="lg:col-span-5 flex flex-col items-center text-center space-y-4">
+              <div
+                className={`w-32 h-32 sm:w-44 sm:h-44 rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 p-1 shadow-2xl transition-all duration-300 ease-out ${
+                  currentStep >= 0 ? "scale-100 opacity-100" : "scale-95 opacity-0"
+                }`}
+              >
+                <div className="w-full h-full rounded-[22px] bg-zinc-950 flex flex-col items-center justify-center border border-white/10">
+                  <span className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-violet-200">
+                    {slide.initials || "AM"}
+                  </span>
+                  <span className="text-[10px] uppercase font-mono tracking-widest text-zinc-400 mt-1">
+                    Founder
+                  </span>
+                </div>
               </div>
+
               <div>
-                <h2 className="text-2xl sm:text-3xl font-black text-white">{slide.title || "AJAY MOKTA"}</h2>
-                <p className="text-xs sm:text-sm text-indigo-300 font-medium mt-1">
+                <h3 className="text-xl sm:text-3xl font-black text-white">{slide.title || "AJAY MOKTA"}</h3>
+                <p className="text-xs sm:text-sm text-indigo-300 font-medium mt-0.5">
                   {slide.subtitle || "Founder, UNISOLE Skill AI Labs · B.Tech, NIT Hamirpur"}
                 </p>
               </div>
             </div>
 
-            {/* Right: Credentials & Quote */}
-            <div className="lg:col-span-7 space-y-6">
-              {/* Credentials List */}
+            {/* Right: Journey & Quote */}
+            <div className="lg:col-span-7 space-y-4 sm:space-y-5">
               <div
-                className={`grid grid-cols-1 sm:grid-cols-2 gap-3 transition-all duration-700 ${
-                  currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+                className={`space-y-2.5 transition-all duration-300 ease-out ${
+                  currentStep >= 1 ? "opacity-100 translate-x-0" : "opacity-0 translate-x-3"
                 }`}
               >
-                {(slide.credentials || [
-                  "NIT Hamirpur Alumnus",
-                  "NASA Space Apps Challenge",
-                  "3rd — National Startup Summit",
-                  "ICAR-IARI Incubation Grantee",
-                  "Speaker & Mentor on Applied AI",
-                ]).map((cred: string, idx: number) => (
-                  <div
-                    key={idx}
-                    className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3 text-xs sm:text-sm text-zinc-200 font-medium"
-                  >
-                    <div className="w-2 h-2 rounded-full bg-indigo-400 shrink-0" />
-                    <span>{cred}</span>
-                  </div>
-                ))}
+                <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                  Track Record & Credentials
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                  {creds.map((c: string, idx: number) => (
+                    <div
+                      key={idx}
+                      className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-2.5 text-xs text-zinc-200 shadow-sm"
+                    >
+                      <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                      <span className="font-medium">{c}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
 
-              {/* Quote Card */}
               <div
-                className={`p-6 rounded-3xl bg-gradient-to-r from-indigo-950/60 to-violet-950/60 border border-indigo-500/30 text-indigo-100 text-sm sm:text-base italic font-medium leading-relaxed transition-all duration-700 ${
-                  currentStep >= 2 ? "opacity-100 scale-100" : "opacity-0 scale-95"
+                className={`p-4 sm:p-5 rounded-3xl bg-gradient-to-r from-indigo-950/60 to-violet-950/60 border border-indigo-500/30 text-indigo-100 font-medium text-xs sm:text-sm leading-relaxed transition-all duration-300 ease-out shadow-xl ${
+                  currentStep >= 2 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
                 }`}
               >
-                {slide.quote ||
-                  "“A degree from any college in Himachal should be backed by skills that compete globally.”"}
+                <p className="italic">
+                  {slide.quote ||
+                    "“A degree from any college in Himachal should be backed by skills that compete globally.”"}
+                </p>
+                <span className="block text-[11px] font-mono text-indigo-300 mt-2">
+                  — Walked the Himachal college to deep-tech journey
+                </span>
               </div>
             </div>
           </div>
@@ -164,9 +187,15 @@ export default function SlideRenderer({
     }
 
     // ==========================================
-    // 3. TEAM GRID SLIDE
+    // 3. TEAM GRID
     // ==========================================
     case "TEAM_GRID": {
+      const pillars = slide.pillars || [
+        "INDUSTRY",
+        "ENGINEERING",
+        "RESEARCH",
+        "ACADEMIC EXPOSURE",
+      ];
       const members = slide.members || [
         { initials: "GG", name: "Girish Gaurav Sharma", role: "GoodSpace AI → Great Learning" },
         { initials: "SP", name: "Shabd Patel", role: "Software Engineer, BlackRock" },
@@ -176,106 +205,113 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
-          <div className="flex items-center justify-between">
-            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
-              {slide.badge || "MENTORS & ADVISORS"}
-            </span>
+        <div className="w-full max-w-6xl mx-auto space-y-5 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                {slide.badge || "THE UNISOLE TEAM"}
+              </span>
+              <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+                {slide.title || "BUILT BY PRACTITIONERS"}
+              </h2>
+            </div>
+            <p className="text-xs sm:text-sm text-zinc-400 max-w-sm">
+              {slide.subtitle || "People who have built and shipped real systems."}
+            </p>
           </div>
 
-          <h2 className="text-3xl sm:text-5xl font-black tracking-tight text-white">
-            {slide.title || "THE UNISOLE TEAM"}
-          </h2>
-
-          {/* 4 Pillars Ribbon */}
+          {/* 4 Pillars Header Tags */}
           <div
-            className={`flex flex-wrap items-center gap-2 sm:gap-4 py-2 transition-all duration-700 ${
+            className={`flex flex-wrap gap-2 transition-all duration-300 ease-out ${
               currentStep >= 0 ? "opacity-100" : "opacity-0"
             }`}
           >
-            {["INDUSTRY", "ENGINEERING", "RESEARCH", "ACADEMIC EXPOSURE"].map((p, idx) => (
-              <React.Fragment key={p}>
-                <span className="px-3 py-1 rounded-xl bg-white/10 text-indigo-300 text-xs sm:text-sm font-bold tracking-wider">
-                  {p}
-                </span>
-                {idx < 3 && <span className="text-zinc-500 font-bold">+</span>}
-              </React.Fragment>
+            {pillars.map((p: string, idx: number) => (
+              <span
+                key={idx}
+                className="px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-[10px] sm:text-[11px] font-mono font-bold text-indigo-300"
+              >
+                {p}
+              </span>
             ))}
           </div>
 
-          {/* Mentors Cards Grid */}
+          {/* Mentors Grid */}
           <div
-            className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3.5 transition-all duration-700 ${
-              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+            className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1 transition-all duration-300 ease-out ${
+              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             }`}
           >
             {members.map((m: any, idx: number) => (
               <div
                 key={idx}
-                className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center space-y-3 hover:border-indigo-500/40 transition-colors shadow-lg"
+                className="p-3.5 sm:p-4 rounded-3xl bg-white/5 border border-white/10 backdrop-blur-md text-center space-y-2 hover:border-indigo-500/40 transition-all shadow-lg"
               >
-                <div className="w-12 h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-500 text-white font-black text-sm flex items-center justify-center mx-auto shadow-md">
+                <div className="w-10 h-10 sm:w-12 sm:h-12 rounded-2xl bg-gradient-to-tr from-indigo-500 to-violet-500 mx-auto flex items-center justify-center text-white font-black text-xs sm:text-sm shadow-md">
                   {m.initials}
                 </div>
                 <div>
-                  <div className="font-bold text-xs sm:text-sm text-white leading-snug">{m.name}</div>
-                  <div className="text-[10px] sm:text-xs text-indigo-300 mt-1 font-medium leading-tight">
+                  <h4 className="font-extrabold text-xs sm:text-sm text-zinc-100">{m.name}</h4>
+                  <p className="text-[10px] sm:text-[11px] text-indigo-300 font-medium mt-0.5 leading-tight">
                     {m.role}
-                  </div>
+                  </p>
                 </div>
               </div>
             ))}
           </div>
 
-          {/* Closing Line */}
-          <div
-            className={`pt-2 transition-all duration-700 ${
+          <p
+            className={`text-center text-xs text-zinc-400 pt-1 transition-all duration-300 ease-out ${
               currentStep >= 2 ? "opacity-100" : "opacity-0"
             }`}
           >
-            <p className="text-sm sm:text-base font-semibold text-zinc-300 border-l-2 border-indigo-400 pl-3">
-              {slide.subtitle || "People who have built and shipped real systems."}
-            </p>
-          </div>
+            Mentors & advisors from FAANG, tier-1 institutions, and top high-growth tech companies.
+          </p>
         </div>
       );
     }
 
     // ==========================================
-    // 4. BIG QUESTION SLIDE ("आगे क्या सोचा है?")
+    // 4. BIG QUESTION ( आगे क्या सोचा है? )
     // ==========================================
     case "BIG_QUESTION": {
       return (
-        <div className="w-full max-w-4xl mx-auto text-center space-y-8 py-12 animate-fade-in">
+        <div className="w-full max-w-4xl mx-auto text-center space-y-6 sm:space-y-8 py-6 sm:py-10 animate-fade-in">
           <div
-            className={`transition-all duration-1000 ${
-              currentStep >= 0 ? "opacity-100 scale-100" : "opacity-0 scale-90"
+            className={`transition-all duration-500 ease-out transform ${
+              currentStep >= 0 ? "opacity-100 scale-100" : "opacity-0 scale-95"
             }`}
           >
-            <h1 className="text-5xl sm:text-8xl lg:text-9xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 drop-shadow-2xl font-serif">
+            <h1 className="text-4xl sm:text-7xl lg:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 drop-shadow-2xl font-serif tracking-tight">
               {slide.title || "आगे क्या सोचा है?"}
             </h1>
           </div>
 
-          {/* Pulsating reflective dot / subtext */}
           <div
-            className={`transition-all duration-700 flex flex-col items-center gap-4 ${
-              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+            className={`transition-all duration-300 ease-out ${
+              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
             }`}
           >
-            <div className="w-4 h-4 rounded-full bg-amber-400 shadow-lg shadow-amber-400/50 animate-ping" />
-            {slide.subtitle && (
-              <p className="text-base sm:text-xl text-zinc-400 max-w-xl mx-auto italic font-medium">
-                {slide.subtitle}
-              </p>
-            )}
+            <p className="text-sm sm:text-2xl text-zinc-300 font-medium max-w-2xl mx-auto leading-relaxed">
+              {slide.subtitle ||
+                "Not what your parents have decided. Not what your friends are doing. What have YOU thought about?"}
+            </p>
+          </div>
+
+          {/* Pulsating Amber Cue Dot */}
+          <div
+            className={`pt-4 transition-all duration-300 ${
+              currentStep >= 1 ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <span className="inline-block w-3.5 h-3.5 rounded-full bg-amber-400 animate-ping" />
           </div>
         </div>
       );
     }
 
     // ==========================================
-    // 5. PILLARS OVERVIEW SLIDE
+    // 5. PILLARS OVERVIEW (FOUR THINGS CHANGED)
     // ==========================================
     case "PILLARS_OVERVIEW": {
       const pillars = slide.pillars || [
@@ -286,48 +322,43 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-8 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "THE LANDSCAPE"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-3 leading-tight">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "FOUR THINGS HAVE CHANGED"}
             </h2>
-            <p className="text-sm sm:text-lg text-zinc-400 font-medium mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "THE WORLD YOU ARE ENTERING."}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
             {pillars.map((p: any, idx: number) => {
               const isRevealed = currentStep >= idx;
               return (
                 <div
                   key={idx}
-                  className={`p-6 rounded-3xl border transition-all duration-700 space-y-4 shadow-xl ${
+                  className={`p-4 sm:p-5 rounded-3xl border transition-all duration-300 ease-out shadow-lg ${
                     isRevealed
-                      ? "bg-gradient-to-b from-indigo-950/50 to-zinc-900 border-indigo-500/50 translate-y-0 opacity-100"
-                      : "bg-white/5 border-white/10 opacity-30 translate-y-4"
+                      ? "bg-gradient-to-br from-indigo-950/60 to-zinc-900 border-indigo-500/40 opacity-100 translate-y-0"
+                      : "bg-white/2 border-white/5 opacity-30 translate-y-2"
                   }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span className="text-xs font-mono font-black text-indigo-400">
+                  <div className="flex items-center justify-between mb-2">
+                    <span className="text-xs font-mono font-bold text-indigo-400">
                       PILLAR {p.number}
                     </span>
-                    <span className="w-7 h-7 rounded-xl bg-indigo-500/20 text-indigo-300 text-xs font-bold flex items-center justify-center">
-                      {isRevealed ? <Check className="w-4 h-4" /> : "?"}
-                    </span>
+                    <span className="w-2 h-2 rounded-full bg-indigo-400" />
                   </div>
-
-                  <div className="space-y-1">
-                    <h3 className="text-lg sm:text-xl font-bold text-white">
-                      {isRevealed ? p.label : "Pillar " + p.number}
-                    </h3>
-                    <p className="text-xs sm:text-sm text-zinc-400 font-medium leading-relaxed">
-                      {isRevealed ? p.revealedText : "Locked"}
-                    </p>
-                  </div>
+                  <h3 className="text-base sm:text-lg font-black text-white mb-0.5">
+                    {p.label}
+                  </h3>
+                  <p className="text-xs sm:text-sm text-zinc-300 font-medium leading-relaxed">
+                    {isRevealed ? p.revealedText : "••••••••••••••••••••••••"}
+                  </p>
                 </div>
               );
             })}
@@ -337,97 +368,97 @@ export default function SlideRenderer({
     }
 
     // ==========================================
-    // 6. COMPARISON STATS (PILLAR 01: JOB MARKET)
+    // 6. COMPARISON STATS (PILLAR 01)
     // ==========================================
     case "COMPARISON_STATS": {
+      const s1 = slide.stat1 || {
+        year: "1990-91",
+        count: "49 lakh",
+        label: "IN HIGHER EDUCATION",
+        ratio: "~6% ENROLMENT RATIO",
+      };
+      const s2 = slide.stat2 || {
+        year: "2023-24",
+        count: "4.50 crore",
+        label: "IN HIGHER EDUCATION",
+        ratio: "30% ENROLMENT RATIO",
+      };
+      const comp = slide.statCompetition || {
+        number: "193",
+        label: "APPLICANTS PER VACANCY",
+        detail: "SSC CGL 2025 — 28.15 lakh applicants for 15,118 posts",
+      };
+
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
-            <span className="px-3 py-1 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-xs font-bold text-cyan-300 uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "PILLAR 01"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "THE JOB MARKET"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "FAR MORE GRADUATES. A DIFFERENT MAP."}
             </p>
           </div>
 
-          {/* Stats Comparison Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-            {/* 1990-91 Box */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+            {/* Stat 1 */}
             <div
-              className={`p-6 rounded-3xl bg-white/5 border border-white/10 space-y-3 transition-all duration-700 ${
-                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+              className={`p-4 sm:p-5 rounded-3xl bg-white/5 border border-white/10 text-center space-y-1.5 transition-all duration-300 ease-out ${
+                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              <span className="text-xs font-mono font-bold text-zinc-400">1990-91</span>
-              <div className="text-3xl sm:text-4xl font-black text-zinc-200">
-                {slide.stat1?.count || "49 lakh"}
-              </div>
-              <div className="text-xs text-zinc-400 font-medium uppercase">
-                {slide.stat1?.label || "IN HIGHER EDUCATION"}
-              </div>
-              <div className="text-xs font-bold text-zinc-500">{slide.stat1?.ratio || "~6% ENROLMENT RATIO"}</div>
+              <span className="text-xs font-mono text-zinc-400 font-bold">{s1.year}</span>
+              <div className="text-2xl sm:text-4xl font-black text-indigo-300">{s1.count}</div>
+              <p className="text-xs font-bold text-zinc-300">{s1.label}</p>
+              <span className="text-[10px] font-mono text-zinc-500 block">{s1.ratio}</span>
             </div>
 
-            {/* 2023-24 Box */}
+            {/* Stat 2 */}
             <div
-              className={`p-6 rounded-3xl bg-gradient-to-b from-cyan-950/60 to-zinc-900 border border-cyan-500/40 space-y-3 transition-all duration-700 shadow-xl ${
-                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
+              className={`p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-indigo-900/40 to-indigo-950/60 border border-indigo-500/40 text-center space-y-1.5 transition-all duration-300 ease-out shadow-xl ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              <span className="text-xs font-mono font-bold text-cyan-400">2023-24 (9x Surge)</span>
-              <div className="text-3xl sm:text-4xl font-black text-cyan-300">
-                {slide.stat2?.count || "4.50 crore"}
+              <span className="text-xs font-mono text-indigo-400 font-bold">{s2.year}</span>
+              <div className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-300">
+                {s2.count}
               </div>
-              <div className="text-xs text-cyan-200/80 font-medium uppercase">
-                {slide.stat2?.label || "IN HIGHER EDUCATION"}
-              </div>
-              <div className="text-xs font-bold text-cyan-400">{slide.stat2?.ratio || "30% ENROLMENT RATIO"}</div>
-            </div>
-
-            {/* Competition Multiplier */}
-            <div
-              className={`p-6 rounded-3xl bg-gradient-to-b from-rose-950/50 to-zinc-900 border border-rose-500/40 space-y-3 transition-all duration-700 shadow-xl ${
-                currentStep >= 2 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-              }`}
-            >
-              <span className="text-xs font-mono font-bold text-rose-400">COMPETITION REALITY</span>
-              <div className="text-3xl sm:text-4xl font-black text-rose-300">
-                {slide.statCompetition?.number || "193"}
-              </div>
-              <div className="text-xs text-rose-200/80 font-medium uppercase">
-                {slide.statCompetition?.label || "APPLICANTS PER VACANCY"}
-              </div>
-              <div className="text-[11px] text-zinc-400 leading-snug">
-                {slide.statCompetition?.detail || "SSC CGL 2025 — 28.15 lakh for 15,118 posts"}
-              </div>
-            </div>
-          </div>
-
-          {/* Amber Insight Box */}
-          <div
-            className={`p-5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-200 text-xs sm:text-sm font-medium leading-relaxed transition-all duration-700 flex items-start gap-3.5 ${
-              currentStep >= 3 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
-            }`}
-          >
-            <Lightbulb className="w-5 h-5 text-amber-400 shrink-0 mt-0.5" />
-            <div>
-              <strong className="block font-bold text-amber-300 mb-0.5">
-                {slide.insightBox?.title || "Government jobs are not a bad choice."}
-              </strong>
-              <span>
-                {slide.insightBox?.text ||
-                  "They are a good choice that far more people are now making at once. The map has more roads than in 1996. Most students are shown one."}
+              <p className="text-xs font-bold text-white">{s2.label}</p>
+              <span className="text-[10px] font-mono text-emerald-400 block font-bold">
+                {s2.ratio} (9x surge)
               </span>
             </div>
+
+            {/* Competition ratio */}
+            <div
+              className={`p-4 sm:p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-center space-y-1.5 transition-all duration-300 ease-out shadow-xl ${
+                currentStep >= 2 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+              }`}
+            >
+              <span className="text-xs font-mono text-amber-400 font-bold">COMPETITION</span>
+              <div className="text-2xl sm:text-4xl font-black text-amber-300">{comp.number}</div>
+              <p className="text-xs font-bold text-amber-200">{comp.label}</p>
+              <span className="text-[10px] text-zinc-400 block leading-tight">{comp.detail}</span>
+            </div>
           </div>
 
-          {slide.source && (
-            <p className="text-[10px] text-zinc-500 font-mono">{slide.source}</p>
-          )}
+          {/* Empathy Insight Box */}
+          <div
+            className={`p-4 rounded-3xl bg-zinc-900/90 border border-amber-500/40 text-xs sm:text-sm text-zinc-200 leading-relaxed transition-all duration-300 ease-out shadow-xl ${
+              currentStep >= 3 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+            }`}
+          >
+            <strong className="block font-bold text-amber-300 mb-0.5">
+              {slide.insightBox?.title || "Government jobs are not a bad choice."}
+            </strong>
+            <p>
+              {slide.insightBox?.text ||
+                "They are a good choice that far more people are now making at once. The map has more roads than in 1996. Most students are shown one."}
+            </p>
+          </div>
         </div>
       );
     }
@@ -444,7 +475,6 @@ export default function SlideRenderer({
         { year: "2020s", label: "DIGITAL ECONOMY" },
         { year: "2025+", label: "AI ECONOMY" },
       ];
-
       const stats = slide.stats || [
         { value: "$315 bn", label: "Tech revenue, FY2026", sub: "124x since 1995-96" },
         { value: "~60 lakh", label: "Working in tech today", sub: "+2.36 mn in 2,117 GCCs" },
@@ -452,59 +482,63 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-xs font-bold text-emerald-300 uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "PILLAR 02"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "THE RISE OF THE PRIVATE SECTOR"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "AN ECONOMY THAT DID NOT EXIST IN 1991."}
             </p>
           </div>
 
-          {/* Timeline Bar */}
+          {/* Timeline Step Bar */}
           <div
-            className={`grid grid-cols-3 sm:grid-cols-6 gap-2 pt-2 transition-all duration-700 ${
-              currentStep >= 0 ? "opacity-100" : "opacity-0"
+            className={`grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1 transition-all duration-300 ease-out ${
+              currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
           >
-            {timeline.map((item: any, idx: number) => (
+            {timeline.map((t: any, idx: number) => (
               <div
                 key={idx}
-                className="p-3 rounded-2xl bg-white/5 border border-white/10 text-center space-y-1"
+                className="p-2.5 rounded-2xl bg-white/5 border border-white/10 text-center space-y-0.5"
               >
-                <div className="text-[10px] font-mono text-emerald-400 font-bold">{item.year}</div>
-                <div className="text-xs font-bold text-zinc-200 leading-tight">{item.label}</div>
+                <div className="text-xs font-mono font-bold text-indigo-400">{t.year}</div>
+                <div className="text-[10px] font-bold text-zinc-200 leading-tight">{t.label}</div>
               </div>
             ))}
           </div>
 
-          {/* 3 Metric Cards */}
+          {/* 3 Impact Numbers */}
           <div
-            className={`grid grid-cols-1 sm:grid-cols-3 gap-5 transition-all duration-700 ${
-              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+            className={`grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 transition-all duration-300 ease-out ${
+              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
           >
-            {stats.map((st: any, idx: number) => (
+            {stats.map((s: any, idx: number) => (
               <div
                 key={idx}
-                className="p-6 rounded-3xl bg-gradient-to-b from-white/10 to-white/5 border border-white/10 backdrop-blur-xl text-center space-y-2 shadow-xl"
+                className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-indigo-950/60 to-zinc-900 border border-indigo-500/30 text-center space-y-1 shadow-lg"
               >
-                <div className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-emerald-400 to-teal-300">
-                  {st.value}
+                <div className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-violet-300">
+                  {s.value}
                 </div>
-                <div className="text-xs sm:text-sm font-bold text-zinc-200">{st.label}</div>
-                {st.sub && <div className="text-[11px] text-zinc-400 font-medium">{st.sub}</div>}
+                <div className="text-xs font-bold text-zinc-200">{s.label}</div>
+                <div className="text-[10px] text-zinc-400 font-mono">{s.sub}</div>
               </div>
             ))}
           </div>
 
-          {slide.source && (
-            <p className="text-[10px] text-zinc-500 font-mono">{slide.source}</p>
-          )}
+          <p
+            className={`text-xs text-zinc-400 text-center pt-1 transition-all duration-300 ease-out ${
+              currentStep >= 2 ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            Source: NASSCOM Strategic Review 2026 · DPIIT / Startup India
+          </p>
         </div>
       );
     }
@@ -520,7 +554,6 @@ export default function SlideRenderer({
         "What happens after 50?",
         "Only government is secure.",
       ];
-
       const facts = slide.facts || [
         { value: "+170 mn", label: "new roles by 2030, against 92 mn displaced" },
         { value: "39%", label: "of core skills change — churn opens doors too" },
@@ -530,70 +563,70 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
-            <span className="px-3 py-1 rounded-full bg-violet-500/20 border border-violet-500/40 text-xs font-bold text-violet-300 uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "PILLAR 03"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "WHAT PEOPLE GET WRONG"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "THE FEARS ARE REAL. THEY ARE ALSO INCOMPLETE."}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Left: The Perception */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            {/* Left: Fears / Myths */}
             <div
-              className={`p-6 rounded-3xl bg-rose-950/30 border border-rose-500/30 space-y-4 transition-all duration-700 ${
-                currentStep >= 0 ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-6"
+              className={`p-4 sm:p-5 rounded-3xl bg-rose-950/20 border border-rose-500/30 space-y-2.5 transition-all duration-300 ease-out shadow-lg ${
+                currentStep >= 0 ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-3"
               }`}
             >
               <div className="flex items-center gap-2 text-rose-400 text-xs font-bold uppercase tracking-wider">
                 <AlertTriangle className="w-4 h-4" />
-                <span>THE PERCEPTION</span>
+                <span>The Perception / Fear</span>
               </div>
-              <div className="space-y-2.5">
+              <ul className="space-y-2 text-xs sm:text-sm text-zinc-200">
                 {myths.map((m: string, idx: number) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs sm:text-sm text-zinc-300 font-medium">
-                    <span className="text-rose-400 font-bold">“</span>
+                  <li key={idx} className="flex items-start gap-2">
+                    <span className="text-rose-400 font-bold shrink-0">✕</span>
                     <span>{m}</span>
-                  </div>
+                  </li>
                 ))}
-              </div>
-              <p className="text-[11px] text-zinc-400 italic pt-2 border-t border-white/10">
+              </ul>
+              <p className="text-[10px] text-zinc-400 italic pt-1 border-t border-rose-500/20">
                 {slide.mythsFooter || "These come from watching real people lose real jobs."}
               </p>
             </div>
 
-            {/* Right: The Fuller Picture */}
+            {/* Right: Facts & Upside */}
             <div
-              className={`p-6 rounded-3xl bg-emerald-950/30 border border-emerald-500/30 space-y-4 transition-all duration-700 ${
-                currentStep >= 1 ? "opacity-100 translate-x-0" : "opacity-0 translate-x-6"
+              className={`p-4 sm:p-5 rounded-3xl bg-emerald-950/20 border border-emerald-500/30 space-y-2.5 transition-all duration-300 ease-out shadow-lg ${
+                currentStep >= 1 ? "opacity-100 translate-x-0" : "opacity-0 translate-x-3"
               }`}
             >
               <div className="flex items-center gap-2 text-emerald-400 text-xs font-bold uppercase tracking-wider">
                 <ShieldCheck className="w-4 h-4" />
-                <span>THE FULLER PICTURE</span>
+                <span>The Fuller Picture & Facts</span>
               </div>
-              <div className="space-y-2.5">
+              <ul className="space-y-2 text-xs sm:text-sm text-zinc-200">
                 {facts.map((f: any, idx: number) => (
-                  <div key={idx} className="flex items-baseline gap-2 text-xs sm:text-sm text-zinc-200">
-                    <span className="font-mono font-black text-emerald-400 shrink-0">{f.value}</span>
-                    <span className="text-zinc-300 font-medium">{f.label}</span>
-                  </div>
+                  <li key={idx} className="flex items-start gap-2">
+                    <strong className="text-emerald-400 font-mono font-bold shrink-0">{f.value}</strong>
+                    <span>{f.label}</span>
+                  </li>
                 ))}
-              </div>
-              <p className="text-[11px] text-emerald-300 font-medium pt-2 border-t border-white/10">
-                {slide.factsFooter || "Mobility, remote work, global roles, entrepreneurship — all real here."}
+              </ul>
+              <p className="text-[10px] text-zinc-400 italic pt-1 border-t border-emerald-500/20">
+                {slide.factsFooter || "Mobility, remote work, global roles, entrepreneurship."}
               </p>
             </div>
           </div>
 
           {/* Key Takeaway */}
           <div
-            className={`p-4 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 text-center text-sm sm:text-base font-bold text-indigo-200 transition-all duration-700 ${
+            className={`p-3.5 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 text-center font-bold text-xs sm:text-sm text-indigo-200 transition-all duration-300 ease-out ${
               currentStep >= 2 ? "opacity-100 scale-100" : "opacity-0 scale-95"
             }`}
           >
@@ -607,87 +640,96 @@ export default function SlideRenderer({
     // 9. SCENARIO SPLIT (PILLAR 04)
     // ==========================================
     case "SCENARIO_SPLIT": {
+      const scA = slide.scenarioA || {
+        title: "SCENARIO A",
+        subtitle: "Two years of full-time exam preparation",
+        steps: ["Study", "Exam attempts", "Selection uncertainty", "Waiting period"],
+        footer: "193 per vacancy · 933 UPSC posts",
+      };
+      const scB = slide.scenarioB || {
+        title: "SCENARIO B",
+        subtitle: "Two years building skills alongside your degree",
+        steps: [
+          { time: "MONTH 0-6", label: "Learn a real skill" },
+          { time: "MONTH 6-12", label: "Build and ship projects" },
+          { time: "MONTH 12-18", label: "Internship & Industry Exposure" },
+          { time: "MONTH 18-24", label: "Entry role → first switch" },
+        ],
+        footer: "₹3.5-6 LPA entry · ₹8-12 LPA+ with a portfolio",
+      };
+
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
-            <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-xs font-bold text-amber-300 uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "PILLAR 04"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "TIME & OPPORTUNITY COST"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "WHAT CAN TWO YEARS CHANGE?"}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
             {/* Scenario A */}
             <div
-              className={`p-6 rounded-3xl bg-white/5 border border-white/10 space-y-4 transition-all duration-700 ${
-                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+              className={`p-4 sm:p-5 rounded-3xl bg-white/5 border border-white/10 space-y-3 transition-all duration-300 ease-out shadow-lg ${
+                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              <div className="space-y-1">
-                <span className="text-xs font-bold text-zinc-400 font-mono">SCENARIO A</span>
-                <h3 className="text-base sm:text-lg font-bold text-white">
-                  Two years of full-time exam preparation
-                </h3>
+              <div>
+                <span className="text-xs font-mono font-bold text-zinc-400">{scA.title}</span>
+                <h4 className="text-sm sm:text-base font-bold text-white mt-0.5">{scA.subtitle}</h4>
               </div>
-              <div className="space-y-2 py-2">
-                {["Study", "Exam attempts", "Selection uncertainty", "Waiting period"].map((s, idx) => (
-                  <div key={idx} className="flex items-center gap-3 text-xs sm:text-sm text-zinc-300">
-                    <div className="w-5 h-5 rounded-lg bg-zinc-800 flex items-center justify-center text-[10px] font-bold text-zinc-400">
-                      {idx + 1}
-                    </div>
-                    <span>{s}</span>
+              <div className="space-y-1.5">
+                {scA.steps.map((st: string, idx: number) => (
+                  <div key={idx} className="p-2 rounded-xl bg-black/30 text-xs text-zinc-300">
+                    {st}
                   </div>
                 ))}
               </div>
-              <div className="p-3 rounded-xl bg-black/40 text-xs text-zinc-400 font-mono">
-                193 per vacancy · 933 UPSC posts
+              <div className="text-xs font-mono text-zinc-400 pt-1 border-t border-white/10">
+                {scA.footer}
               </div>
             </div>
 
             {/* Scenario B */}
             <div
-              className={`p-6 rounded-3xl bg-gradient-to-b from-indigo-950/60 to-zinc-900 border border-indigo-500/40 space-y-4 transition-all duration-700 shadow-xl ${
-                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+              className={`p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-indigo-950/70 to-zinc-900 border border-indigo-500/40 space-y-3 transition-all duration-300 ease-out shadow-xl ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              <div className="space-y-1">
-                <span className="text-xs font-bold text-indigo-400 font-mono">SCENARIO B</span>
-                <h3 className="text-base sm:text-lg font-bold text-white">
-                  Two years building skills alongside your degree
-                </h3>
+              <div>
+                <span className="text-xs font-mono font-bold text-indigo-400">{scB.title}</span>
+                <h4 className="text-sm sm:text-base font-bold text-white mt-0.5">{scB.subtitle}</h4>
               </div>
-              <div className="space-y-2 py-2">
-                {[
-                  { time: "MONTH 0-6", label: "Learn a real skill" },
-                  { time: "MONTH 6-12", label: "Build and ship projects" },
-                  { time: "MONTH 12-18", label: "Internship & Industry Exposure" },
-                  { time: "MONTH 18-24", label: "Entry role → first switch" },
-                ].map((s, idx) => (
-                  <div key={idx} className="flex items-center justify-between text-xs sm:text-sm">
-                    <span className="text-[10px] font-mono font-bold text-indigo-400">{s.time}</span>
-                    <span className="text-zinc-200 font-medium">{s.label}</span>
+              <div className="space-y-1.5">
+                {scB.steps.map((st: any, idx: number) => (
+                  <div
+                    key={idx}
+                    className="p-2 rounded-xl bg-indigo-900/30 border border-indigo-500/20 flex items-center justify-between text-xs"
+                  >
+                    <span className="font-mono text-indigo-300 font-bold">{st.time}</span>
+                    <span className="text-zinc-200 font-medium">{st.label}</span>
                   </div>
                 ))}
               </div>
-              <div className="p-3 rounded-xl bg-indigo-950/60 border border-indigo-500/30 text-xs text-indigo-300 font-bold font-mono">
-                ₹3.5-6 LPA entry · ₹8-12 LPA+ with a portfolio
+              <div className="text-xs font-mono text-emerald-400 font-bold pt-1 border-t border-indigo-500/20">
+                {scB.footer}
               </div>
             </div>
           </div>
 
-          <div
-            className={`text-xs text-zinc-400 text-center italic transition-all duration-700 ${
+          <p
+            className={`text-xs text-zinc-400 text-center italic transition-all duration-300 ease-out ${
               currentStep >= 2 ? "opacity-100" : "opacity-0"
             }`}
           >
             {slide.caveat ||
               "Illustrative — not a guaranteed outcome. Many students do both. Choose deliberately, not by default."}
-          </div>
+          </p>
         </div>
       );
     }
@@ -705,40 +747,43 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-xs font-bold text-emerald-300 uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "CAREER POTENTIAL"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "THE OTHER SIDE OF THE LEDGER"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "WHAT CAN A PRIVATE CAREER OFFER?"}
             </p>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 pt-2">
-            {benefits.map((b: any, idx: number) => {
-              const isVisible = currentStep >= Math.floor(idx / 2);
-              return (
-                <div
-                  key={idx}
-                  className={`p-5 rounded-3xl bg-white/5 border border-white/10 text-center space-y-2 transition-all duration-700 shadow-xl ${
-                    isVisible ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-                  }`}
-                >
-                  <div className="text-xs font-bold text-indigo-400 uppercase tracking-wider leading-tight">
-                    {b.title}
-                  </div>
-                  <div className="text-2xl sm:text-3xl font-black text-white">{b.value}</div>
-                  <div className="text-[11px] text-zinc-400">{b.sub}</div>
-                </div>
-              );
-            })}
+          <div
+            className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-1 transition-all duration-300 ease-out ${
+              currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+            }`}
+          >
+            {benefits.map((b: any, idx: number) => (
+              <div
+                key={idx}
+                className="p-3.5 sm:p-4 rounded-3xl bg-white/5 border border-white/10 text-center space-y-1.5 hover:border-indigo-500/40 transition-all shadow-md"
+              >
+                <span className="text-[10px] font-mono text-zinc-400 font-bold block leading-tight">
+                  {b.title}
+                </span>
+                <div className="text-xl sm:text-3xl font-black text-indigo-300">{b.value}</div>
+                <span className="text-[10px] text-zinc-400 block">{b.sub}</span>
+              </div>
+            ))}
           </div>
 
-          <p className="text-xs text-zinc-400 text-center">
+          <p
+            className={`text-xs text-zinc-400 text-center italic transition-all duration-300 ease-out ${
+              currentStep >= 1 ? "opacity-100" : "opacity-0"
+            }`}
+          >
             {slide.footer || "Depending on role, company and industry. None of it arrives without skills."}
           </p>
         </div>
@@ -757,43 +802,42 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "ACADEMIC ALIGNMENT"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "YOUR DEGREE, YOUR ENTRY POINT"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "FOUR STARTING POINTS."}
             </p>
           </div>
 
-          {/* Matrix Rows */}
-          <div className="space-y-3">
+          <div className="space-y-2 pt-1">
             {rows.map((r: any, idx: number) => {
-              const isVisible = currentStep >= idx;
+              const isRevealed = currentStep >= idx;
               return (
                 <div
                   key={idx}
-                  className={`p-4 rounded-2xl border transition-all duration-700 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 ${
-                    isVisible
-                      ? "bg-white/5 border-white/15 opacity-100 translate-x-0 shadow-md"
-                      : "bg-white/2 border-white/5 opacity-20 -translate-x-4"
+                  className={`p-3.5 sm:p-4 rounded-2xl border flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 transition-all duration-300 ease-out shadow-md ${
+                    isRevealed
+                      ? "bg-white/5 border-white/10 opacity-100 translate-x-0"
+                      : "bg-white/2 border-white/5 opacity-30 -translate-x-3"
                   }`}
                 >
-                  <div className="space-y-0.5 sm:w-1/3">
-                    <span className="text-xs font-black text-indigo-400 font-mono">{r.branch}</span>
-                    <p className="text-[11px] text-zinc-400">{r.degrees}</p>
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-mono font-bold text-indigo-400">{r.branch}</span>
+                    <h4 className="font-bold text-xs sm:text-base text-white">{r.role}</h4>
+                    <p className="text-[10px] sm:text-[11px] text-zinc-400">{r.degrees}</p>
                   </div>
-                  <div className="sm:w-1/3">
-                    <span className="text-xs sm:text-sm font-bold text-white block">{r.role}</span>
-                  </div>
-                  <div className="flex items-center gap-4 sm:w-1/3 justify-between sm:justify-end">
-                    <span className="font-mono font-bold text-emerald-400 text-xs sm:text-sm">{r.range}</span>
-                    <span className="px-2.5 py-1 rounded-lg bg-white/10 text-[10px] font-black text-zinc-300 font-mono">
-                      {r.effort}
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-xs font-mono font-black text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-xl border border-emerald-500/20">
+                      {r.range}
+                    </span>
+                    <span className="text-[10px] font-mono font-bold text-zinc-400 bg-white/5 px-2 py-1 rounded-lg">
+                      EFFORT: {r.effort}
                     </span>
                   </div>
                 </div>
@@ -801,31 +845,29 @@ export default function SlideRenderer({
             })}
           </div>
 
-          {/* Equation Formula */}
+          {/* Formula */}
           <div
-            className={`p-4 rounded-2xl bg-gradient-to-r from-indigo-950/60 to-violet-950/60 border border-indigo-500/40 text-center transition-all duration-700 ${
-              currentStep >= 4 ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            className={`p-3 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm font-black transition-all duration-300 ease-out shadow-lg ${
+              currentStep >= 3 ? "opacity-100" : "opacity-0"
             }`}
           >
-            <div className="flex flex-wrap items-center justify-center gap-2 text-xs sm:text-sm font-black text-indigo-200">
-              <span>DEGREE</span>
-              <span className="text-indigo-400">+</span>
-              <span>SKILLS</span>
-              <span className="text-indigo-400">+</span>
-              <span>PROJECTS</span>
-              <span className="text-indigo-400">+</span>
-              <span>EVIDENCE</span>
-            </div>
+            <span className="text-indigo-300">DEGREE</span>
+            <span className="text-zinc-500">+</span>
+            <span className="text-indigo-300">SKILLS</span>
+            <span className="text-zinc-500">+</span>
+            <span className="text-indigo-300">PROJECTS</span>
+            <span className="text-zinc-500">+</span>
+            <span className="text-amber-400">EVIDENCE</span>
           </div>
         </div>
       );
     }
 
     // ==========================================
-    // 12. GAP LAYER
+    // 12. THE GAP (GAP LAYER)
     // ==========================================
     case "GAP_LAYER": {
-      const industrySkills = slide.industryLayer || [
+      const layers = slide.industryLayer || [
         "Practical Skills",
         "Projects",
         "Portfolio",
@@ -836,75 +878,78 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
-            <span className="px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-xs font-bold text-rose-300 uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "REALITY CHECK"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "THE GAP"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "A DEGREE DOES NOT INCLUDE THESE."}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Foundation Layer */}
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center pt-1">
+            {/* Degree Foundation */}
             <div
-              className={`p-6 rounded-3xl bg-white/5 border border-white/10 space-y-4 transition-all duration-700 ${
-                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+              className={`lg:col-span-4 p-4 sm:p-5 rounded-3xl bg-white/5 border border-white/10 text-center space-y-2 transition-all duration-300 ease-out shadow-lg ${
+                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              <span className="text-xs font-mono font-bold text-zinc-400">THE FOUNDATION</span>
-              <h3 className="text-2xl font-black text-white">YOUR DEGREE</h3>
-              <p className="text-xs sm:text-sm text-indigo-300 font-bold">DOMAIN KNOWLEDGE</p>
-              <p className="text-xs text-zinc-400 leading-relaxed">
-                Irreplaceable — and what every other student here already has.
+              <span className="text-xs font-mono text-zinc-400 font-bold uppercase">THE FOUNDATION</span>
+              <div className="w-12 h-12 rounded-2xl bg-indigo-600/30 border border-indigo-500/40 mx-auto flex items-center justify-center">
+                <GraduationCap className="w-6 h-6 text-indigo-400" />
+              </div>
+              <h4 className="font-extrabold text-sm sm:text-base text-white">YOUR DEGREE</h4>
+              <p className="text-[11px] text-zinc-400 leading-relaxed">
+                Domain knowledge. Irreplaceable — and what every other graduate already has.
               </p>
             </div>
 
-            {/* Industry Layer */}
+            {/* Industry Layer (Gap) */}
             <div
-              className={`p-6 rounded-3xl bg-gradient-to-b from-indigo-950/60 to-zinc-900 border border-indigo-500/40 space-y-4 transition-all duration-700 shadow-xl ${
-                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+              className={`lg:col-span-8 p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-indigo-950/70 to-zinc-900 border border-indigo-500/40 space-y-3 transition-all duration-300 ease-out shadow-xl ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
-              <span className="text-xs font-mono font-bold text-indigo-400">+ THE INDUSTRY LAYER</span>
-              <div className="flex flex-wrap gap-2">
-                {industrySkills.map((s: string, idx: number) => (
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-mono font-bold text-indigo-400 uppercase">
+                  THE MISSING INDUSTRY LAYER
+                </span>
+                <span className="text-xs text-amber-400 font-bold">Nobody hands you this</span>
+              </div>
+              <div className="flex flex-wrap gap-1.5">
+                {layers.map((l: string, idx: number) => (
                   <span
                     key={idx}
-                    className="px-3 py-1.5 rounded-xl bg-white/10 text-xs font-bold text-zinc-200"
+                    className="px-3 py-1 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-[11px] font-bold text-white shadow-sm"
                   >
-                    {s}
+                    {l}
                   </span>
                 ))}
               </div>
-              <p className="text-xs text-indigo-300 font-bold italic pt-2">Nobody hands you this.</p>
+              <div className="pt-2 flex items-center justify-between text-xs text-zinc-300 border-t border-white/10">
+                <span>India Skills Report 2026:</span>
+                <span className="font-mono font-bold text-amber-400">Only 56.4% assessed employable</span>
+              </div>
             </div>
           </div>
 
-          {/* Employability Stat */}
-          <div
-            className={`p-4 rounded-2xl bg-rose-500/10 border border-rose-500/30 flex items-center justify-between gap-4 transition-all duration-700 ${
+          <p
+            className={`text-center font-bold text-xs sm:text-sm text-indigo-300 transition-all duration-300 ease-out ${
               currentStep >= 2 ? "opacity-100" : "opacity-0"
             }`}
           >
-            <div>
-              <div className="text-2xl sm:text-3xl font-black text-rose-400">56.4%</div>
-              <div className="text-[11px] text-zinc-300 font-semibold uppercase">ASSESSED EMPLOYABLE (India Skills Report 2026)</div>
-            </div>
-            <div className="text-xs sm:text-sm text-zinc-300 font-medium max-w-sm text-right">
-              {slide.punchline || "The degree is the foundation. The layer on top is built on purpose."}
-            </div>
-          </div>
+            {slide.punchline || "The degree is the foundation. The layer on top is built on purpose."}
+          </p>
         </div>
       );
     }
 
     // ==========================================
-    // 13. ROADMAP FLOW
+    // 13. THE ROADMAP (6 STEPS)
     // ==========================================
     case "ROADMAP_FLOW": {
       const steps = slide.steps || [
@@ -917,40 +962,47 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-8 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "THE BLUEPRINT"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "THE ROADMAP"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "HOW DO YOU GET THERE?"}
             </p>
           </div>
 
-          {/* Steps Chain */}
-          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+          <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5 pt-1">
             {steps.map((st: any, idx: number) => {
               const isRevealed = currentStep >= idx;
               return (
                 <div
                   key={idx}
-                  className={`p-4 rounded-2xl border transition-all duration-500 space-y-2 text-center ${
+                  className={`p-3.5 rounded-3xl border text-center space-y-2 transition-all duration-300 ease-out shadow-lg ${
                     isRevealed
-                      ? "bg-indigo-950/40 border-indigo-500/60 scale-102 shadow-lg"
-                      : "bg-white/5 border-white/10 opacity-30"
+                      ? "bg-gradient-to-b from-indigo-900/40 to-zinc-900 border-indigo-500/40 opacity-100 scale-100"
+                      : "bg-white/2 border-white/5 opacity-20 scale-95"
                   }`}
                 >
-                  <div className="text-xs font-mono font-black text-indigo-400">{st.num}</div>
-                  <div className="text-xs font-bold text-white leading-snug">{st.title}</div>
+                  <div className="w-7 h-7 rounded-xl bg-indigo-600/30 text-indigo-300 font-mono font-black text-xs mx-auto flex items-center justify-center border border-indigo-500/30">
+                    {st.num}
+                  </div>
+                  <h4 className="font-extrabold text-[11px] text-white leading-tight min-h-[28px] flex items-center justify-center">
+                    {st.title}
+                  </h4>
                 </div>
               );
             })}
           </div>
 
-          <div className="p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center text-xs sm:text-sm font-bold text-amber-300">
+          <div
+            className={`p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center font-bold text-xs sm:text-sm text-amber-300 transition-all duration-300 ease-out ${
+              currentStep >= 5 ? "opacity-100" : "opacity-0"
+            }`}
+          >
             {slide.punchline || "Most students try to jump from 01 directly to 06."}
           </div>
         </div>
@@ -961,65 +1013,83 @@ export default function SlideRenderer({
     // 14. BUILD VS TUTORIAL
     // ==========================================
     case "BUILD_VS_TUTORIAL": {
+      const tut = slide.tutorialChain || ["TUTORIAL", "COPY", "FINISH", "FORGET"];
+      const proj = slide.projectSteps || [
+        { step: 1, label: "PROBLEM" },
+        { step: 2, label: "RESEARCH" },
+        { step: 3, label: "BUILD" },
+        { step: 4, label: "TEST" },
+        { step: 5, label: "DEPLOY / PRESENT" },
+        { step: 6, label: "EVIDENCE" },
+      ];
+
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
-            <span className="px-3 py-1 rounded-full bg-rose-500/20 border border-rose-500/40 text-xs font-bold text-rose-300 uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "STEP 02 FOCUS"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "LEARNING IS NOT BUILDING."}
             </h2>
+            <p className="text-xs sm:text-sm text-zinc-400">
+              {slide.subtitle || "A project is the only proof that you can apply what you know."}
+            </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Tutorial Trap */}
-            <div
-              className={`p-6 rounded-3xl bg-rose-950/30 border border-rose-500/30 space-y-4 transition-all duration-700 ${
-                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-              }`}
-            >
-              <span className="text-xs font-bold font-mono text-rose-400">THE TUTORIAL TRAP</span>
-              <div className="flex items-center gap-2 text-xs sm:text-sm font-bold text-zinc-300">
-                <span>TUTORIAL</span>
-                <span>›</span>
-                <span>COPY</span>
-                <span>›</span>
-                <span>FINISH</span>
-                <span>›</span>
-                <span>FORGET</span>
-              </div>
-              <p className="text-xs text-rose-300 italic">The feeling of progress. None of the evidence.</p>
+          {/* Tutorial Trap */}
+          <div
+            className={`p-4 rounded-3xl bg-rose-950/20 border border-rose-500/30 space-y-1.5 transition-all duration-300 ease-out shadow-lg ${
+              currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+            }`}
+          >
+            <span className="text-xs font-mono font-bold text-rose-400 uppercase">THE TUTORIAL TRAP</span>
+            <div className="flex flex-wrap items-center gap-1.5 pt-1 text-xs font-mono font-bold">
+              {tut.map((t: string, idx: number) => (
+                <React.Fragment key={idx}>
+                  <span className="px-2.5 py-1 rounded-xl bg-rose-500/20 text-rose-200 border border-rose-500/30">
+                    {t}
+                  </span>
+                  {idx < tut.length - 1 && <span className="text-rose-400">→</span>}
+                </React.Fragment>
+              ))}
             </div>
+            <p className="text-[10px] text-zinc-400 italic pt-0.5">
+              {slide.tutorialNote || "The feeling of progress. None of the evidence."}
+            </p>
+          </div>
 
-            {/* Project Engineering Cycle */}
-            <div
-              className={`p-6 rounded-3xl bg-emerald-950/30 border border-emerald-500/30 space-y-4 transition-all duration-700 ${
-                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
-              }`}
-            >
-              <span className="text-xs font-bold font-mono text-emerald-400">REAL PROJECT ENGINEERING</span>
-              <div className="grid grid-cols-3 gap-2 text-center text-xs font-bold">
-                {["1. PROBLEM", "2. RESEARCH", "3. BUILD", "4. TEST", "5. DEPLOY", "6. EVIDENCE"].map((s) => (
-                  <div key={s} className="p-2 rounded-xl bg-white/10 text-emerald-200">
-                    {s}
-                  </div>
-                ))}
-              </div>
+          {/* Real Project Cycle */}
+          <div
+            className={`p-4 rounded-3xl bg-emerald-950/20 border border-emerald-500/30 space-y-1.5 transition-all duration-300 ease-out shadow-lg ${
+              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+            }`}
+          >
+            <span className="text-xs font-mono font-bold text-emerald-400 uppercase">
+              REAL PROJECT EVIDENCE
+            </span>
+            <div className="grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1">
+              {proj.map((p: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="p-2 rounded-xl bg-emerald-500/20 border border-emerald-500/30 text-center"
+                >
+                  <span className="text-[10px] font-mono text-emerald-400 block font-bold">0{p.step}</span>
+                  <span className="text-xs font-bold text-white">{p.label}</span>
+                </div>
+              ))}
             </div>
           </div>
 
           {/* The Test */}
           <div
-            className={`p-5 rounded-2xl bg-amber-500/10 border border-amber-500/40 space-y-1 transition-all duration-700 ${
-              currentStep >= 2 ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            className={`p-3.5 rounded-2xl bg-zinc-900 border border-white/10 text-xs sm:text-sm text-zinc-200 leading-relaxed transition-all duration-300 ease-out ${
+              currentStep >= 2 ? "opacity-100" : "opacity-0"
             }`}
           >
-            <div className="text-xs font-bold text-amber-400 uppercase tracking-wider">THE TEST</div>
-            <p className="text-xs sm:text-sm text-zinc-200 font-medium">
-              {slide.theTest ||
-                "Can someone else open it and see that it works — without you explaining it? If not, it is not yet evidence."}
-            </p>
+            <strong className="text-indigo-400">The Test: </strong>
+            {slide.theTest ||
+              "Can someone else open it and see that it works — without you explaining it? If not, it is not yet evidence."}
           </div>
         </div>
       );
@@ -1029,6 +1099,15 @@ export default function SlideRenderer({
     // 15. FUNNEL WAYS
     // ==========================================
     case "FUNNEL_WAYS": {
+      const funnel = slide.funnel || [
+        "SKILL",
+        "PROJECT",
+        "RESUME",
+        "APPLICATION",
+        "REFERRAL / NETWORK",
+        "INTERVIEW",
+        "OPPORTUNITY",
+      ];
       const channels = slide.channels || [
         "Job portals",
         "Career pages",
@@ -1041,44 +1120,65 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "STEPS 03 TO 06"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "GOOD SKILL ≠ GOOD OPPORTUNITY."}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "Every stage below skill is a communication problem."}
             </p>
           </div>
 
-          {/* Funnel Channels Grid */}
-          <div className="space-y-3">
-            <span className="text-xs font-bold text-zinc-400 font-mono uppercase">8 Ways In</span>
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-              {channels.map((ch: string, idx: number) => {
-                const isRevealed = currentStep >= Math.floor(idx / 2);
-                return (
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-4 items-center pt-1">
+            {/* Funnel Flow */}
+            <div
+              className={`lg:col-span-6 p-4 rounded-3xl bg-white/5 border border-white/10 space-y-1.5 transition-all duration-300 ease-out shadow-lg ${
+                currentStep >= 0 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <span className="text-xs font-mono font-bold text-indigo-400 uppercase">
+                THE 7-STAGE CONVERSION FUNNEL
+              </span>
+              <div className="space-y-1 pt-1">
+                {funnel.map((f: string, idx: number) => (
                   <div
                     key={idx}
-                    className={`p-3.5 rounded-2xl border text-xs font-bold transition-all duration-500 flex items-center gap-2 ${
-                      isRevealed
-                        ? "bg-white/10 border-indigo-500/40 text-white"
-                        : "bg-white/5 border-white/5 text-zinc-500 opacity-40"
-                    }`}
+                    className="p-2 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between text-xs"
                   >
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
-                    <span>{ch}</span>
+                    <span className="font-mono text-zinc-400 text-[10px]">0{idx + 1}</span>
+                    <span className="font-bold text-white">{f}</span>
                   </div>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
 
-          <div className="p-4 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 text-center text-xs sm:text-sm font-bold text-indigo-200">
-            {slide.punchline || "Most students use only one of these eight."}
+            {/* 8 Channels */}
+            <div
+              className={`lg:col-span-6 p-4 rounded-3xl bg-gradient-to-br from-indigo-950/70 to-zinc-900 border border-indigo-500/40 space-y-2.5 transition-all duration-300 ease-out shadow-xl ${
+                currentStep >= 1 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <span className="text-xs font-mono font-bold text-indigo-300 uppercase">
+                8 CHANNELS TO REACH RECRUITERS
+              </span>
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                {channels.map((c: string, idx: number) => (
+                  <div
+                    key={idx}
+                    className="p-2.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/20 text-xs font-bold text-zinc-100 text-center"
+                  >
+                    {c}
+                  </div>
+                ))}
+              </div>
+              <p className="text-xs text-amber-300 font-bold pt-1 border-t border-white/10 text-center">
+                {slide.punchline || "Most students use only one of these eight."}
+              </p>
+            </div>
           </div>
         </div>
       );
@@ -1088,7 +1188,7 @@ export default function SlideRenderer({
     // 16. PROGRAM PILLARS
     // ==========================================
     case "PROGRAM_PILLARS": {
-      const components = slide.components || [
+      const comps = slide.components || [
         { title: "Industry Curriculum", desc: "Modern production-grade tools, stacks & patterns" },
         { title: "Practical Projects", desc: "Shipped live with real data, tests & end users" },
         { title: "Expert Sessions", desc: "Live masterclasses from senior engineers & founders" },
@@ -1099,44 +1199,43 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "THE STRUCTURED SOLUTION"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "SO HOW DO YOU BUILD THIS?"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "UNISOLE AI CAMPUS PROGRAM — Build skills, projects and professional evidence."}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 pt-2">
-            {components.map((c: any, idx: number) => {
-              const isRevealed = currentStep >= Math.floor(idx / 3);
-              return (
-                <div
-                  key={idx}
-                  className={`p-5 rounded-3xl border transition-all duration-700 space-y-1.5 ${
-                    isRevealed
-                      ? "bg-white/5 border-indigo-500/40 translate-y-0 opacity-100 shadow-lg"
-                      : "bg-white/2 border-white/5 translate-y-4 opacity-20"
-                  }`}
-                >
-                  <div className="text-xs font-black text-indigo-400 font-mono uppercase">0{idx + 1}</div>
-                  <h3 className="text-sm sm:text-base font-bold text-white">{c.title}</h3>
-                  <p className="text-xs text-zinc-400 leading-relaxed">{c.desc}</p>
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1 transition-all duration-300 ease-out ${
+              currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+            }`}
+          >
+            {comps.map((c: any, idx: number) => (
+              <div
+                key={idx}
+                className="p-4 rounded-3xl bg-white/5 border border-white/10 hover:border-indigo-500/40 transition-all shadow-md space-y-1"
+              >
+                <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                  <h4 className="font-extrabold text-xs sm:text-sm text-white">{c.title}</h4>
                 </div>
-              );
-            })}
+                <p className="text-xs text-zinc-300 font-medium leading-relaxed">{c.desc}</p>
+              </div>
+            ))}
           </div>
         </div>
       );
     }
 
     // ==========================================
-    // 17. COURSE PATHWAYS
+    // 17. COURSE PATHWAYS (FEES & TRACKS)
     // ==========================================
     case "COURSE_PATHWAYS": {
       const groups = slide.groups || [
@@ -1181,51 +1280,64 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-6xl mx-auto space-y-5 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "CHOOSE YOUR TRACK"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "COURSE PATHWAYS"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "FIND YOUR GROUP."}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
             {groups.map((g: any, idx: number) => {
               const isRevealed = currentStep >= idx;
               return (
                 <div
                   key={idx}
-                  className={`p-5 rounded-3xl border transition-all duration-700 space-y-4 ${
+                  className={`p-4 rounded-3xl border transition-all duration-300 ease-out flex flex-col justify-between shadow-lg ${
                     isRevealed
-                      ? "bg-gradient-to-b from-indigo-950/40 to-zinc-900 border-indigo-500/40 shadow-xl opacity-100"
-                      : "bg-white/5 border-white/5 opacity-20"
+                      ? "bg-gradient-to-b from-indigo-950/60 to-zinc-900 border-indigo-500/40 opacity-100 translate-y-0"
+                      : "bg-white/2 border-white/5 opacity-25 translate-y-2"
                   }`}
                 >
-                  <div className="space-y-0.5 border-b border-white/10 pb-3">
-                    <span className="text-[10px] font-mono font-black text-indigo-400">{g.group}</span>
-                    <h3 className="text-base font-black text-white">{g.branch}</h3>
-                    <p className="text-[10px] text-zinc-400">{g.degrees}</p>
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-mono font-bold text-indigo-400">{g.group}</span>
+                      <span className="text-xs font-black text-white">{g.branch}</span>
+                    </div>
+                    <p className="text-[10px] text-zinc-400 leading-tight">{g.degrees}</p>
+
+                    <div className="space-y-1.5 pt-2 border-t border-white/10">
+                      {g.courses.map((c: any, cIdx: number) => (
+                        <div
+                          key={cIdx}
+                          className="p-2 rounded-xl bg-black/40 border border-white/5 flex items-center justify-between text-xs"
+                        >
+                          <span className="font-medium text-zinc-200 truncate mr-2 text-[11px]">{c.name}</span>
+                          <span className="font-mono font-black text-amber-400 shrink-0 text-xs">{c.price}</span>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
-                  <div className="space-y-2.5">
-                    {g.courses.map((c: any, cIdx: number) => (
-                      <div key={cIdx} className="flex items-center justify-between text-xs gap-2">
-                        <span className="text-zinc-300 font-medium leading-tight">{c.name}</span>
-                        <span className="font-mono font-black text-emerald-400 shrink-0">{c.price}</span>
-                      </div>
-                    ))}
+                  <div className="pt-2 mt-1 border-t border-white/5 text-[9px] text-zinc-500 text-center font-mono">
+                    Structured Curriculum + Projects
                   </div>
                 </div>
               );
             })}
           </div>
 
-          <p className="text-xs text-indigo-300 text-center font-semibold">
+          <p
+            className={`text-center text-xs text-indigo-300 transition-all duration-300 ease-out ${
+              currentStep >= 3 ? "opacity-100" : "opacity-0"
+            }`}
+          >
             {slide.note || "AI Entrepreneurship & Innovation is open to every group."}
           </p>
         </div>
@@ -1237,7 +1349,7 @@ export default function SlideRenderer({
     // ==========================================
     case "OPPORTUNITY_PATHWAY": {
       const flow = slide.flow || ["TRAIN", "BUILD", "PERFORM", "GET IDENTIFIED", "TALENT POOL", "OPPORTUNITIES"];
-      const opportunities = slide.opportunities || [
+      const opps = slide.opportunities || [
         "Advanced projects",
         "Hackathons",
         "Industry interaction",
@@ -1247,58 +1359,63 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
-            <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-xs font-bold text-emerald-300 uppercase tracking-wider">
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "CAREER PIPELINE"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "BEYOND THE TRAINING"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "FROM TRAINING TO OPPORTUNITY"}
             </p>
           </div>
 
-          {/* Flow Ribbon */}
+          {/* Flow pipeline */}
           <div
-            className={`grid grid-cols-2 sm:grid-cols-6 gap-2 transition-all duration-700 ${
-              currentStep >= 0 ? "opacity-100" : "opacity-0"
+            className={`grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1 transition-all duration-300 ease-out ${
+              currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
           >
             {flow.map((f: string, idx: number) => (
-              <div key={idx} className="p-3 rounded-2xl bg-white/5 border border-white/10 text-center">
-                <span className="text-xs font-bold text-emerald-300">{f}</span>
-              </div>
-            ))}
-          </div>
-
-          {/* Opportunities Badges */}
-          <div
-            className={`grid grid-cols-2 sm:grid-cols-3 gap-3 transition-all duration-700 ${
-              currentStep >= 1 ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            {opportunities.map((opp: string, idx: number) => (
               <div
                 key={idx}
-                className="p-4 rounded-2xl bg-gradient-to-r from-emerald-950/40 to-teal-950/40 border border-emerald-500/30 flex items-center gap-3 text-xs sm:text-sm font-bold text-emerald-100"
+                className="p-2.5 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 text-center text-xs font-black text-white shadow-sm"
               >
-                <div className="w-2 h-2 rounded-full bg-emerald-400" />
-                <span>{opp}</span>
+                {f}
+              </div>
+            ))}
+          </div>
+
+          {/* 6 Opportunities Grid */}
+          <div
+            className={`grid grid-cols-2 sm:grid-cols-3 gap-2.5 pt-1 transition-all duration-300 ease-out ${
+              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+            }`}
+          >
+            {opps.map((o: string, idx: number) => (
+              <div
+                key={idx}
+                className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-center text-xs font-bold text-zinc-200 shadow-sm"
+              >
+                {o}
               </div>
             ))}
           </div>
 
           <div
-            className={`p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 font-medium transition-all duration-700 ${
+            className={`p-3.5 rounded-2xl bg-zinc-900 border border-white/10 text-center space-y-0.5 transition-all duration-300 ease-out ${
               currentStep >= 2 ? "opacity-100" : "opacity-0"
             }`}
           >
-            <strong>Disclaimer:</strong> {slide.disclaimer || "Subject to performance, eligibility, availability and applicable selection procedures."}
-            <div className="text-sm font-bold text-amber-300 mt-1">
+            <p className="text-xs text-zinc-400 italic">
+              {slide.disclaimer ||
+                "Subject to performance, eligibility, availability and applicable selection procedures."}
+            </p>
+            <p className="text-xs sm:text-sm font-bold text-amber-300">
               {slide.punchline || "Nothing here is promised. Everything here is earned."}
-            </div>
+            </p>
           </div>
         </div>
       );
@@ -1308,59 +1425,66 @@ export default function SlideRenderer({
     // 19. MENTORSHIP DUAL
     // ==========================================
     case "MENTORSHIP_DUAL": {
+      const pA = slide.panelA || {
+        title: "INDUSTRY EXPERTS",
+        points: ["Real professionals", "Real problems", "Real workflows", "Real career insight"],
+        footer: "People currently doing the work — not describing it.",
+      };
+      const pB = slide.panelB || {
+        title: "PERSONAL MENTORSHIP",
+        points: ["Career direction", "Project guidance", "Resume & portfolio review", "Interview prep", "Communication coaching"],
+        footer: "One-to-one, on your own work.",
+      };
+
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "EXPERIENCE"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "WHAT IT FEELS LIKE"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "PEOPLE, NOT JUST CONTENT."}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Industry Experts */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            {/* Panel A */}
             <div
-              className={`p-6 rounded-3xl bg-white/5 border border-white/10 space-y-4 transition-all duration-700 ${
-                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+              className={`p-4 sm:p-5 rounded-3xl bg-white/5 border border-white/10 space-y-3 transition-all duration-300 ease-out shadow-lg ${
+                currentStep >= 0 ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-3"
               }`}
             >
-              <h3 className="text-lg font-black text-white">INDUSTRY EXPERTS</h3>
-              <div className="space-y-2">
-                {["Real professionals", "Real problems", "Real workflows", "Real career insight"].map((pt, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs sm:text-sm text-zinc-200">
-                    <div className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
+              <h3 className="text-sm sm:text-base font-black text-indigo-300">{pA.title}</h3>
+              <ul className="space-y-1.5 text-xs text-zinc-200">
+                {pA.points.map((pt: string, idx: number) => (
+                  <li key={idx} className="flex items-center gap-2">
+                    <span className="w-1.5 h-1.5 rounded-full bg-indigo-400" />
                     <span>{pt}</span>
-                  </div>
+                  </li>
                 ))}
-              </div>
-              <p className="text-xs text-indigo-300 font-semibold pt-2 border-t border-white/10">
-                People currently doing the work — not describing it.
-              </p>
+              </ul>
+              <p className="text-xs text-zinc-400 italic pt-1 border-t border-white/10">{pA.footer}</p>
             </div>
 
-            {/* Personal Mentorship */}
+            {/* Panel B */}
             <div
-              className={`p-6 rounded-3xl bg-gradient-to-b from-indigo-950/60 to-zinc-900 border border-indigo-500/40 space-y-4 transition-all duration-700 shadow-xl ${
-                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+              className={`p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-indigo-950/60 to-zinc-900 border border-indigo-500/40 space-y-3 transition-all duration-300 ease-out shadow-xl ${
+                currentStep >= 1 ? "opacity-100 translate-x-0" : "opacity-0 translate-x-3"
               }`}
             >
-              <h3 className="text-lg font-black text-white">PERSONAL MENTORSHIP</h3>
-              <div className="space-y-2">
-                {["Career direction", "Project guidance", "Resume & portfolio review", "Interview prep", "Communication coaching"].map((pt, idx) => (
-                  <div key={idx} className="flex items-center gap-2 text-xs sm:text-sm text-zinc-200">
-                    <div className="w-1.5 h-1.5 rounded-full bg-emerald-400" />
+              <h3 className="text-sm sm:text-base font-black text-violet-300">{pB.title}</h3>
+              <ul className="space-y-1.5 text-xs text-zinc-200">
+                {pB.points.map((pt: string, idx: number) => (
+                  <li key={idx} className="flex items-center gap-2">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
                     <span>{pt}</span>
-                  </div>
+                  </li>
                 ))}
-              </div>
-              <p className="text-xs text-emerald-300 font-semibold pt-2 border-t border-white/10">
-                One-to-one, on your own work.
-              </p>
+              </ul>
+              <p className="text-xs text-indigo-300 font-bold pt-1 border-t border-indigo-500/20">{pB.footer}</p>
             </div>
           </div>
         </div>
@@ -1368,9 +1492,10 @@ export default function SlideRenderer({
     }
 
     // ==========================================
-    // 20. RESEARCH & INTERN
+    // 20. RESEARCH & INTERNSHIP EXPOSURE
     // ==========================================
     case "RESEARCH_INTERN": {
+      const flow = slide.flow || ["TRAINING", "PROJECT", "PERFORMANCE", "IDENTIFICATION", "OPPORTUNITY"];
       const doors = slide.doors || [
         "Industry-linked projects",
         "Internship opportunities",
@@ -1380,28 +1505,43 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "ADVANCED PATHWAYS"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "WHERE STRONG PERFORMANCE LEADS"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-semibold mt-1">
+            <p className="text-xs sm:text-sm text-zinc-400">
               {slide.subtitle || "INTERNSHIP & RESEARCH EXPOSURE"}
             </p>
           </div>
 
           <div
-            className={`grid grid-cols-2 sm:grid-cols-5 gap-3 transition-all duration-700 ${
-              currentStep >= 0 ? "opacity-100" : "opacity-0"
+            className={`grid grid-cols-2 sm:grid-cols-5 gap-2 pt-1 transition-all duration-300 ease-out ${
+              currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+            }`}
+          >
+            {flow.map((f: string, idx: number) => (
+              <div
+                key={idx}
+                className="p-2.5 rounded-2xl bg-indigo-600/20 border border-indigo-500/30 text-center text-xs font-black text-white shadow-sm"
+              >
+                {f}
+              </div>
+            ))}
+          </div>
+
+          <div
+            className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-1 transition-all duration-300 ease-out ${
+              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
           >
             {doors.map((d: string, idx: number) => (
               <div
                 key={idx}
-                className="p-4 rounded-2xl bg-white/5 border border-white/10 text-center text-xs font-bold text-zinc-200 shadow-md"
+                className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-center text-xs font-bold text-zinc-200 shadow-sm"
               >
                 {d}
               </div>
@@ -1409,11 +1549,11 @@ export default function SlideRenderer({
           </div>
 
           <div
-            className={`p-5 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 leading-relaxed transition-all duration-700 ${
-              currentStep >= 1 ? "opacity-100" : "opacity-0"
+            className={`p-4 rounded-3xl bg-amber-500/10 border border-amber-500/30 text-xs text-amber-200 leading-relaxed transition-all duration-300 ease-out ${
+              currentStep >= 2 ? "opacity-100" : "opacity-0"
             }`}
           >
-            <strong className="block font-bold text-amber-300 mb-1">RESEARCH-ORIENTED STUDENTS</strong>
+            <strong className="block font-bold text-amber-300 mb-0.5">RESEARCH-ORIENTED STUDENTS</strong>
             {slide.academicNote?.body ||
               "IAPT-linked and academic-network exposure is offered only where formally supported at the time. Nothing here is a guaranteed internship, research placement or IAPT selection — all subject to eligibility, institutional availability and selection procedures."}
           </div>
@@ -1426,20 +1566,20 @@ export default function SlideRenderer({
     // ==========================================
     case "IMAGE_BANNER": {
       return (
-        <div className="w-full max-w-5xl mx-auto text-center space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto text-center space-y-5 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "CAMPUS ROADSHOW"}
             </span>
-            <h2 className="text-3xl sm:text-5xl font-black text-white mt-2">
+            <h2 className="text-xl sm:text-5xl font-black text-white mt-2">
               {slide.title || "Empowering Himachal's Next-Gen Tech Talent"}
             </h2>
-            <p className="text-sm sm:text-base text-zinc-400 font-medium mt-1">
+            <p className="text-xs sm:text-base text-zinc-400 font-medium mt-1">
               {slide.subtitle || "Hands-on AI skill labs across colleges"}
             </p>
           </div>
 
-          <div className="rounded-3xl overflow-hidden border border-white/15 shadow-2xl max-h-[420px] mx-auto bg-black/40">
+          <div className="rounded-3xl overflow-hidden border border-white/15 shadow-2xl max-h-[360px] mx-auto bg-black/40">
             <img
               src={slide.image}
               alt={slide.title}
@@ -1465,22 +1605,22 @@ export default function SlideRenderer({
       ];
 
       return (
-        <div className="w-full max-w-6xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-6xl mx-auto space-y-5 animate-fade-in">
           <div className="flex items-center justify-between">
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "A RECOGNITION PATHWAY"}
             </span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-center">
             {/* Left: Perks */}
-            <div className="lg:col-span-7 space-y-4">
-              <h2 className="text-3xl sm:text-5xl font-black text-white leading-tight">
+            <div className="lg:col-span-7 space-y-3.5">
+              <h2 className="text-xl sm:text-5xl font-black text-white leading-tight">
                 {slide.title || "UNISOLE COLLEGE AMBASSADORS"}
               </h2>
 
               <div
-                className={`grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-2 transition-all duration-700 ${
+                className={`grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 transition-all duration-300 ease-out ${
                   currentStep >= 0 ? "opacity-100" : "opacity-0"
                 }`}
               >
@@ -1492,43 +1632,43 @@ export default function SlideRenderer({
                 ))}
               </div>
 
-              <p className="text-xs text-zinc-400 italic pt-2 border-t border-white/10">
+              <p className="text-xs text-zinc-400 italic pt-1 border-t border-white/10">
                 {slide.disclaimer || "A recognition and mentorship pathway — not a job, internship or placement."}
               </p>
             </div>
 
             {/* Right: Scan QR / Return of Big Question */}
             <div
-              className={`lg:col-span-5 p-6 rounded-3xl bg-gradient-to-b from-indigo-950/80 to-zinc-900 border border-indigo-500/40 text-center space-y-4 shadow-2xl transition-all duration-700 ${
-                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-6"
+              className={`lg:col-span-5 p-5 rounded-3xl bg-gradient-to-b from-indigo-950/80 to-zinc-900 border border-indigo-500/40 text-center space-y-3 shadow-xl transition-all duration-300 ease-out ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
               }`}
             >
-              <div className="p-3 bg-white rounded-2xl inline-block shadow-xl">
+              <div className="p-2.5 bg-white rounded-2xl inline-block shadow-lg">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(
                     slide.targetUrl || "https://unisole.org/programs"
                   )}`}
                   alt="Scan QR"
-                  className="w-36 h-36 object-contain"
+                  className="w-28 h-28 sm:w-36 sm:h-36 object-contain"
                 />
               </div>
 
               <div>
-                <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest block mb-1">
+                <span className="text-xs font-bold text-indigo-300 uppercase tracking-widest block mb-0.5">
                   SIGN UP NOW
                 </span>
-                <p className="text-xs text-zinc-300 font-medium">
+                <p className="text-[11px] text-zinc-300 font-medium">
                   {slide.qrAction || "Scan to sign up or connect with your college coordinator"}
                 </p>
               </div>
 
               {/* The Return Question in Step 2 */}
               <div
-                className={`pt-2 transition-all duration-1000 ${
+                className={`pt-1 transition-all duration-500 ease-out ${
                   currentStep >= 2 ? "opacity-100 scale-100" : "opacity-0 scale-95"
                 }`}
               >
-                <div className="text-xl sm:text-2xl font-black text-amber-300 font-serif">
+                <div className="text-lg sm:text-2xl font-black text-amber-300 font-serif">
                   {slide.finalQuestion || "आगे क्या सोचा है?"}
                 </div>
               </div>
@@ -1539,21 +1679,21 @@ export default function SlideRenderer({
     }
 
     // ==========================================
-    // 23. LIVE POLL SLIDE
+    // 23. LIVE POLL SLIDE (Audience Interactive + Projector)
     // ==========================================
     case "POLL": {
       return (
-        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in text-center sm:text-left">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in text-center sm:text-left">
           <div className="flex items-center gap-2 text-cyan-400 text-xs font-bold uppercase tracking-wider">
             <BarChart3 className="w-5 h-5" />
             <span>{slide.badge || "LIVE AUDIENCE POLL"}</span>
           </div>
 
-          <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white leading-tight">
+          <h2 className="text-xl sm:text-4xl lg:text-5xl font-black text-white leading-tight">
             {slide.question || slide.title || "Live Audience Poll"}
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
             {(slide.options || []).map((opt: string, optIdx: number) => {
               const count = quizState?.pollCounts?.[optIdx] || 0;
               const totalVotes = Object.values(quizState?.pollCounts || {}).reduce(
@@ -1561,30 +1701,38 @@ export default function SlideRenderer({
                 0
               ) as number;
               const percent = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+              const isSelected = selectedOption === optIdx;
 
               return (
-                <div
+                <button
                   key={optIdx}
-                  className="relative p-5 rounded-2xl bg-white/5 border border-cyan-500/30 overflow-hidden shadow-lg"
+                  type="button"
+                  disabled={isProjector || (!quizState?.isQuizActive && !isSubmitted)}
+                  onClick={() => onSelectOption && onSelectOption(optIdx)}
+                  className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-300 ease-out overflow-hidden shadow-lg text-left ${
+                    isSelected
+                      ? "ring-4 ring-cyan-400 bg-cyan-950/60 border-cyan-400"
+                      : "bg-white/5 border-cyan-500/30 hover:border-cyan-400/60"
+                  } ${!isProjector ? "cursor-pointer active:scale-98" : ""}`}
                 >
                   {/* Fill Bar */}
                   <div
-                    className="absolute inset-y-0 left-0 bg-cyan-500/20 transition-all duration-700 ease-out"
+                    className="absolute inset-y-0 left-0 bg-cyan-500/20 transition-all duration-500 ease-out"
                     style={{ width: `${percent}%` }}
                   />
 
                   <div className="relative flex items-center justify-between gap-3">
                     <div className="flex items-center gap-3">
-                      <span className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold text-sm">
+                      <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold text-xs sm:text-sm">
                         {String.fromCharCode(65 + optIdx)}
                       </span>
-                      <span className="text-sm sm:text-base font-bold text-white">{opt}</span>
+                      <span className="text-xs sm:text-base font-bold text-white">{opt}</span>
                     </div>
-                    <span className="text-base sm:text-lg font-mono font-black text-cyan-400">
+                    <span className="text-sm sm:text-lg font-mono font-black text-cyan-400">
                       {percent}%
                     </span>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>
@@ -1593,30 +1741,30 @@ export default function SlideRenderer({
     }
 
     // ==========================================
-    // 24. LIVE QUIZ SLIDE
+    // 24. LIVE QUIZ SLIDE (Audience Interactive + Projector)
     // ==========================================
     case "QUIZ": {
       return (
-        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
             <div className="flex items-center gap-2 text-amber-400 text-xs font-bold uppercase tracking-wider">
               <Flame className="w-5 h-5" />
               <span>{slide.badge || "FAST-FINGER TECH CHALLENGE"}</span>
             </div>
 
             {remainingTime !== null && (
-              <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono font-black text-lg shadow-lg">
+              <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono font-black text-base sm:text-lg shadow-lg">
                 <Clock className="w-4 h-4 animate-spin" />
                 <span>{remainingTime}s remaining</span>
               </div>
             )}
           </div>
 
-          <h2 className="text-2xl sm:text-4xl font-black text-white leading-tight">
+          <h2 className="text-xl sm:text-4xl font-black text-white leading-tight">
             {slide.question || slide.title}
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
             {(slide.options || []).map((opt: any, optIdx: number) => {
               const colors = [
                 "bg-rose-500/20 border-rose-500/40 text-rose-100",
@@ -1627,33 +1775,39 @@ export default function SlideRenderer({
               const isCorrect = typeof opt === "object" ? opt.isCorrect : false;
               const text = typeof opt === "object" ? opt.text : opt;
               const isRevealed = quizState?.isAnswerRevealed;
+              const isSelected = selectedOption === optIdx;
 
               return (
-                <div
+                <button
                   key={optIdx}
-                  className={`p-5 rounded-2xl border transition-all duration-500 flex items-center justify-between gap-3 shadow-lg ${
+                  type="button"
+                  disabled={isProjector || (!quizState?.isQuizActive && !isSubmitted)}
+                  onClick={() => onSelectOption && onSelectOption(optIdx)}
+                  className={`p-4 sm:p-5 rounded-2xl border transition-all duration-300 ease-out flex items-center justify-between gap-3 shadow-lg text-left ${
                     colors[optIdx % 4]
+                  } ${
+                    isSelected ? "ring-4 ring-amber-400 scale-102" : ""
                   } ${
                     isRevealed && isCorrect
                       ? "ring-4 ring-emerald-400 scale-102 bg-emerald-600/40"
                       : isRevealed
                       ? "opacity-40"
                       : ""
-                  }`}
+                  } ${!isProjector ? "cursor-pointer active:scale-98" : ""}`}
                 >
                   <div className="flex items-center gap-3">
-                    <span className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center font-bold text-sm">
+                    <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/20 flex items-center justify-center font-bold text-xs sm:text-sm">
                       {String.fromCharCode(65 + optIdx)}
                     </span>
-                    <span className="text-sm sm:text-base font-bold">{text}</span>
+                    <span className="text-xs sm:text-base font-bold">{text}</span>
                   </div>
 
                   {isRevealed && isCorrect && (
-                    <span className="px-3 py-1 rounded-full bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-md">
-                      <CheckCircle2 className="w-4 h-4" /> Correct Answer
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-md">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Correct
                     </span>
                   )}
-                </div>
+                </button>
               );
             })}
           </div>
@@ -1662,12 +1816,11 @@ export default function SlideRenderer({
     }
 
     // ==========================================
-    // 25. CONTENT (BULLETS) & OTHER DEFAULT
+    // 25. STATS SLIDE
     // ==========================================
-    case "CONTENT":
-    default: {
+    case "STATS": {
       return (
-        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in text-center sm:text-left">
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in text-center sm:text-left">
           {slide.badge && (
             <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold text-indigo-300">
               <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
@@ -1675,33 +1828,112 @@ export default function SlideRenderer({
             </div>
           )}
 
-          <h1 className="text-3xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+          <h1 className="text-2xl sm:text-5xl font-black text-white tracking-tight leading-tight">
+            {slide.title || "Impact Stats"}
+          </h1>
+
+          {slide.subtitle && (
+            <p className="text-sm sm:text-xl text-zinc-300 max-w-3xl leading-relaxed">
+              {slide.subtitle}
+            </p>
+          )}
+
+          {Array.isArray(slide.stats) && (
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 pt-4">
+              {slide.stats.map((st: any, idx: number) => {
+                const isRevealed = currentStep >= idx;
+                return (
+                  <div
+                    key={idx}
+                    className={`p-6 sm:p-8 rounded-3xl bg-gradient-to-b from-white/10 to-white/5 border border-white/10 backdrop-blur-md text-center shadow-xl transition-all duration-300 ease-out ${
+                      isRevealed ? "opacity-100 translate-y-0" : "opacity-20 translate-y-2"
+                    }`}
+                  >
+                    <div className="text-3xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-300">
+                      {st.value}
+                    </div>
+                    <div className="text-xs sm:text-base font-semibold text-zinc-300 mt-2">
+                      {st.label}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 26. OFFER / CTA SLIDE
+    // ==========================================
+    case "OFFER_CTA": {
+      return (
+        <div className="w-full max-w-4xl mx-auto p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-indigo-900/60 to-violet-900/60 border border-indigo-500/40 backdrop-blur-xl space-y-4 shadow-2xl text-center sm:text-left animate-fade-in">
+          <div className="inline-block px-3.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs">
+            {slide.badge || "Special Roadshow Grant"}
+          </div>
+          <h3 className="text-xl sm:text-4xl font-black text-white leading-tight">
+            {slide.title || "Exclusive Student Scholarship Available Now"}
+          </h3>
+          {slide.subtitle && (
+            <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed max-w-xl">
+              {slide.subtitle}
+            </p>
+          )}
+          {slide.couponCode && (
+            <div className="flex flex-wrap items-center gap-3 pt-2">
+              <span className="text-xs text-zinc-300">Use Promo Code:</span>
+              <span className="px-4 py-2 rounded-xl bg-black/40 border border-amber-400/50 text-amber-300 font-mono font-black text-base sm:text-lg tracking-wider shadow-inner">
+                {slide.couponCode}
+              </span>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 27. CONTENT (BULLETS) & OTHER DEFAULT
+    // ==========================================
+    case "CONTENT":
+    default: {
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in text-center sm:text-left">
+          {slide.badge && (
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold text-indigo-300">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <span>{slide.badge}</span>
+            </div>
+          )}
+
+          <h1 className="text-2xl sm:text-5xl font-black text-white tracking-tight leading-tight">
             {slide.title || "Slide Title"}
           </h1>
 
           {slide.subtitle && (
-            <p className="text-base sm:text-xl text-zinc-300 max-w-3xl leading-relaxed">
+            <p className="text-sm sm:text-xl text-zinc-300 max-w-3xl leading-relaxed">
               {slide.subtitle}
             </p>
           )}
 
           {Array.isArray(slide.bullets) && slide.bullets.length > 0 && (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3.5 pt-2">
               {slide.bullets.map((bullet: string, idx: number) => {
                 const isRevealed = currentStep >= idx;
                 return (
                   <div
                     key={idx}
-                    className={`p-5 rounded-2xl border backdrop-blur-md flex items-start gap-4 shadow-lg transition-all duration-700 ${
+                    className={`p-4 sm:p-5 rounded-2xl border backdrop-blur-md flex items-start gap-3.5 shadow-md transition-all duration-300 ease-out ${
                       isRevealed
                         ? "bg-white/5 border-white/10 opacity-100 translate-y-0"
-                        : "bg-white/2 border-white/5 opacity-20 translate-y-4"
+                        : "bg-white/2 border-white/5 opacity-20 translate-y-2"
                     }`}
                   >
-                    <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
+                    <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold text-xs sm:text-sm shrink-0">
                       {idx + 1}
                     </div>
-                    <p className="text-sm sm:text-base text-zinc-200 font-medium leading-relaxed">
+                    <p className="text-xs sm:text-base text-zinc-200 font-medium leading-relaxed">
                       {bullet}
                     </p>
                   </div>
