@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import confetti from "canvas-confetti";
 import {
   X,
   Clock,
@@ -16,6 +17,11 @@ import {
   RotateCcw,
   Edit2,
   Save,
+  FileCheck2,
+  Copy,
+  Check,
+  Calendar,
+  Layers,
 } from "lucide-react";
 import Button from "../ui/Button";
 
@@ -59,6 +65,10 @@ export default function TaskDrawer({
   const isLeader = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
 
+  // Tab State: 'overview', 'proof', 'activity'
+  const [activeTab, setActiveTab] = useState<"overview" | "proof" | "activity">("overview");
+  const [copied, setCopied] = useState(false);
+
   // Edit Mode state
   const [isEditing, setIsEditing] = useState(false);
   const [editTitle, setEditTitle] = useState(task.title || "");
@@ -79,8 +89,6 @@ export default function TaskDrawer({
   const [proofInput, setProofInput] = useState(task.submissionProofUrl || "");
   const [proofNotes, setProofNotes] = useState(task.submissionNotes || "");
   const [reviewFeedback, setReviewFeedback] = useState("");
-  const [blockerReason, setBlockerReason] = useState(task.blockedReason || "");
-  const [showBlockerInput, setShowBlockerInput] = useState(false);
 
   useEffect(() => {
     setEditTitle(task.title || "");
@@ -96,9 +104,14 @@ export default function TaskDrawer({
     setEditEntityName(task.relatedEntityName || "");
     setProofInput(task.submissionProofUrl || "");
     setProofNotes(task.submissionNotes || "");
-    setBlockerReason(task.blockedReason || "");
     setIsEditing(false);
   }, [task.id]);
+
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(task.id);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,6 +137,22 @@ export default function TaskDrawer({
     setNewSubtaskTitle("");
   };
 
+  const handleToggleSubtaskWithConfetti = (subtaskId: string, isCompleted: boolean) => {
+    onToggleSubtask(task.id, subtaskId, isCompleted);
+    if (isCompleted && task.subtasks) {
+      const completedCount = task.subtasks.filter((s: any) => s.isCompleted || s.id === subtaskId).length;
+      if (completedCount === task.subtasks.length) {
+        try {
+          confetti({
+            particleCount: 50,
+            spread: 60,
+            origin: { y: 0.6 },
+          });
+        } catch (e) {}
+      }
+    }
+  };
+
   const handleAddComment = (e: React.FormEvent) => {
     e.preventDefault();
     if (!commentText.trim()) return;
@@ -141,20 +170,27 @@ export default function TaskDrawer({
 
   return (
     <div className="fixed inset-0 z-50 overflow-hidden flex justify-end bg-black/40 backdrop-blur-xs animate-fade-in">
-      <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 h-full shadow-2xl flex flex-col border-l border-zinc-200/80 dark:border-zinc-800 overflow-hidden">
+      <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 h-full shadow-2xl flex flex-col border-l border-zinc-200/80 dark:border-zinc-800 overflow-hidden animate-slide-in-right">
         {/* Header */}
-        <div className="px-6 py-4 border-b border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-950/50">
-          <div className="flex items-center gap-2">
+        <div className="px-6 py-4 border-b border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/80 dark:bg-zinc-950/70 backdrop-blur-md">
+          <div className="flex items-center gap-2.5">
             <span
               className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider"
               style={{
-                backgroundColor: `${task.departmentColor || "#6366f1"}15`,
+                backgroundColor: `${task.departmentColor || "#6366f1"}18`,
                 color: task.departmentColor || "#6366f1",
               }}
             >
               {task.departmentName || "General Task"}
             </span>
-            <span className="text-xs text-zinc-400 font-mono">#{task.id}</span>
+            <button
+              onClick={handleCopyId}
+              className="flex items-center gap-1 text-xs text-zinc-400 font-mono hover:text-zinc-600 dark:hover:text-zinc-300 transition-colors"
+              title="Click to copy Task ID"
+            >
+              <span>#{task.id}</span>
+              {copied ? <Check className="w-3 h-3 text-emerald-500" /> : <Copy className="w-3 h-3 opacity-50" />}
+            </button>
           </div>
 
           <div className="flex items-center gap-2">
@@ -195,11 +231,55 @@ export default function TaskDrawer({
           </div>
         </div>
 
+        {/* Navigation Tabs */}
+        {!isEditing && (
+          <div className="flex border-b border-zinc-200/80 dark:border-zinc-800 px-6 bg-zinc-50/40 dark:bg-zinc-950/40">
+            <button
+              onClick={() => setActiveTab("overview")}
+              className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 ${
+                activeTab === "overview"
+                  ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                  : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              }`}
+            >
+              Overview & SOP
+            </button>
+            <button
+              onClick={() => setActiveTab("proof")}
+              className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
+                activeTab === "proof"
+                  ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                  : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              }`}
+            >
+              <span>Quality Gate & Proof</span>
+              {task.submissionProofUrl && (
+                <span className="w-2 h-2 rounded-full bg-indigo-500" />
+              )}
+            </button>
+            <button
+              onClick={() => setActiveTab("activity")}
+              className={`px-4 py-2.5 text-xs font-bold transition-all border-b-2 flex items-center gap-1.5 ${
+                activeTab === "activity"
+                  ? "border-indigo-600 text-indigo-600 dark:text-indigo-400"
+                  : "border-transparent text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+              }`}
+            >
+              <span>Activity & Comments</span>
+              {task.comments?.length > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                  {task.comments.length}
+                </span>
+              )}
+            </button>
+          </div>
+        )}
+
         {/* Scrollable Content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* EDIT FORM MODE (Super Admin / Admin) */}
           {isEditing ? (
-            <form onSubmit={handleSaveEdit} className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/80 border border-indigo-200 dark:border-indigo-900/60 space-y-4 text-xs">
+            <form onSubmit={handleSaveEdit} className="p-5 rounded-3xl bg-zinc-50 dark:bg-zinc-950/80 border border-indigo-200 dark:border-indigo-900/60 space-y-4 text-xs">
               <div className="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
                 <span className="font-black text-indigo-700 dark:text-indigo-300 uppercase tracking-wider flex items-center gap-1.5 font-mono">
                   <Sparkles className="w-3.5 h-3.5" />
@@ -232,7 +312,7 @@ export default function TaskDrawer({
                   Description / Instructions
                 </label>
                 <textarea
-                  rows={2}
+                  rows={3}
                   value={editDesc}
                   onChange={(e) => setEditDesc(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
@@ -368,314 +448,350 @@ export default function TaskDrawer({
               </div>
             </form>
           ) : (
-            <div>
-              <div className="flex items-center justify-between gap-3 mb-2">
-                <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase font-mono tracking-wider">
-                  Priority: {task.priority}
-                </span>
-
-                {/* Status Switcher */}
-                <select
-                  value={task.status}
-                  onChange={(e) => onUpdateStatus(task.id, e.target.value)}
-                  className="text-xs font-bold px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 cursor-pointer"
-                >
-                  <option value="TODO">To Do</option>
-                  <option value="IN_PROGRESS">In Progress</option>
-                  <option value="BLOCKED">🚨 Blocked / Stuck</option>
-                  <option value="SUBMITTED_FOR_REVIEW">Submitted for Review</option>
-                  <option value="CHANGES_REQUESTED">Changes Requested</option>
-                  <option value="COMPLETED">Completed</option>
-                </select>
-              </div>
-
-              <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 leading-snug">
-                {task.title}
-              </h2>
-
-              {task.description && (
-                <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                  {task.description}
-                </p>
-              )}
-            </div>
-          )}
-
-          {/* Key Metadata Grid */}
-          {!isEditing && (
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 text-xs">
+            <>
+              {/* Top Summary Bar */}
               <div>
-                <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
-                  Assignee
-                </span>
-                <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                  {task.assigneeName || "Unassigned"}
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
-                  Due Date
-                </span>
-                <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                  {task.dueDate
-                    ? new Date(task.dueDate).toLocaleDateString("en-IN", {
-                        month: "short",
-                        day: "numeric",
-                        year: "numeric",
-                      })
-                    : "No deadline"}
-                </span>
-              </div>
-
-              <div>
-                <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
-                  Estimated Hours
-                </span>
-                <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                  {task.estimatedHours ? `${task.estimatedHours} hrs` : "N/A"}
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Linked Platform Entity */}
-          {!isEditing && task.relatedEntityName && (
-            <div className="p-3.5 rounded-2xl bg-indigo-50/40 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-900/60 flex items-center gap-3">
-              <Link2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
-              <div className="text-xs">
-                <span className="text-zinc-500">Connected to {task.relatedEntityType}: </span>
-                <strong className="text-indigo-700 dark:text-indigo-300">
-                  {task.relatedEntityName}
-                </strong>
-              </div>
-            </div>
-          )}
-
-          {/* 🚨 Blocked Banner & Action */}
-          {task.status === "BLOCKED" && (
-            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900">
-              <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-black text-xs uppercase tracking-wider mb-1">
-                <AlertTriangle className="w-4 h-4" />
-                <span>Task is Currently Blocked</span>
-              </div>
-              <p className="text-xs text-rose-900 dark:text-rose-200 font-medium">
-                {task.blockedReason || "No blocker details provided."}
-              </p>
-              {isLeader && (
-                <button
-                  onClick={() => onUpdateStatus(task.id, "IN_PROGRESS", "Unblocked by leadership")}
-                  className="mt-3 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-colors"
-                >
-                  <RotateCcw className="w-3.5 h-3.5" />
-                  <span>Mark as Unblocked (Resume Work)</span>
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* 🚀 SUBMISSION REVIEW GATE (For Leaders & Submitters) */}
-          {task.submissionProofUrl && (
-            <div className="p-5 rounded-3xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 space-y-3">
-              <div className="flex items-center justify-between">
-                <span className="text-xs font-black text-indigo-900 dark:text-indigo-200 uppercase font-mono tracking-wider flex items-center gap-1.5">
-                  <ShieldCheck className="w-4 h-4 text-indigo-600" />
-                  Submission Proof & Quality Gate
-                </span>
-                <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-indigo-200 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 font-bold">
-                  {task.status}
-                </span>
-              </div>
-
-              {/* Proof Link Card */}
-              <div className="p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-indigo-100 dark:border-indigo-900/60 flex items-center justify-between">
-                <div className="flex items-center gap-2.5 overflow-hidden">
-                  <Link2 className="w-4 h-4 text-indigo-500 shrink-0" />
-                  <a
-                    href={task.submissionProofUrl}
-                    target="_blank"
-                    rel="noreferrer"
-                    className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline truncate"
-                  >
-                    {task.submissionProofUrl}
-                  </a>
-                </div>
-                <a
-                  href={task.submissionProofUrl}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-lg shrink-0"
-                >
-                  <ExternalLink className="w-4 h-4" />
-                </a>
-              </div>
-
-              {task.submissionNotes && (
-                <p className="text-xs text-zinc-700 dark:text-zinc-300 italic">
-                  "{task.submissionNotes}"
-                </p>
-              )}
-
-              {/* Review Decision Buttons (Leaders) */}
-              {isLeader && task.status === "SUBMITTED_FOR_REVIEW" && (
-                <div className="pt-3 border-t border-indigo-200/60 dark:border-indigo-900/60 space-y-2">
-                  <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block">
-                    Leadership Review Decision:
+                <div className="flex items-center justify-between gap-3 mb-2">
+                  <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 uppercase font-mono tracking-wider">
+                    Priority: {task.priority}
                   </span>
-                  <div className="flex gap-2">
-                    <Button
-                      onClick={() => onReviewTask(task.id, "APPROVED")}
-                      variant="primary"
-                      className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-xs font-bold shadow-xs"
-                    >
-                      <CheckCircle2 className="w-4 h-4 mr-1.5" />
-                      Approve & Complete
-                    </Button>
+
+                  {/* Status Switcher */}
+                  <select
+                    value={task.status}
+                    onChange={(e) => onUpdateStatus(task.id, e.target.value)}
+                    className="text-xs font-bold px-3 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-2xs"
+                  >
+                    <option value="TODO">To Do</option>
+                    <option value="IN_PROGRESS">In Progress</option>
+                    <option value="BLOCKED">🚨 Blocked / Stuck</option>
+                    <option value="SUBMITTED_FOR_REVIEW">Submitted for Review</option>
+                    <option value="CHANGES_REQUESTED">Changes Requested</option>
+                    <option value="COMPLETED">Completed</option>
+                  </select>
+                </div>
+
+                <h2 className="text-xl font-black text-zinc-900 dark:text-zinc-100 leading-snug">
+                  {task.title}
+                </h2>
+
+                {task.description && (
+                  <p className="mt-2 text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                    {task.description}
+                  </p>
+                )}
+              </div>
+
+              {/* Key Metadata Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 text-xs">
+                <div>
+                  <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
+                    Assignee
+                  </span>
+                  <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                    {task.assigneeName || "Unassigned"}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
+                    Due Date
+                  </span>
+                  <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                    {task.dueDate
+                      ? new Date(task.dueDate).toLocaleDateString("en-IN", {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
+                      : "No deadline"}
+                  </span>
+                </div>
+
+                <div>
+                  <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
+                    Estimated Hours
+                  </span>
+                  <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                    {task.estimatedHours ? `${task.estimatedHours} hrs` : "N/A"}
+                  </span>
+                </div>
+              </div>
+
+              {/* Linked Platform Entity */}
+              {task.relatedEntityName && (
+                <div className="p-3.5 rounded-2xl bg-indigo-50/40 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-900/60 flex items-center gap-3">
+                  <Link2 className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+                  <div className="text-xs">
+                    <span className="text-zinc-500">Connected to {task.relatedEntityType}: </span>
+                    <strong className="text-indigo-700 dark:text-indigo-300">
+                      {task.relatedEntityName}
+                    </strong>
+                  </div>
+                </div>
+              )}
+
+              {/* 🚨 Blocked Banner & Action */}
+              {task.status === "BLOCKED" && (
+                <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900">
+                  <div className="flex items-center gap-2 text-rose-700 dark:text-rose-400 font-black text-xs uppercase tracking-wider mb-1">
+                    <AlertTriangle className="w-4 h-4" />
+                    <span>Task is Currently Blocked</span>
+                  </div>
+                  <p className="text-xs text-rose-900 dark:text-rose-200 font-medium">
+                    {task.blockedReason || "No blocker details provided."}
+                  </p>
+                  {isLeader && (
                     <button
-                      onClick={() => {
-                        const note = prompt("Please enter what changes are needed:");
-                        if (note) onReviewTask(task.id, "CHANGES_REQUESTED", note);
-                      }}
-                      className="px-3.5 py-2 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 text-xs font-bold transition-colors cursor-pointer"
+                      onClick={() => onUpdateStatus(task.id, "IN_PROGRESS", "Unblocked by leadership")}
+                      className="mt-3 inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-rose-600 text-white text-xs font-bold hover:bg-rose-700 transition-colors shadow-2xs cursor-pointer"
                     >
-                      Request Changes
+                      <RotateCcw className="w-3.5 h-3.5" />
+                      <span>Mark as Unblocked (Resume Work)</span>
                     </button>
-                  </div>
+                  )}
                 </div>
               )}
-            </div>
-          )}
 
-          {/* 📋 SOP Checklist (Subtasks) */}
-          <div className="space-y-3">
-            <div className="flex items-center justify-between">
-              <h3 className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase font-mono tracking-wider">
-                SOP Step Checklist ({task.subtasks?.length || 0})
-              </h3>
-              <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400">
-                {progressPercent}% Complete
-              </span>
-            </div>
-
-            {/* Progress Bar */}
-            <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
-              <div
-                className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-300 rounded-full"
-                style={{ width: `${progressPercent}%` }}
-              />
-            </div>
-
-            {/* Items */}
-            <div className="space-y-1.5">
-              {task.subtasks?.map((st: any) => (
-                <div
-                  key={st.id}
-                  className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50/80 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 group hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
-                >
-                  <button
-                    onClick={() => onToggleSubtask(task.id, st.id, !st.isCompleted)}
-                    className="flex items-center gap-3 text-left flex-1 cursor-pointer"
-                  >
-                    {st.isCompleted ? (
-                      <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                    ) : (
-                      <Circle className="w-4 h-4 text-zinc-400 shrink-0 group-hover:text-indigo-500 transition-colors" />
-                    )}
-                    <span
-                      className={`text-xs ${
-                        st.isCompleted
-                          ? "line-through text-zinc-400 font-medium"
-                          : "text-zinc-800 dark:text-zinc-200 font-medium"
-                      }`}
-                    >
-                      {st.title}
+              {/* TAB 1: OVERVIEW & SOP CHECKLIST */}
+              {activeTab === "overview" && (
+                <div className="space-y-4">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase font-mono tracking-wider flex items-center gap-2">
+                      <FileCheck2 className="w-4 h-4 text-indigo-600" />
+                      <span>SOP Step Checklist ({task.subtasks?.length || 0})</span>
+                    </h3>
+                    <span className="text-xs font-bold text-indigo-600 dark:text-indigo-400 font-mono">
+                      {progressPercent}% Complete
                     </span>
-                  </button>
-
-                  <button
-                    onClick={() => onDeleteSubtask(task.id, st.id)}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-rose-500 transition-all cursor-pointer"
-                  >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
-
-            {/* Add Subtask Form */}
-            <form onSubmit={handleAddSubtask} className="flex gap-2 pt-1">
-              <input
-                type="text"
-                placeholder="+ Add next checklist step..."
-                value={newSubtaskTitle}
-                onChange={(e) => setNewSubtaskTitle(e.target.value)}
-                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-2 focus:ring-indigo-500"
-              />
-              <button
-                type="submit"
-                disabled={!newSubtaskTitle.trim()}
-                className="px-3.5 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
-              >
-                Add Step
-              </button>
-            </form>
-          </div>
-
-          {/* 💬 Activity Trail & Comments */}
-          <div className="space-y-3 pt-4 border-t border-zinc-200/80 dark:border-zinc-800">
-            <h3 className="text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase font-mono tracking-wider flex items-center gap-1.5">
-              <MessageSquare className="w-3.5 h-3.5" />
-              Activity & Comments
-            </h3>
-
-            <div className="space-y-2.5 max-h-48 overflow-y-auto">
-              {task.comments?.length === 0 ? (
-                <p className="text-xs text-zinc-400 italic">No comments or activity yet.</p>
-              ) : (
-                task.comments?.map((c: any) => (
-                  <div
-                    key={c.id}
-                    className="p-3 rounded-2xl bg-zinc-50/60 dark:bg-zinc-950/40 border border-zinc-100 dark:border-zinc-800/80 text-xs"
-                  >
-                    <div className="flex items-center justify-between mb-1">
-                      <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                        {c.userName || "Team Member"}
-                      </span>
-                      <span className="text-[10px] text-zinc-400 font-mono">
-                        {new Date(c.createdAt).toLocaleTimeString([], {
-                          hour: "2-digit",
-                          minute: "2-digit",
-                        })}
-                      </span>
-                    </div>
-                    <p className="text-zinc-600 dark:text-zinc-300 whitespace-pre-wrap">
-                      {c.content}
-                    </p>
                   </div>
-                ))
-              )}
-            </div>
 
-            {/* Add Comment Input */}
-            <form onSubmit={handleAddComment} className="flex gap-2">
-              <input
-                type="text"
-                placeholder="Post an update or comment..."
-                value={commentText}
-                onChange={(e) => setCommentText(e.target.value)}
-                className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-2 focus:ring-indigo-500"
-              />
-              <Button
-                type="submit"
-                variant="primary"
-                size="sm"
-                disabled={!commentText.trim()}
-                className="text-xs"
-              >
-                <Send className="w-3.5 h-3.5" />
-              </Button>
-            </form>
-          </div>
+                  {/* Progress Bar */}
+                  <div className="w-full h-2 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                    <div
+                      className="h-full bg-gradient-to-r from-indigo-500 to-emerald-500 transition-all duration-300 rounded-full"
+                      style={{ width: `${progressPercent}%` }}
+                    />
+                  </div>
+
+                  {/* Items */}
+                  <div className="space-y-1.5">
+                    {task.subtasks?.map((st: any) => (
+                      <div
+                        key={st.id}
+                        className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50/80 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 group hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
+                      >
+                        <button
+                          onClick={() => handleToggleSubtaskWithConfetti(st.id, !st.isCompleted)}
+                          className="flex items-center gap-3 text-left flex-1 cursor-pointer"
+                        >
+                          {st.isCompleted ? (
+                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                          ) : (
+                            <Circle className="w-4 h-4 text-zinc-400 shrink-0 group-hover:text-indigo-500 transition-colors" />
+                          )}
+                          <span
+                            className={`text-xs ${
+                              st.isCompleted
+                                ? "line-through text-zinc-400 font-medium"
+                                : "text-zinc-800 dark:text-zinc-200 font-medium"
+                            }`}
+                          >
+                            {st.title}
+                          </span>
+                        </button>
+
+                        <button
+                          onClick={() => onDeleteSubtask(task.id, st.id)}
+                          className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-rose-500 transition-all cursor-pointer"
+                        >
+                          <X className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+
+                  {/* Add Subtask Form */}
+                  <form onSubmit={handleAddSubtask} className="flex gap-2 pt-1">
+                    <input
+                      type="text"
+                      placeholder="+ Add next checklist step..."
+                      value={newSubtaskTitle}
+                      onChange={(e) => setNewSubtaskTitle(e.target.value)}
+                      className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <button
+                      type="submit"
+                      disabled={!newSubtaskTitle.trim()}
+                      className="px-4 py-2 rounded-xl bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 text-zinc-800 dark:text-zinc-200 text-xs font-bold transition-colors cursor-pointer disabled:opacity-50"
+                    >
+                      Add Step
+                    </button>
+                  </form>
+                </div>
+              )}
+
+              {/* TAB 2: PROOF & LEADER REVIEW QUALITY GATE */}
+              {activeTab === "proof" && (
+                <div className="space-y-4">
+                  {task.submissionProofUrl ? (
+                    <div className="p-5 rounded-3xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-indigo-900 dark:text-indigo-200 uppercase font-mono tracking-wider flex items-center gap-1.5">
+                          <ShieldCheck className="w-4 h-4 text-indigo-600" />
+                          Submitted Deliverable Output
+                        </span>
+                        <span className="text-[10px] font-mono uppercase px-2 py-0.5 rounded-full bg-indigo-200 dark:bg-indigo-900 text-indigo-800 dark:text-indigo-200 font-bold">
+                          {task.status}
+                        </span>
+                      </div>
+
+                      {/* Proof Link Card */}
+                      <div className="p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-indigo-100 dark:border-indigo-900/60 flex items-center justify-between shadow-2xs">
+                        <div className="flex items-center gap-2.5 overflow-hidden">
+                          <Link2 className="w-4 h-4 text-indigo-500 shrink-0" />
+                          <a
+                            href={task.submissionProofUrl}
+                            target="_blank"
+                            rel="noreferrer"
+                            className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline truncate"
+                          >
+                            {task.submissionProofUrl}
+                          </a>
+                        </div>
+                        <a
+                          href={task.submissionProofUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                          className="p-1.5 text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 rounded-lg shrink-0"
+                        >
+                          <ExternalLink className="w-4 h-4" />
+                        </a>
+                      </div>
+
+                      {task.submissionNotes && (
+                        <p className="text-xs text-zinc-700 dark:text-zinc-300 italic p-3 rounded-xl bg-white/60 dark:bg-zinc-900/60">
+                          "{task.submissionNotes}"
+                        </p>
+                      )}
+
+                      {/* Review Decision Buttons (Leaders) */}
+                      {isLeader && task.status === "SUBMITTED_FOR_REVIEW" && (
+                        <div className="pt-3 border-t border-indigo-200/60 dark:border-indigo-900/60 space-y-2">
+                          <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 block">
+                            Leadership Quality Gate Action:
+                          </span>
+                          <div className="flex gap-2">
+                            <Button
+                              onClick={() => onReviewTask(task.id, "APPROVED")}
+                              variant="primary"
+                              className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-xs font-bold shadow-xs"
+                            >
+                              <CheckCircle2 className="w-4 h-4 mr-1.5" />
+                              Approve & Mark Complete
+                            </Button>
+                            <button
+                              onClick={() => {
+                                const note = prompt("Please enter what revisions are needed:");
+                                if (note) onReviewTask(task.id, "CHANGES_REQUESTED", note);
+                              }}
+                              className="px-4 py-2 rounded-xl border border-rose-200 dark:border-rose-900 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 hover:bg-rose-100 text-xs font-bold transition-colors cursor-pointer"
+                            >
+                              Request Changes
+                            </button>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : (
+                    <div className="p-8 text-center rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                      <ShieldCheck className="w-8 h-8 text-zinc-400 mx-auto mb-2" />
+                      <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-200">
+                        No Submission Proof Yet
+                      </h4>
+                      <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto mb-4">
+                        When the deliverables are complete, submit a proof link (Loom video, Google Drive, Figma, or PR link) for leadership signoff.
+                      </p>
+                      <button
+                        onClick={() => {
+                          const url = prompt("Enter proof output URL (e.g. Google Drive, Loom, GitHub):");
+                          if (url) {
+                            const notes = prompt("Enter optional notes:");
+                            onSubmitProof(task.id, url, notes || undefined);
+                          }
+                        }}
+                        className="px-4 py-2 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors shadow-2xs cursor-pointer"
+                      >
+                        + Submit Proof Output
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {/* TAB 3: ACTIVITY & AUDIT TRAIL */}
+              {activeTab === "activity" && (
+                <div className="space-y-4">
+                  <div className="space-y-2.5 max-h-72 overflow-y-auto pr-1">
+                    {task.comments?.length === 0 ? (
+                      <p className="text-xs text-zinc-400 italic py-6 text-center">
+                        No activity recorded yet. Post the first update below!
+                      </p>
+                    ) : (
+                      task.comments?.map((c: any) => (
+                        <div
+                          key={c.id}
+                          className="p-3.5 rounded-2xl bg-zinc-50/80 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800 text-xs"
+                        >
+                          <div className="flex items-center justify-between mb-1.5">
+                            <div className="flex items-center gap-2">
+                              <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                                {c.userName || "Team Member"}
+                              </span>
+                              {c.userRole && (
+                                <span className="text-[9px] font-mono font-bold px-1.5 py-0.2 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 uppercase">
+                                  {c.userRole}
+                                </span>
+                              )}
+                            </div>
+                            <span className="text-[10px] text-zinc-400 font-mono">
+                              {new Date(c.createdAt).toLocaleTimeString([], {
+                                hour: "2-digit",
+                                minute: "2-digit",
+                              })}
+                            </span>
+                          </div>
+                          <p className="text-zinc-600 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">
+                            {c.content}
+                          </p>
+                        </div>
+                      ))
+                    )}
+                  </div>
+
+                  {/* Add Comment Input */}
+                  <form onSubmit={handleAddComment} className="flex gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+                    <input
+                      type="text"
+                      placeholder="Post a message, blocker update, or note..."
+                      value={commentText}
+                      onChange={(e) => setCommentText(e.target.value)}
+                      className="flex-1 px-3.5 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:ring-2 focus:ring-indigo-500"
+                    />
+                    <Button
+                      type="submit"
+                      variant="primary"
+                      size="sm"
+                      disabled={!commentText.trim()}
+                      className="text-xs px-4"
+                    >
+                      <Send className="w-3.5 h-3.5" />
+                    </Button>
+                  </form>
+                </div>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>

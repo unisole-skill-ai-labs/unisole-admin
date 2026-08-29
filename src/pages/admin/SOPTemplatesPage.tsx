@@ -3,9 +3,11 @@ import { useSelector } from "react-redux";
 import {
   useGetTemplatesQuery,
   useGetDepartmentsQuery,
+  useGetTeamMembersQuery,
   useCreateTemplateMutation,
   useUpdateTemplateMutation,
   useDeleteTemplateMutation,
+  useCreateTaskMutation,
 } from "../../store";
 import {
   FileCheck2,
@@ -18,6 +20,10 @@ import {
   CheckCircle2,
   Edit2,
   Trash2,
+  Rocket,
+  ArrowRight,
+  Check,
+  BookOpen,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 
@@ -31,6 +37,12 @@ export default function SOPTemplatesPage() {
   const [isCreateOpen, setIsCreateOpen] = useState(false);
   const [editingTemplate, setEditingTemplate] = useState<any | null>(null);
 
+  // Launch Task from SOP Modal state
+  const [launchingTemplate, setLaunchingTemplate] = useState<any | null>(null);
+  const [launchAssigneeId, setLaunchAssigneeId] = useState("");
+  const [launchDueDate, setLaunchDueDate] = useState("");
+  const [launchEntityName, setLaunchEntityName] = useState("");
+
   // Form State (Shared for Create / Edit)
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
@@ -43,6 +55,9 @@ export default function SOPTemplatesPage() {
   const { data: deptRes } = useGetDepartmentsQuery(baseUrl);
   const departments = deptRes?.data || [];
 
+  const { data: membersRes } = useGetTeamMembersQuery({ baseUrl });
+  const teamMembers = membersRes?.data || [];
+
   const { data: templatesRes, isLoading } = useGetTemplatesQuery({
     baseUrl,
     departmentId: departmentFilter || undefined,
@@ -52,6 +67,7 @@ export default function SOPTemplatesPage() {
   const [createTemplate] = useCreateTemplateMutation();
   const [updateTemplate] = useUpdateTemplateMutation();
   const [deleteTemplate] = useDeleteTemplateMutation();
+  const [createTask] = useCreateTaskMutation();
 
   const handleOpenCreate = () => {
     setEditingTemplate(null);
@@ -134,6 +150,37 @@ export default function SOPTemplatesPage() {
     }
   };
 
+  const handleLaunchTask = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!launchingTemplate) return;
+
+    try {
+      await createTask({
+        baseUrl,
+        body: {
+          title: launchingTemplate.title,
+          description: launchingTemplate.description || undefined,
+          departmentId: launchingTemplate.departmentId || undefined,
+          templateId: launchingTemplate.id,
+          assigneeId: launchAssigneeId || undefined,
+          dueDate: launchDueDate ? new Date(launchDueDate).toISOString() : undefined,
+          relatedEntityName: launchEntityName.trim() || undefined,
+          subtasks: Array.isArray(launchingTemplate.defaultChecklist)
+            ? launchingTemplate.defaultChecklist
+            : [],
+        },
+      }).unwrap();
+
+      alert("🚀 Task successfully launched from SOP template!");
+      setLaunchingTemplate(null);
+      setLaunchAssigneeId("");
+      setLaunchDueDate("");
+      setLaunchEntityName("");
+    } catch (err: any) {
+      alert(err?.data?.error || "Failed to launch task from SOP");
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -142,11 +189,11 @@ export default function SOPTemplatesPage() {
           <h1 className="text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight flex items-center gap-2.5">
             <span>Standard Operating Procedures (SOPs)</span>
             <span className="text-xs font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 font-mono">
-              {templates.length} Templates
+              {templates.length} Protocols
             </span>
           </h1>
           <p className="text-xs text-zinc-500 mt-1">
-            Pre-loaded step-by-step checklists to guide learners and ensure quality execution.
+            Standardized playbooks, step-by-step checklists, and 1-click operational task dispatching.
           </p>
         </div>
 
@@ -166,22 +213,22 @@ export default function SOPTemplatesPage() {
       <div className="flex flex-wrap items-center gap-2">
         <button
           onClick={() => setDepartmentFilter("")}
-          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+          className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs ${
             !departmentFilter
               ? "bg-indigo-600 text-white"
-              : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100"
+              : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
           }`}
         >
-          All SOPs
+          All SOPs ({templates.length})
         </button>
         {departments.map((dept: any) => (
           <button
             key={dept.id}
             onClick={() => setDepartmentFilter(dept.id)}
-            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors cursor-pointer ${
+            className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer shadow-2xs ${
               departmentFilter === dept.id
                 ? "bg-indigo-600 text-white"
-                : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100"
+                : "bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800"
             }`}
           >
             {dept.name}
@@ -192,8 +239,13 @@ export default function SOPTemplatesPage() {
       {/* Templates Grid */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         {isLoading ? (
-          <div className="col-span-full h-40 flex items-center justify-center">
+          <div className="col-span-full h-48 flex items-center justify-center">
             <div className="w-8 h-8 rounded-full border-3 border-indigo-500/20 border-t-indigo-600 animate-spin" />
+          </div>
+        ) : templates.length === 0 ? (
+          <div className="col-span-full p-12 text-center rounded-3xl border border-dashed border-zinc-200 dark:border-zinc-800 text-zinc-400">
+            <BookOpen className="w-8 h-8 mx-auto mb-2 opacity-50" />
+            <p className="text-sm font-semibold">No SOP templates matching this department</p>
           </div>
         ) : (
           templates.map((tmpl: any) => {
@@ -204,15 +256,15 @@ export default function SOPTemplatesPage() {
             return (
               <div
                 key={tmpl.id}
-                className="p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                className="p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-xs hover:shadow-xl hover:-translate-y-0.5 transition-all duration-200 flex flex-col justify-between"
               >
                 <div>
                   {/* Top: Dept Pill, Est. Time & Edit/Delete for Super Admin */}
                   <div className="flex items-center justify-between mb-3">
                     <span
-                      className="px-2.5 py-0.5 rounded-md text-[10px] font-bold"
+                      className="px-2.5 py-0.5 rounded-lg text-[10px] font-bold"
                       style={{
-                        backgroundColor: `${tmpl.departmentColor || "#6366f1"}15`,
+                        backgroundColor: `${tmpl.departmentColor || "#6366f1"}18`,
                         color: tmpl.departmentColor || "#6366f1",
                       }}
                     >
@@ -220,15 +272,15 @@ export default function SOPTemplatesPage() {
                     </span>
 
                     <div className="flex items-center gap-2">
-                      <div className="flex items-center gap-1 text-[11px] text-zinc-500">
-                        <Clock className="w-3.5 h-3.5" />
+                      <div className="flex items-center gap-1 text-[11px] text-zinc-500 font-mono font-bold bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
+                        <Clock className="w-3.5 h-3.5 text-indigo-500" />
                         <span>~{tmpl.estimatedHours || 2}h</span>
                       </div>
 
                       {isLeader && (
                         <button
                           onClick={() => handleOpenEdit(tmpl)}
-                          className="p-1 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                          className="p-1.5 rounded-lg text-zinc-400 hover:text-indigo-600 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                           title="Edit SOP"
                         >
                           <Edit2 className="w-3.5 h-3.5" />
@@ -238,7 +290,7 @@ export default function SOPTemplatesPage() {
                       {isSuperAdmin && (
                         <button
                           onClick={() => handleDelete(tmpl.id)}
-                          className="p-1 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
+                          className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
                           title="Delete SOP"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -248,21 +300,21 @@ export default function SOPTemplatesPage() {
                   </div>
 
                   {/* Title & Description */}
-                  <h3 className="text-base font-black text-zinc-900 dark:text-zinc-100">
+                  <h3 className="text-base font-black text-zinc-900 dark:text-zinc-100 leading-snug">
                     {tmpl.title}
                   </h3>
                   {tmpl.description && (
-                    <p className="text-xs text-zinc-500 mt-1 leading-relaxed">
+                    <p className="text-xs text-zinc-500 mt-1.5 leading-relaxed">
                       {tmpl.description}
                     </p>
                   )}
 
                   {/* Checklist Preview */}
-                  <div className="mt-4 p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/80 space-y-2">
+                  <div className="mt-4 p-4 rounded-2xl bg-zinc-50/80 dark:bg-zinc-950/70 border border-zinc-100 dark:border-zinc-800/80 space-y-2.5">
                     <span className="text-[10px] font-mono font-bold text-zinc-400 uppercase tracking-wider block">
-                      Standard Steps ({checklist.length}):
+                      Standard Procedure Steps ({checklist.length}):
                     </span>
-                    {checklist.map((step: string, idx: number) => (
+                    {checklist.slice(0, 4).map((step: string, idx: number) => (
                       <div
                         key={idx}
                         className="flex items-start gap-2 text-xs text-zinc-800 dark:text-zinc-200"
@@ -271,27 +323,132 @@ export default function SOPTemplatesPage() {
                         <span className="leading-snug">{step}</span>
                       </div>
                     ))}
+                    {checklist.length > 4 && (
+                      <span className="text-[11px] text-zinc-400 italic block pl-5">
+                        + {checklist.length - 4} additional steps in checklist
+                      </span>
+                    )}
                   </div>
                 </div>
 
-                {tmpl.guidelinesUrl && (
-                  <div className="mt-4 pt-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
+                {/* Bottom Action Row */}
+                <div className="mt-5 pt-3.5 border-t border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between">
+                  {tmpl.guidelinesUrl ? (
                     <a
                       href={tmpl.guidelinesUrl}
                       target="_blank"
                       rel="noreferrer"
                       className="inline-flex items-center gap-1.5 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
                     >
-                      <span>View Extended SOP Guide</span>
+                      <span>SOP Documentation</span>
                       <ExternalLink className="w-3 h-3" />
                     </a>
-                  </div>
-                )}
+                  ) : (
+                    <span />
+                  )}
+
+                  {isLeader && (
+                    <button
+                      onClick={() => setLaunchingTemplate(tmpl)}
+                      className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700 transition-colors shadow-2xs cursor-pointer"
+                    >
+                      <Rocket className="w-3.5 h-3.5" />
+                      <span>Launch Task</span>
+                    </button>
+                  )}
+                </div>
               </div>
             );
           })
         )}
       </div>
+
+      {/* Launch Task Modal */}
+      {launchingTemplate && (
+        <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
+          <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl">
+            <div className="flex items-center justify-between mb-4">
+              <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <Rocket className="w-4 h-4 text-indigo-600" />
+                <span>Launch Task from SOP</span>
+              </h3>
+              <button
+                onClick={() => setLaunchingTemplate(null)}
+                className="p-1 text-zinc-400 hover:text-zinc-600"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleLaunchTask} className="space-y-3.5 text-xs">
+              <div className="p-3 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60">
+                <span className="text-[10px] font-mono uppercase text-indigo-600 font-bold block mb-0.5">
+                  SOP Playbook
+                </span>
+                <span className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">
+                  {launchingTemplate.title}
+                </span>
+              </div>
+
+              <div>
+                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Assign Staff
+                </label>
+                <select
+                  value={launchAssigneeId}
+                  onChange={(e) => setLaunchAssigneeId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                >
+                  <option value="">Unassigned</option>
+                  {teamMembers.map((m: any) => (
+                    <option key={m.id} value={m.id}>
+                      {m.name || m.phone} ({m.role})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Due Date
+                </label>
+                <input
+                  type="datetime-local"
+                  value={launchDueDate}
+                  onChange={(e) => setLaunchDueDate(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                />
+              </div>
+
+              <div>
+                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Entity / Reference (Optional)
+                </label>
+                <input
+                  type="text"
+                  placeholder="e.g. IIT Delhi or Pathway #2"
+                  value={launchEntityName}
+                  onChange={(e) => setLaunchEntityName(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                />
+              </div>
+
+              <div className="flex justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button
+                  type="button"
+                  onClick={() => setLaunchingTemplate(null)}
+                  className="px-4 py-2 rounded-xl text-zinc-600 hover:bg-zinc-100"
+                >
+                  Cancel
+                </button>
+                <Button type="submit" variant="primary">
+                  Launch Task Now
+                </Button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Create / Edit SOP Template Modal */}
       {isCreateOpen && (

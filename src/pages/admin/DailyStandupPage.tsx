@@ -13,6 +13,9 @@ import {
   Sparkles,
   User,
   Clock,
+  ChevronLeft,
+  ChevronRight,
+  Check,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import DailyEodModal from "../../components/tasks/DailyEodModal";
@@ -21,9 +24,10 @@ export default function DailyStandupPage() {
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
   const currentUser = useSelector((s: any) => s.auth.user);
 
-  const [selectedDate, setSelectedDate] = useState<string>(
-    new Date().toISOString().split("T")[0]
-  );
+  const todayStr = new Date().toISOString().split("T")[0];
+  const yesterdayStr = new Date(Date.now() - 86400000).toISOString().split("T")[0];
+
+  const [selectedDate, setSelectedDate] = useState<string>(todayStr);
   const [isEodModalOpen, setIsEodModalOpen] = useState(false);
 
   const { data: logsRes, isLoading } = useGetDailyLogsQuery({
@@ -69,13 +73,6 @@ export default function DailyStandupPage() {
         </div>
 
         <div className="flex items-center gap-3">
-          <input
-            type="date"
-            value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="px-3 py-1.5 text-xs font-bold rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
-          />
-
           <Button
             onClick={() => setIsEodModalOpen(true)}
             variant="primary"
@@ -87,13 +84,61 @@ export default function DailyStandupPage() {
         </div>
       </div>
 
+      {/* Date Switcher & Submission Status Banner */}
+      <div className="flex flex-wrap items-center justify-between gap-3 p-3.5 rounded-2xl bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md border border-zinc-200/80 dark:border-zinc-800 shadow-2xs">
+        {/* Quick Date Pills */}
+        <div className="flex items-center gap-1.5">
+          <button
+            onClick={() => setSelectedDate(todayStr)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              selectedDate === todayStr
+                ? "bg-indigo-600 text-white shadow-2xs"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200"
+            }`}
+          >
+            Today
+          </button>
+          <button
+            onClick={() => setSelectedDate(yesterdayStr)}
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+              selectedDate === yesterdayStr
+                ? "bg-indigo-600 text-white shadow-2xs"
+                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200"
+            }`}
+          >
+            Yesterday
+          </button>
+          <input
+            type="date"
+            value={selectedDate}
+            onChange={(e) => setSelectedDate(e.target.value)}
+            className="px-3 py-1.5 text-xs font-bold rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+          />
+        </div>
+
+        {/* User Submission Status */}
+        <div className="flex items-center gap-2">
+          {userSubmittedToday ? (
+            <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-3 py-1.5 rounded-xl border border-emerald-200/60 dark:border-emerald-900/60">
+              <CheckCircle2 className="w-4 h-4" />
+              <span>You logged your check-in</span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-1.5 text-xs font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/40 px-3 py-1.5 rounded-xl border border-amber-200/60 dark:border-amber-900/60">
+              <AlertTriangle className="w-4 h-4 text-amber-500" />
+              <span>Your EOD is pending</span>
+            </div>
+          )}
+        </div>
+      </div>
+
       {/* Logs Feed */}
       {isLoading ? (
-        <div className="h-40 flex items-center justify-center">
+        <div className="h-48 flex items-center justify-center">
           <div className="w-8 h-8 rounded-full border-3 border-indigo-500/20 border-t-indigo-600 animate-spin" />
         </div>
       ) : logs.length === 0 ? (
-        <div className="p-12 text-center rounded-3xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+        <div className="p-12 text-center rounded-3xl border border-zinc-200/80 dark:border-zinc-800 bg-white/80 dark:bg-zinc-900/80 backdrop-blur-md shadow-xs">
           <div className="w-14 h-14 rounded-2xl bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center mx-auto mb-3">
             <CalendarCheck className="w-7 h-7" />
           </div>
@@ -106,7 +151,7 @@ export default function DailyStandupPage() {
           <Button
             onClick={() => setIsEodModalOpen(true)}
             variant="primary"
-            className="text-xs font-bold"
+            className="text-xs font-bold shadow-md shadow-indigo-600/20"
           >
             Submit EOD Log Now
           </Button>
@@ -116,12 +161,12 @@ export default function DailyStandupPage() {
           {logs.map((log: any) => (
             <div
               key={log.id}
-              className="p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-xs space-y-4"
+              className="p-6 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 bg-white/90 dark:bg-zinc-900/90 backdrop-blur-md shadow-xs space-y-4 hover:shadow-md transition-all"
             >
               {/* Member Top Bar */}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
-                  <div className="w-9 h-9 rounded-xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center text-xs font-black shadow-xs">
+                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-600 to-violet-600 text-white flex items-center justify-center text-xs font-black shadow-xs">
                     {(log.userName || log.userPhone || "U").charAt(0).toUpperCase()}
                   </div>
                   <div>
@@ -129,7 +174,7 @@ export default function DailyStandupPage() {
                       {log.userName || "Team Member"}
                     </h3>
                     <div className="flex items-center gap-2 text-[11px] text-zinc-500">
-                      <span>{log.userRole}</span>
+                      <span className="font-mono">{log.userRole}</span>
                       {log.departmentName && (
                         <>
                           <span>•</span>
@@ -154,7 +199,7 @@ export default function DailyStandupPage() {
               </div>
 
               {/* Completed Section */}
-              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/80">
+              <div className="p-4 rounded-2xl bg-zinc-50/80 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/80">
                 <span className="text-[10px] font-mono uppercase font-bold text-emerald-600 dark:text-emerald-400 block mb-1">
                   ✅ Completed Today:
                 </span>
@@ -164,7 +209,7 @@ export default function DailyStandupPage() {
               </div>
 
               {/* Tomorrow's Plan */}
-              <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/80">
+              <div className="p-4 rounded-2xl bg-zinc-50/80 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/80">
                 <span className="text-[10px] font-mono uppercase font-bold text-indigo-600 dark:text-indigo-400 block mb-1">
                   📌 Tomorrow's Plan:
                 </span>
@@ -175,7 +220,7 @@ export default function DailyStandupPage() {
 
               {/* Blockers (If any) */}
               {log.blockers && (
-                <div className="p-3.5 rounded-2xl bg-rose-50/70 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex items-start gap-2.5">
+                <div className="p-3.5 rounded-2xl bg-rose-50/80 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 flex items-start gap-2.5">
                   <AlertTriangle className="w-4 h-4 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
                   <div>
                     <span className="text-[10px] font-mono uppercase font-bold text-rose-700 dark:text-rose-400 block">
