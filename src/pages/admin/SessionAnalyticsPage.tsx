@@ -7,7 +7,6 @@ import {
 } from "../../store";
 import {
   ArrowLeft,
-  Download,
   Users,
   Trophy,
   Calendar,
@@ -48,29 +47,6 @@ export default function SessionAnalyticsPage() {
       (lead.branch || "").toLowerCase().includes(q)
     );
   });
-
-  const handleExportCsv = async () => {
-    try {
-      const res = await fetch(
-        `${baseUrl}/api/admin/presentations/sessions/${sessionId}/leads/export`,
-        {
-          headers: token ? { Authorization: `Bearer ${token}` } : {},
-        }
-      );
-      if (!res.ok) throw new Error("Failed to export CSV");
-      const blob = await res.blob();
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = `session_${session?.sessionCode || sessionId}_leads.csv`;
-      document.body.appendChild(a);
-      a.click();
-      a.remove();
-      window.URL.revokeObjectURL(url);
-    } catch (err) {
-      console.error("Export error:", err);
-    }
-  };
 
   const topScorer = leads.length > 0 ? leads[0] : null;
   const totalPoints = leads.reduce((sum, l) => sum + (l.totalScore || 0), 0);
@@ -115,23 +91,13 @@ export default function SessionAnalyticsPage() {
 
         <div className="flex items-center gap-3">
           <Button
-            variant="ghost"
+            variant="primary"
             size="sm"
             onClick={() => navigate(`/presentations/live/${sessionId}`)}
             className="flex items-center gap-1.5"
           >
             <Play className="w-3.5 h-3.5 fill-current" />
             <span>Open Projector View</span>
-          </Button>
-
-          <Button
-            variant="primary"
-            size="sm"
-            onClick={handleExportCsv}
-            className="bg-emerald-600 hover:bg-emerald-500 shadow-sm flex items-center gap-1.5"
-          >
-            <Download className="w-3.5 h-3.5" />
-            <span>Export CSV ({leads.length} Leads)</span>
           </Button>
         </div>
       </div>
