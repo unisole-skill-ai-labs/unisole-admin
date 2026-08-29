@@ -21,8 +21,12 @@ import {
   Clock,
   Award,
   Zap,
+  RotateCcw,
+  FileText,
 } from "lucide-react";
 import Button from "../ui/Button";
+import SlideRenderer from "./SlideRenderer";
+import { UNISOLE_AI_CAMPUS_DECK_SLIDES } from "../../data/aiCampusDeck";
 
 interface PresentationBuilderProps {
   baseUrl: string;
@@ -58,6 +62,23 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
 
   const activeSlide = slides[activeSlideIndex] || null;
 
+  const handleLoadCampusTemplate = () => {
+    if (
+      slides.length > 0 &&
+      !window.confirm(
+        "Are you sure you want to load the complete 28-slide UNISOLE AI Campus Program Animated Template? This will replace current slides."
+      )
+    ) {
+      return;
+    }
+    setTitle("UNISOLE AI Campus Program (Animated)");
+    setDescription(
+      "Interactive 28-slide animated roadshow presentation for college students across Himachal Pradesh with real-time live pulse polls and fast-finger quizzes."
+    );
+    setSlides(UNISOLE_AI_CAMPUS_DECK_SLIDES);
+    setActiveSlideIndex(0);
+  };
+
   const handleAddSlide = (type: string) => {
     const newId = `slide_${Date.now()}`;
     let newSlide: any = {
@@ -65,12 +86,34 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
       type,
       title: "New Slide Title",
       subtitle: "Add descriptive subtext or context here",
+      maxBuildSteps: 1,
+      notes: "Presenter notes for this slide...",
     };
 
     if (type === "COVER") {
-      newSlide.badge = "Unisole College Roadshow";
-      newSlide.title = title || "Next-Gen Tech Careers";
-      newSlide.subtitle = "Master Real-World Industry Skills & Get Placed";
+      newSlide.badge = "INDUSTRIAL TRAINING & INTERNSHIP OPPORTUNITY PROGRAM";
+      newSlide.title = title || "UNISOLE AI CAMPUS PROGRAM";
+      newSlide.subtitle = "For College Students Across Himachal Pradesh";
+      newSlide.org = "UNISOLE SKILL AI LABS";
+      newSlide.maxBuildSteps = 3;
+    } else if (type === "FOUNDER_BIO") {
+      newSlide.badge = "FOUNDER";
+      newSlide.title = "AJAY MOKTA";
+      newSlide.subtitle = "Founder, UNISOLE Skill AI Labs · B.Tech, NIT Hamirpur";
+      newSlide.initials = "AM";
+      newSlide.credentials = [
+        "NIT Hamirpur Alumnus",
+        "NASA Space Apps Challenge",
+        "3rd — National Startup Summit",
+        "ICAR-IARI Incubation Grantee",
+        "Speaker & Mentor on Applied AI",
+      ];
+      newSlide.quote = "“A degree from any college in Himachal should be backed by skills that compete globally.”";
+      newSlide.maxBuildSteps = 3;
+    } else if (type === "BIG_QUESTION") {
+      newSlide.title = "आगे क्या सोचा है?";
+      newSlide.subtitle = "Not what your parents have decided. What have YOU thought about?";
+      newSlide.maxBuildSteps = 2;
     } else if (type === "CONTENT") {
       newSlide.title = "Core Program Highlights";
       newSlide.bullets = [
@@ -78,6 +121,7 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
         "Production-grade capstone projects built in modern stacks",
         "Dedicated placement drive with 200+ hiring partners",
       ];
+      newSlide.maxBuildSteps = 3;
     } else if (type === "STATS") {
       newSlide.title = "Unisole Impact & Alumni Reach";
       newSlide.stats = [
@@ -85,8 +129,10 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
         { value: "18 LPA", label: "Highest CTC" },
         { value: "450+", label: "Hiring Partners" },
       ];
+      newSlide.maxBuildSteps = 3;
     } else if (type === "POLL") {
-      newSlide.title = "Live Audience Pulse";
+      newSlide.badge = "LIVE AUDIENCE PULSE";
+      newSlide.title = "Live Audience Poll";
       newSlide.question = "Which career track are you most interested in?";
       newSlide.options = [
         "Full-Stack Web3 / Cloud",
@@ -94,24 +140,27 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
         "Data Engineering & Analytics",
         "Cybersecurity & DevSecOps",
       ];
+      newSlide.maxBuildSteps = 1;
     } else if (type === "QUIZ") {
+      newSlide.badge = "FAST-FINGER TECH CHALLENGE";
       newSlide.title = "Fast-Finger Tech Challenge";
-      newSlide.question = "What is the primary benefit of React Virtual DOM?";
+      newSlide.question = "According to WEF Future of Jobs 2025, what is the #1 skill employers prioritize?";
       newSlide.timeLimit = 20;
       newSlide.points = 1000;
       newSlide.options = [
-        { text: "Direct database manipulation", isCorrect: false },
-        { text: "Batched and efficient DOM updates", isCorrect: true },
-        { text: "Automatic image optimization", isCorrect: false },
-        { text: "Server-side DNS resolution", isCorrect: false },
+        { text: "Analytical & Problem-Solving Thinking", isCorrect: true },
+        { text: "Memorizing code syntax", isCorrect: false },
+        { text: "High college test scores alone", isCorrect: false },
+        { text: "Collecting generic online certificates", isCorrect: false },
       ];
+      newSlide.maxBuildSteps = 1;
     } else if (type === "OFFER_CTA") {
       newSlide.title = "Claim Your Exclusive College Grant";
       newSlide.subtitle = "Scan or visit Unisole to claim your special roadshow scholarship!";
       newSlide.badge = "Limited Time Offer";
-      newSlide.couponCode = "COLLEGE40";
+      newSlide.couponCode = "CAMPUS40";
       newSlide.buttonText = "Explore Programs on Unisole";
-      newSlide.targetUrl = "https://unisole.in/programs";
+      newSlide.targetUrl = "https://unisole.org/programs";
     }
 
     const updated = [...slides, newSlide];
@@ -200,12 +249,23 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
               className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 bg-transparent border-b border-transparent hover:border-zinc-300 dark:hover:border-zinc-700 focus:border-indigo-500 focus:outline-hidden px-1 transition-colors"
             />
             <span className="text-[11px] text-zinc-400 block px-1">
-              {slides.length} slides • Visual Deck Builder
+              {slides.length} slides • Animated Visual Deck Builder
             </span>
           </div>
         </div>
 
         <div className="flex items-center gap-2">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleLoadCampusTemplate}
+            className="border-indigo-500/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 flex items-center gap-1.5"
+            title="Load the complete UNISOLE AI Campus Program Animated presentation"
+          >
+            <RotateCcw className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Load AI Campus Template</span>
+          </Button>
+
           {saveSuccess && (
             <span className="text-xs text-emerald-500 font-bold flex items-center gap-1">
               <CheckCircle2 className="w-4 h-4" /> Saved
@@ -240,12 +300,24 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
                 <span>Add Slide</span>
               </button>
 
-              <div className="absolute left-0 mt-1 w-48 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl p-1.5 hidden group-hover:block group-focus-within:block z-30 space-y-0.5 animate-fade-in">
+              <div className="absolute left-0 mt-1 w-52 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl p-1.5 hidden group-hover:block group-focus-within:block z-30 space-y-0.5 animate-fade-in max-h-72 overflow-y-auto">
                 <button
                   onClick={() => handleAddSlide("COVER")}
                   className="w-full text-left px-3 py-1.5 text-xs font-semibold rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
                 >
                   Cover / Title Slide
+                </button>
+                <button
+                  onClick={() => handleAddSlide("FOUNDER_BIO")}
+                  className="w-full text-left px-3 py-1.5 text-xs font-semibold rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                >
+                  Founder Bio Slide
+                </button>
+                <button
+                  onClick={() => handleAddSlide("BIG_QUESTION")}
+                  className="w-full text-left px-3 py-1.5 text-xs font-semibold rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400"
+                >
+                  आगे क्या सोचा है? (Reflection)
                 </button>
                 <button
                   onClick={() => handleAddSlide("CONTENT")}
@@ -261,13 +333,13 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
                 </button>
                 <button
                   onClick={() => handleAddSlide("POLL")}
-                  className="w-full text-left px-3 py-1.5 text-xs font-semibold rounded-lg hover:bg-cyan-50 dark:hover:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400"
+                  className="w-full text-left px-3 py-1.5 text-xs font-semibold rounded-lg hover:bg-cyan-50 dark:hover:bg-cyan-950/40 text-cyan-600 dark:text-cyan-400 font-bold"
                 >
                   📊 Live Pulse Poll
                 </button>
                 <button
                   onClick={() => handleAddSlide("QUIZ")}
-                  className="w-full text-left px-3 py-1.5 text-xs font-semibold rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400"
+                  className="w-full text-left px-3 py-1.5 text-xs font-semibold rounded-lg hover:bg-amber-50 dark:hover:bg-amber-950/40 text-amber-600 dark:text-amber-400 font-bold"
                 >
                   ⚡ Timed Kahoot Quiz
                 </button>
@@ -359,136 +431,29 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
         </div>
 
         {/* Center: Live Slide Canvas Preview */}
-        <div className="lg:col-span-5 space-y-3">
-          <div className="text-xs font-bold text-zinc-400 uppercase tracking-wider px-1">
-            Canvas Live Preview
+        <div className="lg:col-span-6 space-y-3">
+          <div className="flex items-center justify-between px-1">
+            <span className="text-xs font-bold text-zinc-400 uppercase tracking-wider">
+              Canvas Live Preview
+            </span>
+            <span className="text-xs text-indigo-400 font-medium">
+              Slide {activeSlideIndex + 1} of {slides.length}
+            </span>
           </div>
 
           {activeSlide ? (
-            <div className="aspect-video w-full rounded-3xl bg-gradient-to-br from-zinc-950 via-zinc-900 to-indigo-950 text-white p-6 sm:p-8 flex flex-col justify-between shadow-2xl border border-zinc-800 relative overflow-hidden">
-              {/* Background Glow */}
+            <div className="aspect-video w-full rounded-3xl bg-zinc-950 text-white p-6 sm:p-8 flex flex-col justify-center shadow-2xl border border-zinc-800 relative overflow-hidden">
+              {/* Glow lights */}
               <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+              <div className="absolute bottom-0 left-0 w-48 h-48 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
 
-              {/* Slide Top Badge */}
-              <div className="flex items-center justify-between">
-                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/10 border border-white/15 text-[11px] font-bold text-indigo-300">
-                  <Sparkles className="w-3 h-3 text-indigo-400" />
-                  <span>{activeSlide.badge || "Unisole Campus Presentation"}</span>
-                </div>
-                <span className="text-[11px] font-mono text-zinc-500">
-                  Slide {activeSlideIndex + 1}/{slides.length}
-                </span>
-              </div>
-
-              {/* Slide Center Content */}
-              <div className="my-auto space-y-3">
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight leading-tight">
-                  {activeSlide.title || "Slide Title"}
-                </h2>
-                {activeSlide.subtitle && (
-                  <p className="text-xs sm:text-sm text-zinc-300 max-w-lg leading-relaxed">
-                    {activeSlide.subtitle}
-                  </p>
-                )}
-
-                {/* Bullets Slide Preview */}
-                {activeSlide.type === "CONTENT" &&
-                  Array.isArray(activeSlide.bullets) && (
-                    <ul className="space-y-2 mt-4 text-xs sm:text-sm text-zinc-200">
-                      {activeSlide.bullets.map((b: string, i: number) => (
-                        <li key={i} className="flex items-start gap-2">
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 mt-2 shrink-0" />
-                          <span>{b}</span>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-
-                {/* Stats Grid Preview */}
-                {activeSlide.type === "STATS" &&
-                  Array.isArray(activeSlide.stats) && (
-                    <div className="grid grid-cols-3 gap-3 pt-3">
-                      {activeSlide.stats.map((st: any, i: number) => (
-                        <div
-                          key={i}
-                          className="p-3 rounded-2xl bg-white/5 border border-white/10 text-center"
-                        >
-                          <div className="text-lg sm:text-xl font-black text-indigo-400">
-                            {st.value}
-                          </div>
-                          <div className="text-[10px] text-zinc-400 mt-0.5">
-                            {st.label}
-                          </div>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                {/* Poll Options Preview */}
-                {activeSlide.type === "POLL" &&
-                  Array.isArray(activeSlide.options) && (
-                    <div className="grid grid-cols-2 gap-2.5 pt-3">
-                      {activeSlide.options.map((opt: string, i: number) => (
-                        <div
-                          key={i}
-                          className="p-3 rounded-xl bg-white/5 border border-cyan-500/30 text-xs font-semibold text-cyan-200 flex items-center gap-2"
-                        >
-                          <span className="w-5 h-5 rounded-lg bg-cyan-500/20 text-cyan-300 flex items-center justify-center text-[10px] font-bold">
-                            {String.fromCharCode(65 + i)}
-                          </span>
-                          <span className="truncate">{opt}</span>
-                        </div>
-                      ))}
-                    </div>
-                  )}
-
-                {/* Quiz Choices Preview */}
-                {activeSlide.type === "QUIZ" &&
-                  Array.isArray(activeSlide.options) && (
-                    <div className="grid grid-cols-2 gap-2.5 pt-3">
-                      {activeSlide.options.map((opt: any, i: number) => {
-                        const colors = [
-                          "bg-rose-500/20 border-rose-500/40 text-rose-200",
-                          "bg-blue-500/20 border-blue-500/40 text-blue-200",
-                          "bg-amber-500/20 border-amber-500/40 text-amber-200",
-                          "bg-emerald-500/20 border-emerald-500/40 text-emerald-200",
-                        ];
-                        return (
-                          <div
-                            key={i}
-                            className={`p-3 rounded-xl border text-xs font-semibold flex items-center justify-between gap-2 ${
-                              colors[i % 4]
-                            }`}
-                          >
-                            <span className="truncate">{opt.text}</span>
-                            {opt.isCorrect && (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
-
-                {/* Offer CTA Preview */}
-                {activeSlide.type === "OFFER_CTA" && (
-                  <div className="pt-3 flex items-center gap-3">
-                    {activeSlide.couponCode && (
-                      <div className="px-3.5 py-1.5 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono font-bold text-xs tracking-wider">
-                        {activeSlide.couponCode}
-                      </div>
-                    )}
-                    <div className="px-4 py-2 rounded-xl bg-indigo-600 text-white font-bold text-xs shadow-lg">
-                      {activeSlide.buttonText || "Claim Offer"}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Bottom Footer */}
-              <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-2 border-t border-white/10">
-                <span>unisole.in</span>
-                <span>Audience Sync Ready</span>
+              <div className="relative z-10 max-h-full overflow-y-auto pr-1">
+                <SlideRenderer
+                  slide={activeSlide}
+                  buildStep={999}
+                  presentationTitle={title}
+                  isProjector={false}
+                />
               </div>
             </div>
           ) : (
@@ -499,7 +464,7 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
         </div>
 
         {/* Right: Slide Property Editor */}
-        <div className="lg:col-span-4 space-y-4 bg-white dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80 rounded-3xl p-5 shadow-xs">
+        <div className="lg:col-span-3 space-y-4 bg-white dark:bg-zinc-900/80 border border-zinc-200/80 dark:border-zinc-800/80 rounded-3xl p-5 shadow-xs">
           <div className="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
             <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
               Slide Configuration
@@ -510,7 +475,22 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
           </div>
 
           {activeSlide && (
-            <div className="space-y-4 text-xs">
+            <div className="space-y-3.5 text-xs max-h-[600px] overflow-y-auto pr-1">
+              <div>
+                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Badge / Label
+                </label>
+                <input
+                  type="text"
+                  value={activeSlide.badge || ""}
+                  onChange={(e) =>
+                    handleUpdateActiveSlide({ badge: e.target.value })
+                  }
+                  placeholder="e.g. PILLAR 01, LIVE AUDIENCE PULSE"
+                  className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 font-medium focus:outline-hidden focus:border-indigo-500"
+                />
+              </div>
+
               <div>
                 <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
                   Slide Headline
@@ -527,7 +507,7 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
 
               <div>
                 <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Subtitle / Context
+                  Subtitle / Subtext
                 </label>
                 <textarea
                   rows={2}
@@ -536,6 +516,41 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
                     handleUpdateActiveSlide({ subtitle: e.target.value })
                   }
                   className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 font-medium focus:outline-hidden focus:border-indigo-500"
+                />
+              </div>
+
+              {/* Build steps count */}
+              <div>
+                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Progressive Build Clicks / Steps
+                </label>
+                <input
+                  type="number"
+                  min={0}
+                  max={10}
+                  value={activeSlide.maxBuildSteps ?? 1}
+                  onChange={(e) =>
+                    handleUpdateActiveSlide({
+                      maxBuildSteps: Number(e.target.value),
+                    })
+                  }
+                  className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 font-medium focus:outline-hidden focus:border-indigo-500"
+                />
+              </div>
+
+              {/* Presenter Notes / Cue Script */}
+              <div>
+                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  Presenter Script & Cues (Press 'N' during live)
+                </label>
+                <textarea
+                  rows={4}
+                  value={activeSlide.notes || ""}
+                  onChange={(e) =>
+                    handleUpdateActiveSlide({ notes: e.target.value })
+                  }
+                  placeholder="Presenter script, speaking cues, time limits and caveats..."
+                  className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 font-mono text-[11px] focus:outline-hidden focus:border-indigo-500"
                 />
               </div>
 
@@ -563,8 +578,17 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
               {activeSlide.type === "POLL" && (
                 <div>
                   <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Poll Choices (1 per line)
+                    Poll Question & Choices (1 per line)
                   </label>
+                  <input
+                    type="text"
+                    value={activeSlide.question || ""}
+                    onChange={(e) =>
+                      handleUpdateActiveSlide({ question: e.target.value })
+                    }
+                    placeholder="Poll question..."
+                    className="w-full px-3 py-2 mb-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 font-medium"
+                  />
                   <textarea
                     rows={4}
                     value={(activeSlide.options || []).join("\n")}
@@ -582,6 +606,21 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
               {/* Quiz choices & correct answer editor */}
               {activeSlide.type === "QUIZ" && (
                 <div className="space-y-3">
+                  <div>
+                    <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                      Quiz Question
+                    </label>
+                    <input
+                      type="text"
+                      value={activeSlide.question || ""}
+                      onChange={(e) =>
+                        handleUpdateActiveSlide({ question: e.target.value })
+                      }
+                      placeholder="Quiz challenge question..."
+                      className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 font-medium"
+                    />
+                  </div>
+
                   <div className="flex items-center gap-3">
                     <div className="flex-1">
                       <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
@@ -691,7 +730,7 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
                           targetUrl: e.target.value,
                         })
                       }
-                      placeholder="https://unisole.in/programs"
+                      placeholder="https://unisole.org/programs"
                       className="w-full px-3 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-zinc-900 dark:text-zinc-100 text-xs"
                     />
                   </div>

@@ -22,9 +22,13 @@ import {
   Award,
   Crown,
   Medal,
+  FileText,
+  HelpCircle,
+  Zap,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
+import SlideRenderer from "../../components/presentations/SlideRenderer";
 
 export default function LiveProjectorPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -35,7 +39,9 @@ export default function LiveProjectorPage() {
   const [session, setSession] = useState<any>(null);
   const [presentation, setPresentation] = useState<any>(null);
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [buildStep, setBuildStep] = useState(0);
   const [attendeeCount, setAttendeeCount] = useState(0);
+  const [notesOpen, setNotesOpen] = useState(false);
   const [quizState, setQuizState] = useState<any>({
     isQuizActive: false,
     isAnswerRevealed: false,
@@ -68,6 +74,7 @@ export default function LiveProjectorPage() {
         if (data.data) {
           setSession(data.data);
           setCurrentSlideIndex(data.data.currentSlideIndex || 0);
+          setBuildStep(0);
           return fetch(
             `${baseUrl}/api/admin/presentations/${data.data.presentationId}`,
             { headers: authHeaders }
@@ -119,6 +126,7 @@ export default function LiveProjectorPage() {
 
     socket.on("slide_updated", ({ slideIndex, quizState }) => {
       setCurrentSlideIndex(slideIndex);
+      setBuildStep(0);
       if (quizState) setQuizState(quizState);
     });
 
@@ -210,18 +218,21 @@ export default function LiveProjectorPage() {
 
   const slides = (presentation?.slides as any[]) || [];
   const currentSlide = slides[currentSlideIndex] || null;
+  const maxSteps = currentSlide?.maxBuildSteps ?? 0;
 
   // Handlers for Presenter Actions
   const handlePrevSlide = useCallback(() => {
     if (currentSlideIndex > 0 && socketRef.current && session?.sessionCode) {
       const target = currentSlideIndex - 1;
+      const prevSlide = slides[target];
       setCurrentSlideIndex(target);
+      setBuildStep(prevSlide?.maxBuildSteps ?? 0);
       socketRef.current.emit("admin:change_slide", {
         sessionCode: session.sessionCode,
         slideIndex: target,
       });
     }
-  }, [currentSlideIndex, session?.sessionCode]);
+  }, [currentSlideIndex, session?.sessionCode, slides]);
 
   const handleNextSlide = useCallback(() => {
     if (
@@ -231,12 +242,30 @@ export default function LiveProjectorPage() {
     ) {
       const target = currentSlideIndex + 1;
       setCurrentSlideIndex(target);
+      setBuildStep(0);
       socketRef.current.emit("admin:change_slide", {
         sessionCode: session.sessionCode,
         slideIndex: target,
       });
     }
   }, [currentSlideIndex, slides.length, session?.sessionCode]);
+
+  // Progressive Step & Slide Advance
+  const handleNextAction = useCallback(() => {
+    if (buildStep < maxSteps) {
+      setBuildStep((prev) => prev + 1);
+    } else {
+      handleNextSlide();
+    }
+  }, [buildStep, maxSteps, handleNextSlide]);
+
+  const handlePrevAction = useCallback(() => {
+    if (buildStep > 0) {
+      setBuildStep((prev) => prev - 1);
+    } else {
+      handlePrevSlide();
+    }
+  }, [buildStep, handlePrevSlide]);
 
   const handleStartQuestion = useCallback(() => {
     if (!currentSlide || !socketRef.current || !session?.sessionCode) return;
@@ -287,12 +316,12 @@ export default function LiveProjectorPage() {
         return;
       }
 
-      if (e.key === "ArrowRight" || e.key === "PageDown") {
+      if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
         e.preventDefault();
-        handleNextSlide();
+        handleNextAction();
       } else if (e.key === "ArrowLeft" || e.key === "PageUp") {
         e.preventDefault();
-        handlePrevSlide();
+        handlePrevAction();
       } else if (e.key === "q" || e.key === "Q") {
         e.preventDefault();
         handleStartQuestion();
@@ -302,6 +331,9 @@ export default function LiveProjectorPage() {
       } else if (e.key === "l" || e.key === "L") {
         e.preventDefault();
         handleShowLeaderboard();
+      } else if (e.key === "n" || e.key === "N") {
+        e.preventDefault();
+        setNotesOpen((prev) => !prev);
       } else if (e.key === "f" || e.key === "F") {
         e.preventDefault();
         handleToggleFullscreen();
@@ -314,8 +346,8 @@ export default function LiveProjectorPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
-    handleNextSlide,
-    handlePrevSlide,
+    handleNextAction,
+    handlePrevAction,
     handleStartQuestion,
     handleRevealAnswer,
     handleShowLeaderboard,
@@ -406,11 +438,32 @@ export default function LiveProjectorPage() {
           </button>
         </div>
 
-        {/* Right: Slide Counter & Fullscreen */}
+        {/* Right: Build Step, Slide Counter, Notes & Fullscreen */}
         <div className="flex items-center gap-3">
+          {maxSteps > 0 && (
+            <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-950/60 border border-indigo-500/40 text-[11px] font-mono font-bold text-indigo-300">
+              <Zap className="w-3 h-3 text-indigo-400" />
+              <span>
+                Step {buildStep}/{maxSteps}
+              </span>
+            </div>
+          )}
+
           <span className="text-xs font-mono font-bold text-zinc-400">
             {currentSlideIndex + 1} / {slides.length}
           </span>
+
+          <button
+            onClick={() => setNotesOpen((prev) => !prev)}
+            className={`p-2 rounded-xl transition-colors ${
+              notesOpen
+                ? "bg-indigo-600 text-white"
+                : "text-zinc-400 hover:text-white hover:bg-white/10"
+            }`}
+            title="Toggle Presenter Script / Notes (N)"
+          >
+            <FileText className="w-4 h-4" />
+          </button>
 
           <button
             onClick={handleToggleFullscreen}
@@ -427,291 +480,130 @@ export default function LiveProjectorPage() {
       </header>
 
       {/* Center Stage Presentation Canvas */}
-      <main className="flex-1 relative flex items-center justify-center p-6 sm:p-12 z-20">
+      <main className="flex-1 relative flex items-center justify-center p-6 sm:p-12 z-20 overflow-y-auto">
         {/* Glow ambient lights */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
 
-        {currentSlide && (
-          <div className="w-full max-w-6xl mx-auto space-y-8 animate-fade-in text-center sm:text-left">
-            {/* Top Slide Badge */}
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-white/10 border border-white/20 text-xs font-bold text-indigo-300">
-              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
-              <span>{currentSlide.badge || presentation.title}</span>
+        {/* Live Leaderboard Podium Overlay if Active */}
+        {quizState.isLeaderboardActive ? (
+          <div className="w-full max-w-5xl mx-auto space-y-6 pt-4 animate-fade-in text-center">
+            <div className="flex items-center justify-center gap-3 mb-6">
+              <Trophy className="w-8 h-8 text-amber-400" />
+              <h2 className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-yellow-400">
+                Live Leaderboard Podium
+              </h2>
             </div>
 
-            {/* Slide Title */}
-            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black tracking-tight leading-tight">
-              {currentSlide.title}
-            </h1>
-
-            {/* Subtitle */}
-            {currentSlide.subtitle && (
-              <p className="text-base sm:text-xl text-zinc-300 max-w-3xl leading-relaxed">
-                {currentSlide.subtitle}
-              </p>
-            )}
-
-            {/* Slide Type: CONTENT (Bullets) */}
-            {currentSlide.type === "CONTENT" &&
-              Array.isArray(currentSlide.bullets) && (
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-4">
-                  {currentSlide.bullets.map((bullet: string, idx: number) => (
-                    <div
-                      key={idx}
-                      className="p-5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-start gap-4 shadow-lg"
-                    >
-                      <div className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center text-white font-bold text-sm shrink-0">
-                        {idx + 1}
-                      </div>
-                      <p className="text-sm sm:text-base text-zinc-200 font-medium leading-relaxed">
-                        {bullet}
-                      </p>
-                    </div>
-                  ))}
+            {/* Top 3 Podium Cards */}
+            <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto items-end pt-8">
+              {/* Rank 2 */}
+              <div className="p-4 rounded-3xl bg-white/10 border border-slate-400/40 text-center space-y-2 order-1 shadow-xl">
+                <Medal className="w-8 h-8 text-slate-300 mx-auto" />
+                <div className="font-extrabold text-sm sm:text-base text-zinc-100 truncate">
+                  {leaderboard[1]?.name || "—"}
                 </div>
-              )}
-
-            {/* Slide Type: STATS */}
-            {currentSlide.type === "STATS" &&
-              Array.isArray(currentSlide.stats) && (
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-6">
-                  {currentSlide.stats.map((st: any, idx: number) => (
-                    <div
-                      key={idx}
-                      className="p-8 rounded-3xl bg-gradient-to-b from-white/10 to-white/5 border border-white/10 backdrop-blur-md text-center shadow-xl"
-                    >
-                      <div className="text-4xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 to-violet-300">
-                        {st.value}
-                      </div>
-                      <div className="text-sm sm:text-base font-semibold text-zinc-300 mt-2">
-                        {st.label}
-                      </div>
-                    </div>
-                  ))}
+                <div className="text-xs font-mono font-bold text-indigo-300">
+                  {leaderboard[1]?.score || 0} pts
                 </div>
-              )}
-
-            {/* Slide Type: POLL */}
-            {currentSlide.type === "POLL" && (
-              <div className="space-y-6 pt-4">
-                <div className="text-xl sm:text-2xl font-bold text-cyan-300 flex items-center gap-2">
-                  <BarChart3 className="w-6 h-6" />
-                  <span>{currentSlide.question || "Live Audience Poll"}</span>
-                </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {(currentSlide.options || []).map(
-                    (opt: string, optIdx: number) => {
-                      const count = quizState.pollCounts?.[optIdx] || 0;
-                      const totalVotes = Object.values(
-                        quizState.pollCounts || {}
-                      ).reduce((a: any, b: any) => a + b, 0) as number;
-                      const percent =
-                        totalVotes > 0
-                          ? Math.round((count / totalVotes) * 100)
-                          : 0;
-
-                      return (
-                        <div
-                          key={optIdx}
-                          className="relative p-5 rounded-2xl bg-white/5 border border-cyan-500/30 overflow-hidden shadow-lg"
-                        >
-                          {/* Animated Fill Bar */}
-                          <div
-                            className="absolute inset-y-0 left-0 bg-cyan-500/20 transition-all duration-700 ease-out"
-                            style={{ width: `${percent}%` }}
-                          />
-
-                          <div className="relative flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <span className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold text-sm">
-                                {String.fromCharCode(65 + optIdx)}
-                              </span>
-                              <span className="text-base sm:text-lg font-bold text-white">
-                                {opt}
-                              </span>
-                            </div>
-                            <span className="text-lg font-mono font-black text-cyan-400">
-                              {percent}%
-                            </span>
-                          </div>
-                        </div>
-                      );
-                    }
-                  )}
+                <div className="h-16 bg-slate-400/20 rounded-xl flex items-center justify-center font-black text-xl text-slate-300">
+                  #2
                 </div>
               </div>
-            )}
 
-            {/* Slide Type: QUIZ */}
-            {currentSlide.type === "QUIZ" && !quizState.isLeaderboardActive && (
-              <div className="space-y-6 pt-4">
-                <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-                  <div className="text-xl sm:text-2xl font-bold text-amber-300 flex items-center gap-2">
-                    <Flame className="w-6 h-6 text-amber-400" />
-                    <span>{currentSlide.question}</span>
-                  </div>
-
-                  {/* Circular / Box Countdown Timer */}
-                  {remainingTime !== null && (
-                    <div className="inline-flex items-center gap-2 px-4 py-2 rounded-2xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono font-black text-xl shadow-lg">
-                      <Clock className="w-5 h-5 animate-spin" />
-                      <span>{remainingTime}s remaining</span>
-                    </div>
-                  )}
+              {/* Rank 1 */}
+              <div className="p-5 rounded-3xl bg-gradient-to-b from-amber-500/30 to-amber-500/10 border border-amber-400/60 text-center space-y-2 order-2 shadow-2xl scale-105">
+                <Crown className="w-10 h-10 text-amber-300 mx-auto animate-bounce" />
+                <div className="font-black text-base sm:text-lg text-amber-200 truncate">
+                  {leaderboard[0]?.name || "—"}
                 </div>
-
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {(currentSlide.options || []).map(
-                    (opt: any, optIdx: number) => {
-                      const colors = [
-                        "bg-rose-500/20 border-rose-500/40 text-rose-100",
-                        "bg-blue-500/20 border-blue-500/40 text-blue-100",
-                        "bg-amber-500/20 border-amber-500/40 text-amber-100",
-                        "bg-emerald-500/20 border-emerald-500/40 text-emerald-100",
-                      ];
-                      const isCorrect = opt.isCorrect;
-                      const isRevealed = quizState.isAnswerRevealed;
-
-                      return (
-                        <div
-                          key={optIdx}
-                          className={`p-5 rounded-2xl border transition-all duration-500 flex items-center justify-between gap-3 shadow-lg ${
-                            colors[optIdx % 4]
-                          } ${
-                            isRevealed && isCorrect
-                              ? "ring-4 ring-emerald-400 scale-102 bg-emerald-600/40"
-                              : isRevealed
-                              ? "opacity-40"
-                              : ""
-                          }`}
-                        >
-                          <div className="flex items-center gap-3">
-                            <span className="w-8 h-8 rounded-xl bg-white/20 flex items-center justify-center font-bold text-sm">
-                              {String.fromCharCode(65 + optIdx)}
-                            </span>
-                            <span className="text-base sm:text-lg font-bold">
-                              {opt.text}
-                            </span>
-                          </div>
-
-                          {isRevealed && isCorrect && (
-                            <span className="px-3 py-1 rounded-full bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-md">
-                              <CheckCircle2 className="w-4 h-4" /> Correct Answer
-                            </span>
-                          )}
-                        </div>
-                      );
-                    }
-                  )}
+                <div className="text-sm font-mono font-black text-amber-400">
+                  {leaderboard[0]?.score || 0} pts
+                </div>
+                <div className="h-24 bg-amber-500/30 rounded-xl flex items-center justify-center font-black text-2xl text-amber-300">
+                  #1
                 </div>
               </div>
-            )}
 
-            {/* Quiz Leaderboard Stage Podium */}
-            {quizState.isLeaderboardActive && (
-              <div className="space-y-6 pt-4 animate-fade-in">
-                <div className="flex items-center justify-center gap-3 mb-6">
-                  <Trophy className="w-8 h-8 text-amber-400" />
-                  <h2 className="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-yellow-400">
-                    Live Leaderboard Podium
-                  </h2>
+              {/* Rank 3 */}
+              <div className="p-4 rounded-3xl bg-white/10 border border-amber-700/40 text-center space-y-2 order-3 shadow-xl">
+                <Award className="w-8 h-8 text-amber-600 mx-auto" />
+                <div className="font-extrabold text-sm sm:text-base text-zinc-100 truncate">
+                  {leaderboard[2]?.name || "—"}
                 </div>
-
-                {/* Top 3 Podium Cards */}
-                <div className="grid grid-cols-3 gap-4 max-w-2xl mx-auto items-end pt-8">
-                  {/* Rank 2 */}
-                  <div className="p-4 rounded-3xl bg-white/10 border border-slate-400/40 text-center space-y-2 order-1 shadow-xl">
-                    <Medal className="w-8 h-8 text-slate-300 mx-auto" />
-                    <div className="font-extrabold text-sm sm:text-base text-zinc-100 truncate">
-                      {leaderboard[1]?.name || "—"}
-                    </div>
-                    <div className="text-xs font-mono font-bold text-indigo-300">
-                      {leaderboard[1]?.score || 0} pts
-                    </div>
-                    <div className="h-16 bg-slate-400/20 rounded-xl flex items-center justify-center font-black text-xl text-slate-300">
-                      #2
-                    </div>
-                  </div>
-
-                  {/* Rank 1 */}
-                  <div className="p-5 rounded-3xl bg-gradient-to-b from-amber-500/30 to-amber-500/10 border border-amber-400/60 text-center space-y-2 order-2 shadow-2xl scale-105">
-                    <Crown className="w-10 h-10 text-amber-300 mx-auto animate-bounce" />
-                    <div className="font-black text-base sm:text-lg text-amber-200 truncate">
-                      {leaderboard[0]?.name || "—"}
-                    </div>
-                    <div className="text-sm font-mono font-black text-amber-400">
-                      {leaderboard[0]?.score || 0} pts
-                    </div>
-                    <div className="h-24 bg-amber-500/30 rounded-xl flex items-center justify-center font-black text-2xl text-amber-300">
-                      #1
-                    </div>
-                  </div>
-
-                  {/* Rank 3 */}
-                  <div className="p-4 rounded-3xl bg-white/10 border border-amber-700/40 text-center space-y-2 order-3 shadow-xl">
-                    <Award className="w-8 h-8 text-amber-600 mx-auto" />
-                    <div className="font-extrabold text-sm sm:text-base text-zinc-100 truncate">
-                      {leaderboard[2]?.name || "—"}
-                    </div>
-                    <div className="text-xs font-mono font-bold text-indigo-300">
-                      {leaderboard[2]?.score || 0} pts
-                    </div>
-                    <div className="h-12 bg-amber-700/20 rounded-xl flex items-center justify-center font-black text-lg text-amber-600">
-                      #3
-                    </div>
-                  </div>
+                <div className="text-xs font-mono font-bold text-indigo-300">
+                  {leaderboard[2]?.score || 0} pts
                 </div>
-
-                {/* Remaining Top 4-10 */}
-                {leaderboard.length > 3 && (
-                  <div className="max-w-xl mx-auto grid grid-cols-2 gap-2 pt-4">
-                    {leaderboard.slice(3, 8).map((p, idx) => (
-                      <div
-                        key={p.leadId}
-                        className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs"
-                      >
-                        <div className="flex items-center gap-2">
-                          <span className="font-mono text-zinc-400 font-bold">
-                            #{idx + 4}
-                          </span>
-                          <span className="font-bold text-zinc-200 truncate max-w-[120px]">
-                            {p.name}
-                          </span>
-                        </div>
-                        <span className="font-mono font-bold text-indigo-400">
-                          {p.score} pts
-                        </span>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                <div className="h-12 bg-amber-700/20 rounded-xl flex items-center justify-center font-black text-lg text-amber-600">
+                  #3
+                </div>
               </div>
-            )}
+            </div>
 
-            {/* Slide Type: OFFER_CTA */}
-            {currentSlide.type === "OFFER_CTA" && (
-              <div className="p-8 rounded-3xl bg-gradient-to-r from-indigo-900/60 to-violet-900/60 border border-indigo-500/40 backdrop-blur-xl max-w-3xl space-y-4 shadow-2xl">
-                <div className="inline-block px-3.5 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-bold text-xs">
-                  {currentSlide.badge || "Special Roadshow Grant"}
-                </div>
-                <h3 className="text-2xl sm:text-3xl font-black text-white">
-                  Exclusive Student Scholarship Available Now
-                </h3>
-                {currentSlide.couponCode && (
-                  <div className="flex items-center gap-3 pt-2">
-                    <span className="text-xs text-zinc-300">Use Promo Code:</span>
-                    <span className="px-4 py-2 rounded-xl bg-black/40 border border-amber-400/50 text-amber-300 font-mono font-black text-lg tracking-wider">
-                      {currentSlide.couponCode}
+            {/* Remaining Top 4-10 */}
+            {leaderboard.length > 3 && (
+              <div className="max-w-xl mx-auto grid grid-cols-2 gap-2 pt-4">
+                {leaderboard.slice(3, 8).map((p, idx) => (
+                  <div
+                    key={p.leadId || idx}
+                    className="px-4 py-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs"
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="font-mono text-zinc-400 font-bold">
+                        #{idx + 4}
+                      </span>
+                      <span className="font-bold text-zinc-200 truncate max-w-[120px]">
+                        {p.name}
+                      </span>
+                    </div>
+                    <span className="font-mono font-bold text-indigo-400">
+                      {p.score} pts
                     </span>
                   </div>
-                )}
+                ))}
               </div>
             )}
           </div>
+        ) : (
+          /* Render Active Slide with Progressive Build Step */
+          <SlideRenderer
+            slide={currentSlide}
+            buildStep={buildStep}
+            presentationTitle={presentation.title}
+            isProjector={true}
+            quizState={quizState}
+            remainingTime={remainingTime}
+            leaderboard={leaderboard}
+          />
         )}
       </main>
+
+      {/* Presenter Notes / Teleprompter Floating Drawer (Key 'N') */}
+      {notesOpen && currentSlide?.notes && (
+        <div className="absolute bottom-20 right-6 max-w-lg w-full z-40 bg-zinc-900/95 border border-indigo-500/40 rounded-3xl p-5 shadow-2xl backdrop-blur-2xl text-white space-y-3 animate-fade-in">
+          <div className="flex items-center justify-between border-b border-white/10 pb-2">
+            <div className="flex items-center gap-2 text-xs font-bold text-indigo-400 uppercase tracking-wider">
+              <FileText className="w-4 h-4" />
+              <span>Presenter Guide & Cue Script</span>
+            </div>
+            <button
+              onClick={() => setNotesOpen(false)}
+              className="p-1 rounded-lg text-zinc-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+
+          <div className="max-h-48 overflow-y-auto text-xs sm:text-sm text-zinc-200 leading-relaxed font-sans whitespace-pre-line pr-1">
+            {currentSlide.notes}
+          </div>
+
+          <div className="flex items-center justify-between text-[11px] text-zinc-400 pt-2 border-t border-white/10 font-mono">
+            <span>Slide {currentSlideIndex + 1}</span>
+            <span>Press [N] to close</span>
+          </div>
+        </div>
+      )}
 
       {/* Presenter Floating Remote Control Toolbar */}
       <footer className="px-6 py-4 flex items-center justify-between bg-zinc-950/80 backdrop-blur-xl border-t border-white/10 z-30">
@@ -719,24 +611,30 @@ export default function LiveProjectorPage() {
           <Button
             variant="ghost"
             size="sm"
-            disabled={currentSlideIndex === 0}
-            onClick={handlePrevSlide}
+            disabled={currentSlideIndex === 0 && buildStep === 0}
+            onClick={handlePrevAction}
             className="text-zinc-300 hover:text-white hover:bg-white/10"
-            title="Previous Slide (←)"
+            title="Previous Step / Slide (← / PageUp)"
           >
             <ChevronLeft className="w-4 h-4 mr-1 inline" />
             <span className="hidden sm:inline">Prev</span>
           </Button>
 
           <Button
-            variant="ghost"
+            variant="primary"
             size="sm"
-            disabled={currentSlideIndex === slides.length - 1}
-            onClick={handleNextSlide}
-            className="text-zinc-300 hover:text-white hover:bg-white/10"
-            title="Next Slide (→ / Space)"
+            disabled={
+              currentSlideIndex === slides.length - 1 && buildStep >= maxSteps
+            }
+            onClick={handleNextAction}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg"
+            title="Next Step / Slide (→ / Space)"
           >
-            <span className="hidden sm:inline">Next</span>
+            <span>
+              {buildStep < maxSteps
+                ? `Next Step (${buildStep + 1}/${maxSteps})`
+                : "Next Slide"}
+            </span>
             <ChevronRight className="w-4 h-4 ml-1 inline" />
           </Button>
         </div>
@@ -789,7 +687,8 @@ export default function LiveProjectorPage() {
 
         {/* Right: Shortcuts Guide Tooltip */}
         <div className="hidden md:flex items-center gap-3 text-[11px] font-mono text-zinc-400">
-          <span>[← / →] Slides</span>
+          <span>[Space/→] Step</span>
+          <span>[N] Notes</span>
           <span>[Q] Start</span>
           <span>[R] Reveal</span>
           <span>[L] Podium</span>
