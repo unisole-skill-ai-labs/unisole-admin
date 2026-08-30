@@ -45,7 +45,6 @@ import {
 import Button from "../ui/Button";
 import SlideRenderer from "./SlideRenderer";
 import { UNISOLE_AI_CAMPUS_DECK_SLIDES } from "../../data/aiCampusDeck";
-import { THEOG_COLLEGE_PPT_SLIDES } from "../../data/theogDeck";
 
 interface PresentationBuilderProps {
   baseUrl: string;
@@ -760,24 +759,6 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
     setStepTestIndex(999);
   };
 
-  const handleLoadTheogTemplate = () => {
-    if (
-      slides.length > 0 &&
-      !window.confirm(
-        "Are you sure you want to load the complete 46-slide Theog College PPT Template? This will replace current slides."
-      )
-    ) {
-      return;
-    }
-    setTitle("Theog College PPT");
-    setDescription(
-      "46-slide college student career awareness + industrial training presentation for Govt. Degree College Theog with 8 interactive live polls, stream-specific roadmaps, and career capital framework."
-    );
-    setSlides(THEOG_COLLEGE_PPT_SLIDES);
-    setActiveSlideIndex(0);
-    setStepTestIndex(999);
-  };
-
   const handleInsertTemplate = (template: any) => {
     const newSlide = {
       id: `slide_${Date.now()}`,
@@ -947,17 +928,6 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
               <span>Mobile Phone (9:16)</span>
             </button>
           </div>
-
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={handleLoadTheogTemplate}
-            className="border-amber-500/30 text-amber-600 dark:text-amber-400 hover:bg-amber-50 dark:hover:bg-amber-950/50 flex items-center gap-1.5 font-bold"
-            title="Load the complete 46-slide Theog College PPT presentation"
-          >
-            <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-            <span className="hidden sm:inline">Load Theog College PPT (46 Slides)</span>
-          </Button>
 
           <Button
             variant="secondary"
