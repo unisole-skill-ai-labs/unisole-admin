@@ -14,7 +14,6 @@ import PresentationBuilderPage from "./pages/admin/PresentationBuilderPage";
 import LiveProjectorPage from "./pages/admin/LiveProjectorPage";
 import SessionAnalyticsPage from "./pages/admin/SessionAnalyticsPage";
 import CollegeDetailPage from "./pages/admin/CollegeDetailPage";
-import LeadDiversificationPage from "./pages/admin/LeadDiversificationPage";
 import TasksPage from "./pages/admin/TasksPage";
 import TeamMembersPage from "./pages/admin/TeamMembersPage";
 import SOPTemplatesPage from "./pages/admin/SOPTemplatesPage";
@@ -54,9 +53,8 @@ export default function App() {
           <Route path="curriculum" element={<CurriculumPage />} />
           <Route path="presentations" element={<PresentationsPage />} />
           <Route path="presentations/builder/:id?" element={<PresentationBuilderPage />} />
-          <Route path="presentations/analytics/:sessionId" element={<SessionAnalyticsPage />} />
-          <Route path="leads" element={<LeadDiversificationPage />} />
-          <Route path="lead-diversification" element={<LeadDiversificationPage />} />
+          <Route path="leads" element={<Navigate to="/colleges" replace />} />
+          <Route path="lead-diversification" element={<Navigate to="/colleges" replace />} />
           <Route path="metadata" element={<MetadataPage />} />
           <Route path="colleges" element={<MetadataPage />} />
           <Route path="colleges/:id" element={<CollegeDetailPage />} />

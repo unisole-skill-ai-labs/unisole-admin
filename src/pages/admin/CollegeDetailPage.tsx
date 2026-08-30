@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useMemo } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { useSelector } from "react-redux";
 import {
@@ -11,6 +11,7 @@ import {
   useCreatePresentationMutation,
   useDeletePresentationMutation,
   useLaunchSessionMutation,
+  useUpdateSessionStatusMutation,
 } from "../../store";
 import {
   ArrowLeft,
@@ -43,6 +44,12 @@ import {
   Building2,
   Radio,
   FileText,
+  Settings,
+  Clock,
+  ArrowUpRight,
+  Pause,
+  StopCircle,
+  BarChart2,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
@@ -67,9 +74,10 @@ export default function CollegeDetailPage() {
   const [createPresentation, { isLoading: isCreatingDeck }] = useCreatePresentationMutation();
   const [deletePresentation, { isLoading: isDeletingDeck }] = useDeletePresentationMutation();
   const [launchSession, { isLoading: isLaunchingSession }] = useLaunchSessionMutation();
+  const [updateSessionStatus, { isLoading: isUpdatingSessionStatus }] = useUpdateSessionStatusMutation();
 
   const [activeTab, setActiveTab] = useState<
-    "presentations" | "sessions" | "branches" | "leads" | "students" | "analytics"
+    "presentations" | "sessions" | "branches" | "leads" | "students" | "analytics" | "settings"
   >("presentations");
 
   // Modals state
@@ -98,6 +106,14 @@ export default function CollegeDetailPage() {
   const [searchLeads, setSearchLeads] = useState("");
   const [leadBranchFilter, setLeadBranchFilter] = useState("ALL");
   const [searchStudents, setSearchStudents] = useState("");
+  const [searchDecks, setSearchDecks] = useState("");
+
+  // Toast / inline confirmation message
+  const [toastMessage, setToastMessage] = useState<string | null>(null);
+  const showToast = (msg: string) => {
+    setToastMessage(msg);
+    setTimeout(() => setToastMessage(null), 3000);
+  };
 
   if (isLoading) {
     return (
@@ -113,9 +129,11 @@ export default function CollegeDetailPage() {
       <div className="p-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl space-y-4">
         <GraduationCap className="w-12 h-12 text-zinc-400 mx-auto" />
         <h2 className="text-lg font-bold text-zinc-800 dark:text-zinc-200">University Not Found</h2>
-        <p className="text-xs text-zinc-500 max-w-sm mx-auto">The university or college you requested does not exist or has been removed.</p>
+        <p className="text-xs text-zinc-500 max-w-sm mx-auto">
+          The university or college you requested does not exist or has been removed.
+        </p>
         <Button variant="primary" size="sm" onClick={() => navigate("/colleges")}>
-          Back to University Partners
+          Back to University Directory
         </Button>
       </div>
     );
@@ -123,13 +141,20 @@ export default function CollegeDetailPage() {
 
   const {
     college,
-    stats,
+    stats = {},
     branchBreakdown = [],
     presentations = [],
     sessions = [],
     recentLeads = [],
     enrolledStudents = [],
   } = analytics;
+
+  const liveSessions = sessions.filter((s: any) => s.status === "LIVE");
+  const hasLiveSession = liveSessions.length > 0;
+
+  const filteredDecks = presentations.filter((d: any) =>
+    (d.title || "").toLowerCase().includes(searchDecks.toLowerCase())
+  );
 
   const filteredLeads = recentLeads.filter((l: any) => {
     const q = searchLeads.toLowerCase();
@@ -151,10 +176,16 @@ export default function CollegeDetailPage() {
     );
   });
 
+  // Handlers
   const handleSaveCollege = async (formData: any) => {
-    await updateCollege({ baseUrl, id: college.id, body: formData }).unwrap();
-    setEditingCollege(false);
-    refetch();
+    try {
+      await updateCollege({ baseUrl, id: college.id, body: formData }).unwrap();
+      setEditingCollege(false);
+      showToast("University details updated successfully.");
+      refetch();
+    } catch (err: any) {
+      alert("Failed to update university: " + (err?.data?.message || err.message));
+    }
   };
 
   const handleDeleteCollege = async () => {
@@ -167,20 +198,26 @@ export default function CollegeDetailPage() {
   };
 
   const handleSaveBranch = async (formData: any) => {
-    if (editingBranch === "create") {
-      await createBranch({
-        baseUrl,
-        body: { ...formData, collegeId: college.id },
-      }).unwrap();
-    } else {
-      await updateBranch({
-        baseUrl,
-        id: editingBranch.id,
-        body: { ...formData, collegeId: college.id },
-      }).unwrap();
+    try {
+      if (editingBranch === "create") {
+        await createBranch({
+          baseUrl,
+          body: { ...formData, collegeId: college.id },
+        }).unwrap();
+        showToast("Academic branch added.");
+      } else {
+        await updateBranch({
+          baseUrl,
+          id: editingBranch.id,
+          body: { ...formData, collegeId: college.id },
+        }).unwrap();
+        showToast("Academic branch updated.");
+      }
+      setEditingBranch(null);
+      refetch();
+    } catch (err: any) {
+      alert("Failed to save branch: " + (err?.data?.message || err.message));
     }
-    setEditingBranch(null);
-    refetch();
   };
 
   const handleDeleteBranch = async () => {
@@ -188,6 +225,7 @@ export default function CollegeDetailPage() {
     try {
       await deleteBranch({ baseUrl, id: deletingBranch.id }).unwrap();
       setDeletingBranch(null);
+      showToast("Academic branch removed.");
       refetch();
     } catch (err: any) {
       alert("Failed to delete branch: " + (err?.data?.message || err.message));
@@ -202,7 +240,7 @@ export default function CollegeDetailPage() {
         baseUrl,
         body: {
           title: newDeckTitle.trim(),
-          description: newDeckDesc.trim(),
+          description: newDeckDesc.trim() || undefined,
           collegeId: college.id,
         },
       }).unwrap();
@@ -223,6 +261,7 @@ export default function CollegeDetailPage() {
     try {
       await deletePresentation({ baseUrl, id: deletingDeck.id }).unwrap();
       setDeletingDeck(null);
+      showToast("Presentation deck deleted.");
       refetch();
     } catch (err: any) {
       alert("Failed to delete pitch deck: " + (err?.data?.message || err.message));
@@ -233,7 +272,7 @@ export default function CollegeDetailPage() {
     try {
       const res: any = await launchSession({
         baseUrl,
-        id: deck.id,
+        presentationId: deck.id,
         body: {
           collegeId: college.id,
           customCode: customSessionCode.trim() || undefined,
@@ -247,27 +286,41 @@ export default function CollegeDetailPage() {
     }
   };
 
+  const handleToggleSessionStatus = async (sessionId: string, newStatus: "LIVE" | "PAUSED" | "ENDED") => {
+    try {
+      await updateSessionStatus({
+        baseUrl,
+        id: sessionId,
+        body: { status: newStatus },
+      }).unwrap();
+      showToast(`Session marked as ${newStatus}.`);
+      refetch();
+    } catch (err: any) {
+      alert("Failed to update session status: " + (err?.data?.message || err.message));
+    }
+  };
+
   const handleCopyLink = (text: string) => {
     navigator.clipboard.writeText(text);
     setCopiedLink(true);
     setTimeout(() => setCopiedLink(false), 2000);
   };
 
-  // CSV Export for this college's captured leads
   const handleExportCSV = () => {
     if (recentLeads.length === 0) {
-      alert("No student leads to export for this college yet.");
+      alert("No student leads captured for this campus yet.");
       return;
     }
 
     const headers = [
       "Student Name",
-      "WhatsApp Mobile",
+      "WhatsApp Phone",
       "University / College",
       "Academic Branch",
       "Year of Study",
-      "Quiz / Engagement Score",
+      "Quiz / Total Score",
       "Joined Date & Time",
+      "Session Code",
     ];
 
     const csvRows = [
@@ -281,6 +334,7 @@ export default function CollegeDetailPage() {
           `"${(l.yearOfStudy || "—").replace(/"/g, '""')}"`,
           l.totalScore || 0,
           `"${l.joinedAt ? new Date(l.joinedAt).toLocaleString() : ""}"`,
+          `"${l.sessionId || "—"}"`,
         ].join(",")
       ),
     ];
@@ -300,6 +354,14 @@ export default function CollegeDetailPage() {
 
   return (
     <div className="space-y-6 animate-fade-in pb-16">
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 px-4 py-3 rounded-2xl bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 text-xs font-bold shadow-2xl flex items-center gap-2 border border-zinc-700 animate-fade-in">
+          <CheckCircle2 className="w-4 h-4 text-emerald-400" />
+          <span>{toastMessage}</span>
+        </div>
+      )}
+
       {/* ─── 1. Header Banner & Quick Actions ─────────────────────────────── */}
       <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-3xl p-6 sm:p-7 shadow-xs">
         <div className="flex items-start gap-4">
@@ -308,6 +370,7 @@ export default function CollegeDetailPage() {
             size="sm"
             onClick={() => navigate("/colleges")}
             className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 p-2.5 rounded-2xl mt-1 border border-zinc-200/80 dark:border-zinc-800"
+            title="Back to Universities"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
@@ -320,6 +383,12 @@ export default function CollegeDetailPage() {
               <Badge variant={college.isActive ? "emerald" : "default"}>
                 {college.isActive ? "Active University Partner" : "Inactive"}
               </Badge>
+              {hasLiveSession && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-pulse">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  {liveSessions.length} LIVE ROADSHOW ACTIVE
+                </span>
+              )}
               <span className="text-xs text-zinc-400 font-mono">ID: {college.id}</span>
             </div>
 
@@ -371,11 +440,21 @@ export default function CollegeDetailPage() {
           </Button>
 
           <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleExportCSV}
+            icon={Download}
+            title="Export Leads CSV"
+          >
+            Export Leads
+          </Button>
+
+          <Button
             variant="ghost"
             size="sm"
             onClick={() => setEditingCollege(true)}
             icon={Edit2}
-            className="p-2.5 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 rounded-xl"
+            className="p-2.5 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 rounded-2xl"
             title="Edit University"
           />
 
@@ -384,7 +463,7 @@ export default function CollegeDetailPage() {
             size="sm"
             onClick={() => setDeletingCollege(true)}
             icon={Trash2}
-            className="p-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-zinc-200 dark:border-zinc-800 rounded-xl"
+            className="p-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-zinc-200 dark:border-zinc-800 rounded-2xl"
             title="Delete University"
           />
         </div>
@@ -400,7 +479,7 @@ export default function CollegeDetailPage() {
             <span className="text-xl sm:text-2xl font-black font-mono text-indigo-600 dark:text-indigo-400">
               {presentations.length}
             </span>
-            <span className="text-[10px] text-zinc-400">college-specific</span>
+            <span className="text-[10px] text-zinc-400">decks</span>
           </div>
         </div>
 
@@ -488,7 +567,7 @@ export default function CollegeDetailPage() {
           }`}
         >
           <Radio className="w-4 h-4 text-emerald-500" />
-          <span>Roadshow Sessions ({sessions.length})</span>
+          <span>Roadshows ({sessions.length})</span>
         </button>
 
         <button
@@ -538,31 +617,46 @@ export default function CollegeDetailPage() {
           <TrendingUp className="w-4 h-4 text-rose-500" />
           <span>Branch Diversification</span>
         </button>
+
+        <button
+          onClick={() => setActiveTab("settings")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+            activeTab === "settings"
+              ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+          }`}
+        >
+          <Settings className="w-4 h-4 text-zinc-500" />
+          <span>University Details & Settings</span>
+        </button>
       </div>
 
       {/* ─── TAB 1: PRESENTATIONS & PITCH DECKS ────────────────────────────── */}
       {activeTab === "presentations" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
-            <div>
-              <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                Pitch Decks for {college.name}
-              </h3>
-              <p className="text-[11px] text-zinc-400">
-                Presentations tailored specifically for this university auditorium and roadshows.
-              </p>
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xs">
+            <div className="relative w-full sm:max-w-xs">
+              <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+              <input
+                type="text"
+                placeholder="Search presentation decks..."
+                value={searchDecks}
+                onChange={(e) => setSearchDecks(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden"
+              />
             </div>
             <Button
               variant="primary"
               size="sm"
               onClick={() => setCreatingDeck(true)}
               icon={Plus}
+              className="font-bold shrink-0"
             >
               Create Presentation Deck
             </Button>
           </div>
 
-          {presentations.length === 0 ? (
+          {filteredDecks.length === 0 ? (
             <div className="p-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl space-y-3">
               <Sparkles className="w-10 h-10 mx-auto text-amber-400" />
               <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
@@ -582,7 +676,7 @@ export default function CollegeDetailPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-              {presentations.map((deck: any) => {
+              {filteredDecks.map((deck: any) => {
                 const slides = Array.isArray(deck.slides) ? deck.slides : [];
                 return (
                   <div
@@ -626,7 +720,7 @@ export default function CollegeDetailPage() {
                           setLaunchingSessionForDeck(deck);
                           handleLaunchSession(deck);
                         }}
-                        className="text-xs font-bold"
+                        className="text-xs font-bold flex-1"
                       >
                         Launch
                       </Button>
@@ -662,7 +756,7 @@ export default function CollegeDetailPage() {
       {/* ─── TAB 2: ROADSHOW SESSIONS ─────────────────────────────────────── */}
       {activeTab === "sessions" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+          <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xs">
             <div>
               <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100">
                 Auditorium Roadshow Sessions
@@ -683,6 +777,7 @@ export default function CollegeDetailPage() {
                 }
               }}
               icon={Play}
+              className="font-bold"
             >
               Start New Live Session
             </Button>
@@ -752,6 +847,18 @@ export default function CollegeDetailPage() {
                         </td>
                         <td className="py-3.5 px-5 text-right">
                           <div className="flex items-center justify-end gap-2">
+                            {sess.status === "LIVE" && (
+                              <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => handleToggleSessionStatus(sess.id, "ENDED")}
+                                icon={StopCircle}
+                                className="text-xs text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                                title="End Live Session"
+                              >
+                                End
+                              </Button>
+                            )}
                             <Link to={`/presentations/live/${sess.id}`}>
                               <Button variant="primary" size="sm" icon={Play} className="text-xs font-bold">
                                 Projector Stage
@@ -777,7 +884,7 @@ export default function CollegeDetailPage() {
       {/* ─── TAB 3: ACADEMIC BRANCHES ─────────────────────────────────────── */}
       {activeTab === "branches" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+          <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xs">
             <div>
               <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100">
                 Academic Branches & Specializations
@@ -791,6 +898,7 @@ export default function CollegeDetailPage() {
               size="sm"
               onClick={() => setEditingBranch("create")}
               icon={Plus}
+              className="font-bold"
             >
               Add Academic Branch
             </Button>
@@ -830,19 +938,19 @@ export default function CollegeDetailPage() {
 
                   {/* Branch Metrics */}
                   <div className="grid grid-cols-3 gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
-                    <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/60 text-center">
+                    <div className="p-2 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/60 text-center">
                       <span className="text-[10px] text-zinc-400 block font-semibold">Leads</span>
                       <span className="text-xs font-black text-zinc-800 dark:text-zinc-200 font-mono">
                         {b.leadsCount || 0}
                       </span>
                     </div>
-                    <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/60 text-center">
+                    <div className="p-2 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/60 text-center">
                       <span className="text-[10px] text-zinc-400 block font-semibold">Share</span>
                       <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono">
                         {b.participationPercentage || b.percentage || 0}%
                       </span>
                     </div>
-                    <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/60 text-center">
+                    <div className="p-2 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/60 text-center">
                       <span className="text-[10px] text-zinc-400 block font-semibold">Avg Score</span>
                       <span className="text-xs font-black text-amber-500 font-mono">
                         {b.averageScore || 0} pts
@@ -883,23 +991,23 @@ export default function CollegeDetailPage() {
       {/* ─── TAB 4: CAMPUS LEADS & LEADERBOARD ────────────────────────────── */}
       {activeTab === "leads" && (
         <div className="space-y-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-4 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xs">
             <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:max-w-2xl">
               <div className="relative w-full sm:w-72">
-                <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
                 <input
                   type="text"
-                  placeholder="Search students by name, phone, branch..."
+                  placeholder="Search leads by name, phone, branch..."
                   value={searchLeads}
                   onChange={(e) => setSearchLeads(e.target.value)}
-                  className="w-full pl-9 pr-3 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
+                  className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
                 />
               </div>
 
               <select
                 value={leadBranchFilter}
                 onChange={(e) => setLeadBranchFilter(e.target.value)}
-                className="w-full sm:w-auto px-3.5 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-bold text-zinc-800 dark:text-zinc-200 focus:outline-hidden"
+                className="w-full sm:w-auto px-3.5 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs font-bold text-zinc-800 dark:text-zinc-200 focus:outline-hidden"
               >
                 <option value="ALL">All Academic Branches</option>
                 {branchBreakdown.map((b: any) => (
@@ -995,15 +1103,15 @@ export default function CollegeDetailPage() {
       {/* ─── TAB 5: ENROLLED LEARNERS ─────────────────────────────────────── */}
       {activeTab === "students" && (
         <div className="space-y-4">
-          <div className="flex items-center justify-between p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+          <div className="flex items-center justify-between p-4 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xs">
             <div className="relative w-full sm:w-80">
-              <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
                 placeholder="Search enrolled learners by name or phone..."
                 value={searchStudents}
                 onChange={(e) => setSearchStudents(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
+                className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
               />
             </div>
             <span className="text-xs text-zinc-400 font-bold">
@@ -1061,14 +1169,79 @@ export default function CollegeDetailPage() {
       {/* ─── TAB 6: BRANCH DIVERSIFICATION & ANALYTICS ─────────────────────── */}
       {activeTab === "analytics" && (
         <div className="space-y-6">
+          {/* Diversification KPIs */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex flex-col justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                Conversion to Enrolled
+              </span>
+              <div className="flex items-baseline gap-2">
+                <span className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+                  {recentLeads.length > 0
+                    ? Math.round((enrolledStudents.length / recentLeads.length) * 100)
+                    : 0}
+                  %
+                </span>
+                <span className="text-[10px] text-zinc-400">
+                  {enrolledStudents.length}/{recentLeads.length} leads
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex flex-col justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                Top Participating Dept
+              </span>
+              <div className="flex items-baseline gap-2 truncate">
+                <span className="text-base font-black text-indigo-600 dark:text-indigo-400 truncate">
+                  {branchBreakdown.length > 0
+                    ? [...branchBreakdown].sort((a, b) => (b.leadsCount || 0) - (a.leadsCount || 0))[0]?.name || "None"
+                    : "None"}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex flex-col justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                Highest Scoring Dept
+              </span>
+              <div className="flex items-baseline gap-2 truncate">
+                <span className="text-base font-black text-amber-500 truncate">
+                  {branchBreakdown.length > 0
+                    ? [...branchBreakdown].sort((a, b) => (b.averageScore || 0) - (a.averageScore || 0))[0]?.name || "None"
+                    : "None"}
+                </span>
+              </div>
+            </div>
+
+            <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs flex flex-col justify-between">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+                Campus Top Scorer
+              </span>
+              <div className="flex items-baseline gap-2 truncate">
+                <span className="text-base font-black text-violet-600 dark:text-violet-400 truncate">
+                  {recentLeads.length > 0
+                    ? `${recentLeads[0]?.name || "Student"} (${recentLeads[0]?.totalScore || 0} pts)`
+                    : "No Leads Yet"}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          {/* Department Participation Share Bars */}
           <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xs space-y-5">
-            <div>
-              <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                Department Participation Share
-              </h3>
-              <p className="text-xs text-zinc-400 mt-0.5">
-                Relative attendance and engagement breakdown across academic branches for {college.name}.
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                  Department Participation Share & Diversification
+                </h3>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  Relative attendance and engagement breakdown across academic branches for {college.name}.
+                </p>
+              </div>
+              <span className="text-xs font-mono font-bold text-zinc-400">
+                {branchBreakdown.length} Departments Configured
+              </span>
             </div>
 
             <div className="space-y-4">
@@ -1082,6 +1255,7 @@ export default function CollegeDetailPage() {
                       </span>
                       <div className="flex items-center gap-3">
                         <span className="text-zinc-500 font-mono">{b.leadsCount || 0} leads</span>
+                        <span className="text-amber-500 font-mono font-bold">{b.averageScore || 0} avg pts</span>
                         <span className="font-mono font-black text-indigo-600 dark:text-indigo-400">
                           {pct}%
                         </span>
@@ -1098,6 +1272,98 @@ export default function CollegeDetailPage() {
               })}
             </div>
           </div>
+
+          {/* Department Diversification Table */}
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs overflow-hidden">
+            <div className="p-4 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+              <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Branch Diversification & Performance Matrix
+              </h4>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleExportCSV}
+                icon={Download}
+                className="text-xs"
+              >
+                Export Matrix Data
+              </Button>
+            </div>
+            <div className="overflow-x-auto">
+              <table className="w-full text-left text-xs">
+                <thead className="bg-zinc-50/80 dark:bg-zinc-800/40 text-zinc-500 dark:text-zinc-400 font-semibold border-b border-zinc-200 dark:border-zinc-800">
+                  <tr>
+                    <th className="py-3.5 px-5">Department / Branch</th>
+                    <th className="py-3.5 px-4">Code</th>
+                    <th className="py-3.5 px-4">Captured Leads</th>
+                    <th className="py-3.5 px-4">Campus Share</th>
+                    <th className="py-3.5 px-4">Avg Score</th>
+                    <th className="py-3.5 px-4">Enrolled Learners</th>
+                    <th className="py-3.5 px-5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                  {branchBreakdown.map((b: any) => (
+                    <tr
+                      key={b.id}
+                      className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
+                    >
+                      <td className="py-3.5 px-5 font-bold text-zinc-900 dark:text-zinc-100">
+                        {b.name}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono text-zinc-400 uppercase">
+                        {b.code || "DEPT"}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                        {b.leadsCount || 0}
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-zinc-700 dark:text-zinc-300">
+                        {b.participationPercentage || b.percentage || 0}%
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-amber-500">
+                        {b.averageScore || 0} pts
+                      </td>
+                      <td className="py-3.5 px-4 font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                        {b.enrollmentsCount || b.studentsCount || 0}
+                      </td>
+                      <td className="py-3.5 px-5 text-right">
+                        <button
+                          onClick={() => {
+                            setLeadBranchFilter(b.name);
+                            setActiveTab("leads");
+                          }}
+                          className="text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                        >
+                          View Leads →
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ─── TAB 7: UNIVERSITY SETTINGS & PROFILE ─────────────────────────── */}
+      {activeTab === "settings" && (
+        <div className="max-w-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl p-6 shadow-xs space-y-6">
+          <div>
+            <h3 className="text-base font-black text-zinc-900 dark:text-zinc-100">
+              University Profile & Settings
+            </h3>
+            <p className="text-xs text-zinc-400 mt-1">
+              Update institutional metadata, display abbreviations, and operational status.
+            </p>
+          </div>
+
+          <CollegeEditForm
+            college={college}
+            isLoading={isUpdatingCollege}
+            onClose={() => {}}
+            onSave={handleSaveCollege}
+          />
         </div>
       )}
 
@@ -1220,7 +1486,7 @@ export default function CollegeDetailPage() {
           maxWidth="max-w-lg"
         >
           <form onSubmit={handleCreateDeck} className="space-y-4">
-            <div className="p-3 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800/60 flex items-center gap-2.5">
+            <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800/60 flex items-center gap-2.5">
               <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
               <span className="text-xs text-indigo-700 dark:text-indigo-300 font-semibold">
                 Will be populated with the animated UNISOLE AI Campus roadshow slide deck template.
@@ -1252,7 +1518,7 @@ export default function CollegeDetailPage() {
               <Button type="button" variant="ghost" size="sm" onClick={() => setCreatingDeck(false)}>
                 Cancel
               </Button>
-              <Button type="submit" variant="primary" size="sm" loading={isCreatingDeck} icon={Sparkles}>
+              <Button type="submit" variant="primary" size="sm" loading={isCreatingDeck} icon={Sparkles} className="font-bold">
                 Create & Open Slide Builder
               </Button>
             </div>
@@ -1408,7 +1674,7 @@ function CollegeEditForm({ college, isLoading, onClose, onSave }: any) {
           className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
         />
       </div>
-      <div className="flex items-center gap-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800">
+      <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800">
         <input
           type="checkbox"
           id="clg-edit-active"
@@ -1421,10 +1687,12 @@ function CollegeEditForm({ college, isLoading, onClose, onSave }: any) {
         </label>
       </div>
       <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
-        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
-          Cancel
-        </Button>
-        <Button type="submit" variant="primary" size="sm" loading={isLoading}>
+        {onClose && (
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+        )}
+        <Button type="submit" variant="primary" size="sm" loading={isLoading} className="font-bold">
           Save Changes
         </Button>
       </div>
@@ -1446,7 +1714,7 @@ function BranchForm({ branch, collegeName, isLoading, onClose, onSave }: any) {
       }}
       className="space-y-4"
     >
-      <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
+      <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
         <Building2 className="w-4 h-4 text-indigo-500 shrink-0" />
         <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
           Target College: {collegeName}
@@ -1478,7 +1746,7 @@ function BranchForm({ branch, collegeName, isLoading, onClose, onSave }: any) {
           placeholder="Branch overview, department info..."
         />
       </div>
-      <div className="flex items-center gap-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800">
+      <div className="flex items-center gap-2 p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800">
         <input
           type="checkbox"
           id="brn-edit-active"
@@ -1494,7 +1762,7 @@ function BranchForm({ branch, collegeName, isLoading, onClose, onSave }: any) {
         <Button type="button" variant="ghost" size="sm" onClick={onClose}>
           Cancel
         </Button>
-        <Button type="submit" variant="primary" size="sm" loading={isLoading}>
+        <Button type="submit" variant="primary" size="sm" loading={isLoading} className="font-bold">
           Save Branch
         </Button>
       </div>
