@@ -737,31 +737,31 @@ export default function LiveAudiencePage() {
                   className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-100 focus:outline-hidden focus:border-indigo-500 cursor-pointer"
                 >
                   <option value="">Select Branch</option>
-                  <option value="Computer Science & Engineering">CSE</option>
-                  <option value="Information Technology">IT</option>
-                  <option value="Artificial Intelligence & Machine Learning">AIML</option>
-                  <option value="Data Science & Big Data">Data Science</option>
-                  <option value="Electronics & Communication">ECE</option>
-                  <option value="Electrical & Electronics">EEE</option>
-                  <option value="Mechanical Engineering">MECH</option>
-                  <option value="Civil Engineering">CIVIL</option>
-                  <option value="Cyber Security">Cyber Security</option>
-                  <option value="BCA / MCA">BCA / MCA</option>
-                  <option value="BBA / MBA">BBA / MBA</option>
-                  <option value="Other / Multidisciplinary">Other</option>
+                  <option value="BA">BA</option>
+                  <option value="BCOM">BCOM</option>
+                  <option value="BCA">BCA</option>
+                  <option value="DCA">DCA</option>
+                  <option value="MCA">MCA</option>
+                  <option value="BSC non med">BSC non med</option>
+                  <option value="BSC Med">BSC Med</option>
+                  <option value="Others">Others</option>
                 </select>
               </div>
               <div>
                 <label className="block text-[11px] font-bold text-zinc-300 mb-1">
                   Year of Study
                 </label>
-                <input
-                  type="text"
+                <select
                   value={yearInput}
                   onChange={(e) => setYearInput(e.target.value)}
-                  placeholder="e.g. 2nd / 3rd Year"
-                  className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-100 placeholder:text-zinc-600 focus:outline-hidden focus:border-indigo-500"
-                />
+                  className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-100 focus:outline-hidden focus:border-indigo-500 cursor-pointer"
+                >
+                  <option value="">Select Year</option>
+                  <option value="1st yr">1st yr</option>
+                  <option value="2nd yr">2nd yr</option>
+                  <option value="3rd yr">3rd yr</option>
+                  <option value="4th yr">4th yr</option>
+                </select>
               </div>
             </div>
 
@@ -964,18 +964,14 @@ export default function LiveAudiencePage() {
                     onChange={(e) => handleUpdateBranch(e.target.value)}
                     className="px-2.5 py-1 bg-zinc-950 border border-indigo-500 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
                   >
-                    <option value="Computer Science & Engineering">CSE</option>
-                    <option value="Information Technology">IT</option>
-                    <option value="Artificial Intelligence & Machine Learning">AIML</option>
-                    <option value="Data Science">Data Science</option>
-                    <option value="Electronics & Communication">ECE</option>
-                    <option value="Electrical & Electronics">EEE</option>
-                    <option value="Mechanical Engineering">MECH</option>
-                    <option value="Civil Engineering">CIVIL</option>
-                    <option value="Cyber Security">Cyber Security</option>
-                    <option value="BCA / MCA">BCA / MCA</option>
-                    <option value="BBA / MBA">BBA / MBA</option>
-                    <option value="Other">Other</option>
+                    <option value="BA">BA</option>
+                    <option value="BCOM">BCOM</option>
+                    <option value="BCA">BCA</option>
+                    <option value="DCA">DCA</option>
+                    <option value="MCA">MCA</option>
+                    <option value="BSC non med">BSC non med</option>
+                    <option value="BSC Med">BSC Med</option>
+                    <option value="Others">Others</option>
                   </select>
                 )}
               </div>
