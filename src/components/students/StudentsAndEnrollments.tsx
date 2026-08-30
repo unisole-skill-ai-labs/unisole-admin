@@ -107,6 +107,7 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
       sourceFilter === "ALL" ||
       (sourceFilter === "PAMPHLET_QR" && (s.signupSource === "PAMPHLET_QR" || s.signupSource === "PAMPHLET")) ||
       (sourceFilter === "SESSION_QR" && (s.signupSource === "SESSION_QR" || !!s.signupSessionCode)) ||
+      (sourceFilter === "IAPT" && s.signupSource === "IAPT") ||
       (sourceFilter === "NON_PAMPHLET" && (s.signupSource === "NON_PAMPHLET" || !s.signupSource));
 
     return matchesSearch && matchesSource;
@@ -160,6 +161,7 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
               { id: "ALL", label: "All Sources" },
               { id: "PAMPHLET_QR", label: "📰 Pamphlet QR" },
               { id: "SESSION_QR", label: "🏛️ Session QR" },
+              { id: "IAPT", label: "🎓 IAPT Portal" },
               { id: "NON_PAMPHLET", label: "🌐 Organic Web" },
             ].map((tab) => (
               <button
@@ -225,6 +227,10 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
                       {s.role !== "STUDENT" ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20 font-mono">
                           🛡️ Staff / Admin
+                        </span>
+                      ) : s.signupSource === "IAPT" ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 font-mono">
+                          🎓 IAPT Portal
                         </span>
                       ) : s.signupSource === "PAMPHLET_QR" || s.signupSource === "PAMPHLET" ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono">
