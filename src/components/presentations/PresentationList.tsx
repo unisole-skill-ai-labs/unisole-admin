@@ -1,6 +1,5 @@
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate, Link } from "react-router-dom";
-import { io, Socket } from "socket.io-client";
 import {
   useGetPresentationsQuery,
   useCreatePresentationMutation,
@@ -15,31 +14,16 @@ import {
   Play,
   Edit,
   Trash2,
-  QrCode,
-  Users,
   BarChart3,
-  Calendar,
-  Layers,
   CheckCircle2,
-  Radio,
-  ExternalLink,
-  Copy,
-  Check,
-  UserX,
   Search,
   Building2,
-  Filter,
   AlertTriangle,
-  GraduationCap,
 } from "lucide-react";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import Badge from "../ui/Badge";
 import Input from "../ui/Input";
-import BranchDistributionPieChart, {
-  BranchStats,
-  getBranchColorStyle,
-} from "./BranchDistributionPieChart";
 
 interface PresentationListProps {
   baseUrl: string;
@@ -62,6 +46,7 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
   const [launchModalOpen, setLaunchModalOpen] = useState(false);
   const [deletingDeck, setDeletingDeck] = useState<any>(null);
   const [activeDeck, setActiveDeck] = useState<any>(null);
+  const [launchingDeckId, setLaunchingDeckId] = useState<string | null>(null);
 
   const [titleInput, setTitleInput] = useState("");
   const [descInput, setDescInput] = useState("");
@@ -69,101 +54,12 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
   const [customSessionCode, setCustomSessionCode] = useState("");
   const [searchQuery, setSearchQuery] = useState("");
 
-  const [launchedData, setLaunchedData] = useState<{
-    session: any;
-    qrCodeDataUrl: string;
-    joinUrl: string;
-  } | null>(null);
-  const [copied, setCopied] = useState(false);
-  const [attendees, setAttendees] = useState<any[]>([]);
-  const [attendeeCount, setAttendeeCount] = useState(0);
-  const [branchStats, setBranchStats] = useState<BranchStats | null>(null);
-  const [attendeeSearch, setAttendeeSearch] = useState("");
-  const socketRef = useRef<Socket | null>(null);
-
   // Set default college on create modal open
   useEffect(() => {
     if (colleges.length > 0 && !selectedCollegeId) {
       setSelectedCollegeId(colleges[0].id);
     }
   }, [colleges, selectedCollegeId]);
-
-  // Connect socket whenever launch modal is open with active session
-  useEffect(() => {
-    if (!launchModalOpen || !launchedData?.session?.sessionCode) {
-      if (socketRef.current) {
-        socketRef.current.disconnect();
-        socketRef.current = null;
-      }
-      setAttendees([]);
-      setAttendeeCount(0);
-      setBranchStats(null);
-      return;
-    }
-
-    const socketUrl = baseUrl.replace(/\/+$/, "");
-    const socket = io(socketUrl, {
-      transports: ["websocket", "polling"],
-    });
-    socketRef.current = socket;
-
-    socket.emit("admin:join", {
-      sessionCode: launchedData.session.sessionCode,
-      sessionId: launchedData.session.id,
-    });
-
-    socket.on("sync_state", (state) => {
-      if (Array.isArray(state.attendees)) {
-        setAttendees(state.attendees);
-      }
-      if (state.branchStats) {
-        setBranchStats(state.branchStats);
-      }
-      if (typeof state.attendeeCount === "number") {
-        setAttendeeCount(state.attendeeCount);
-      }
-    });
-
-    socket.on("attendee_count", ({ count }) => {
-      setAttendeeCount(count);
-    });
-
-    socket.on("attendee_joined", ({ attendees: list, count, branchStats: bStats }) => {
-      setAttendeeCount(count);
-      if (list) setAttendees(list);
-      if (bStats) setBranchStats(bStats);
-    });
-
-    socket.on("attendee_left", ({ attendees: list, count, branchStats: bStats }) => {
-      setAttendeeCount(count);
-      if (list) setAttendees(list);
-      if (bStats) setBranchStats(bStats);
-    });
-
-    socket.on("attendee_kicked", ({ attendees: list, count, branchStats: bStats }) => {
-      setAttendeeCount(count);
-      if (list) setAttendees(list);
-      if (bStats) setBranchStats(bStats);
-    });
-
-    socket.on("branch_distribution_updated", ({ branchStats: bStats, attendees: list }) => {
-      if (bStats) setBranchStats(bStats);
-      if (list) setAttendees(list);
-    });
-
-    return () => {
-      socket.disconnect();
-      socketRef.current = null;
-    };
-  }, [launchModalOpen, launchedData?.session?.sessionCode, launchedData?.session?.id, baseUrl]);
-
-  const handleKickAttendee = (leadId: string) => {
-    if (!socketRef.current || !launchedData?.session?.sessionCode) return;
-    socketRef.current.emit("admin:kick_attendee", {
-      sessionCode: launchedData.session.sessionCode,
-      leadId,
-    });
-  };
 
   const presentations = presRes?.data || [];
   const sessions = sessionsRes?.data || [];
@@ -211,8 +107,34 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
     setActiveDeck(deck);
     setSelectedCollegeId(deck.collegeId || "");
     setCustomSessionCode("");
-    setLaunchedData(null);
     setLaunchModalOpen(true);
+  };
+
+  const handleDirectLaunch = async (deck: any) => {
+    const deckId = deck.id || deck._id || deck.presentationId;
+    if (!deckId) {
+      alert("Error: Unable to find presentation ID for this deck.");
+      return;
+    }
+    try {
+      setLaunchingDeckId(deckId);
+      const res: any = await launchSession({
+        baseUrl,
+        id: deckId,
+        presentationId: deckId,
+        body: {
+          collegeId: deck.collegeId || undefined,
+        },
+      }).unwrap();
+
+      if (res?.data?.session?.id) {
+        navigate(`/presentations/live/${res.data.session.id}`);
+      }
+    } catch (err: any) {
+      alert("Failed to launch session: " + (err?.data?.message || err.message));
+    } finally {
+      setLaunchingDeckId(null);
+    }
   };
 
   const handleLaunchSession = async (e: React.FormEvent) => {
@@ -234,8 +156,9 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
         },
       }).unwrap();
 
-      if (res?.data) {
-        setLaunchedData(res.data);
+      if (res?.data?.session?.id) {
+        setLaunchModalOpen(false);
+        navigate(`/presentations/live/${res.data.session.id}`);
       }
     } catch (err: any) {
       alert("Failed to launch session: " + (err?.data?.message || err.message));
@@ -250,12 +173,6 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
     } catch (err: any) {
       alert("Failed to delete pitch deck: " + (err?.data?.message || err.message));
     }
-  };
-
-  const copyToClipboard = (text: string) => {
-    navigator.clipboard.writeText(text);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -398,9 +315,11 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
                   <Button
                     variant="primary"
                     size="sm"
-                    onClick={() => handleOpenLaunchModal(deck)}
+                    loading={launchingDeckId === deck.id}
+                    onClick={() => handleDirectLaunch(deck)}
                     icon={Play}
                     className="font-bold text-xs"
+                    title="Launch Live Auditorium Stage directly"
                   >
                     Launch Stage
                   </Button>
@@ -630,229 +549,60 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
           isOpen={true}
           onClose={() => setLaunchModalOpen(false)}
           title={`Launch Live Roadshow: ${activeDeck.title}`}
-          maxWidth={launchedData ? "max-w-5xl" : "max-w-xl"}
+          maxWidth="max-w-xl"
         >
-          {!launchedData ? (
-            <form onSubmit={handleLaunchSession} className="space-y-4">
-              <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800/60 space-y-2">
-                <div className="flex items-center justify-between">
-                  <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-extrabold uppercase tracking-wider">
-                    Target University Partner
-                  </span>
-                  <Badge variant="brand" size="sm">Roadshow Stage</Badge>
-                </div>
-                <p className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                  <Building2 className="w-4 h-4 text-indigo-500" />
-                  {activeDeck.collegeName || collegeMap.get(activeDeck.collegeId) || "College Partner"}
-                </p>
+          <form onSubmit={handleLaunchSession} className="space-y-4">
+            <div className="p-4 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800/60 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-extrabold uppercase tracking-wider">
+                  Target University Partner
+                </span>
+                <Badge variant="brand" size="sm">Roadshow Stage</Badge>
               </div>
+              <p className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-indigo-500" />
+                {activeDeck.collegeName || collegeMap.get(activeDeck.collegeId) || "College Partner"}
+              </p>
+            </div>
 
-              <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 space-y-2 text-xs text-zinc-600 dark:text-zinc-400">
-                <p className="font-bold text-zinc-800 dark:text-zinc-200">🚀 Live Stage Capabilities:</p>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
-                  <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    <span>Instant Student Fast-Pass QR</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    <span>Live Branch Diversity Analytics</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    <span>Real-time Interactive Audience Sync</span>
-                  </div>
-                  <div className="flex items-center gap-1.5 text-pink-600 dark:text-pink-400 font-medium">
-                    <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
-                    <span>Fullscreen Projector Engine</span>
-                  </div>
+            <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 space-y-2 text-xs text-zinc-600 dark:text-zinc-400">
+              <p className="font-bold text-zinc-800 dark:text-zinc-200">🚀 Live Stage Capabilities:</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px]">
+                <div className="flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Instant Student Fast-Pass QR</span>
                 </div>
-              </div>
-
-              <Input
-                label="Custom Session Code (Optional)"
-                value={customSessionCode}
-                onChange={(e) => setCustomSessionCode(e.target.value.toUpperCase())}
-                placeholder="Leave blank to auto-generate (e.g. UNIXYZ)"
-              />
-
-              <div className="pt-3 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
-                <Button type="button" variant="ghost" size="sm" onClick={() => setLaunchModalOpen(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="primary" size="sm" loading={isLaunching} icon={Play} className="font-bold">
-                  Start Live Auditorium Stage
-                </Button>
-              </div>
-            </form>
-          ) : (
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch py-1">
-              {/* ─── Left Column: Fast-Pass QR & Action Launch (Cols 1-5) ─── */}
-              <div className="lg:col-span-5 flex flex-col justify-between space-y-4 p-5 rounded-3xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200/80 dark:border-zinc-800/80">
-                <div className="space-y-4 text-center">
-                  <div className="flex items-center justify-between gap-2">
-                    <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/60 text-emerald-600 dark:text-emerald-400 font-bold text-[11px]">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                      <span>LIVE STAGE ACTIVE</span>
-                    </div>
-                    <span className="text-[11px] font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1 truncate max-w-[160px]">
-                      <Building2 className="w-3.5 h-3.5 text-indigo-500 shrink-0" />
-                      <span className="truncate">{activeDeck.collegeName || collegeMap.get(activeDeck.collegeId) || "Campus"}</span>
-                    </span>
-                  </div>
-
-                  {/* Session Code Highlight */}
-                  <div className="p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-xs">
-                    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block mb-0.5">
-                      Session Join Code
-                    </span>
-                    <span className="text-3xl font-black font-mono tracking-widest text-indigo-600 dark:text-indigo-400">
-                      {launchedData.session.sessionCode}
-                    </span>
-                  </div>
-
-                  {/* QR Code Frame */}
-                  {launchedData.qrCodeDataUrl && (
-                    <div className="relative group w-fit mx-auto">
-                      <div className="p-3 bg-white rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-md">
-                        <img
-                          src={launchedData.qrCodeDataUrl}
-                          alt="Student Fast-Pass QR Code"
-                          className="w-40 h-40 rounded-xl object-contain"
-                        />
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Join Link with Copy */}
-                  <div className="flex items-center gap-1.5 justify-center">
-                    <input
-                      type="text"
-                      readOnly
-                      value={launchedData.joinUrl}
-                      className="px-3 py-1.5 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl text-[11px] font-mono text-zinc-700 dark:text-zinc-300 w-full text-center truncate shadow-2xs"
-                    />
-                    <Button
-                      variant="secondary"
-                      size="sm"
-                      onClick={() => copyToClipboard(launchedData.joinUrl)}
-                      icon={copied ? Check : Copy}
-                      className="shrink-0 text-xs font-bold"
-                    >
-                      {copied ? "Copied" : "Copy"}
-                    </Button>
-                  </div>
+                <div className="flex items-center gap-1.5 text-indigo-600 dark:text-indigo-400 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Live Branch Diversity Analytics</span>
                 </div>
-
-                {/* Primary Launch Action - Prominent & Visible */}
-                <div className="space-y-2 pt-3 border-t border-zinc-200/80 dark:border-zinc-800/80">
-                  <Link to={`/presentations/live/${launchedData.session.id}`} className="block">
-                    <Button
-                      variant="primary"
-                      size="lg"
-                      icon={Play}
-                      className="w-full font-black text-sm py-3 bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 hover:from-indigo-500 hover:via-purple-500 hover:to-violet-500 text-white rounded-2xl shadow-xl shadow-indigo-500/25 flex items-center justify-center gap-2 cursor-pointer"
-                    >
-                      Open Auditorium Projector Stage
-                    </Button>
-                  </Link>
-
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setLaunchModalOpen(false)}
-                    className="w-full text-xs text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-                  >
-                    Keep Running in Background / Close
-                  </Button>
+                <div className="flex items-center gap-1.5 text-purple-600 dark:text-purple-400 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Real-time Interactive Audience Sync</span>
                 </div>
-              </div>
-
-              {/* ─── Right Column: Real-Time Fast-Pass & Diversity Analytics (Cols 6-12) ─── */}
-              <div className="lg:col-span-7 flex flex-col justify-between space-y-4">
-                {/* Real-time Headcount Header */}
-                <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-between">
-                  <div className="flex items-center gap-2.5">
-                    <div className="w-8 h-8 rounded-xl bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                      <Users className="w-4 h-4" />
-                    </div>
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">
-                          {attendees.length || attendeeCount} Students Checked In
-                        </span>
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-                      </div>
-                      <span className="text-[11px] text-zinc-400 block font-mono">
-                        Fast-pass stream ready
-                      </span>
-                    </div>
-                  </div>
-                  <span className="text-xs font-mono font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2.5 py-1 rounded-lg border border-indigo-200/60 dark:border-indigo-800/60">
-                    Live Sync ⚡
-                  </span>
-                </div>
-
-                {/* Real-Time Branch Breakdown */}
-                <div className="flex-1 rounded-2xl bg-white dark:bg-zinc-900/60 border border-zinc-200/80 dark:border-zinc-800/80 p-3 shadow-xs">
-                  <BranchDistributionPieChart
-                    branchStats={branchStats}
-                    attendees={attendees}
-                    compact={true}
-                    title="Real-Time Branch Distribution"
-                    subtitle="Live candidate diversity breakdown"
-                  />
-                </div>
-
-                {/* Live Candidate Stream Preview */}
-                <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200/80 dark:border-zinc-800/80">
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[11px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5">
-                      <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
-                      Recent Candidate Check-Ins
-                    </span>
-                    <span className="text-[10px] text-zinc-400 font-mono">
-                      {attendees.length} Verified
-                    </span>
-                  </div>
-
-                  {attendees.length === 0 ? (
-                    <div className="py-4 text-center text-zinc-400 text-xs flex flex-col items-center justify-center space-y-1">
-                      <Users className="w-6 h-6 opacity-40 animate-pulse text-indigo-500" />
-                      <p className="font-semibold text-zinc-500 dark:text-zinc-400">Auditorium Waiting Room Open</p>
-                      <p className="text-[11px] text-zinc-400">Candidates will appear here as they scan the Fast-Pass QR code.</p>
-                    </div>
-                  ) : (
-                    <div className="max-h-28 overflow-y-auto space-y-1.5 pr-1 text-xs">
-                      {attendees.slice(-5).reverse().map((att: any, idx: number) => {
-                        const style = getBranchColorStyle(att.branch || "General", idx);
-                        return (
-                          <div
-                            key={att.leadId || att.id || idx}
-                            className="flex items-center justify-between p-2 rounded-xl bg-white dark:bg-zinc-900 border border-zinc-100 dark:border-zinc-800 text-[11px]"
-                          >
-                            <div className="flex items-center gap-2 truncate">
-                              <span className="font-bold text-zinc-900 dark:text-zinc-100 truncate">
-                                {att.name || "Anonymous Candidate"}
-                              </span>
-                              {att.rollNo && (
-                                <span className="text-zinc-400 font-mono text-[10px]">
-                                  ({att.rollNo})
-                                </span>
-                              )}
-                            </div>
-                            <span className={`px-2 py-0.5 rounded-md font-bold text-[10px] ${style.bg} ${style.border} ${style.text}`}>
-                              {att.branch || "General"}
-                            </span>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  )}
+                <div className="flex items-center gap-1.5 text-pink-600 dark:text-pink-400 font-medium">
+                  <CheckCircle2 className="w-3.5 h-3.5 shrink-0" />
+                  <span>Fullscreen Projector Engine</span>
                 </div>
               </div>
             </div>
-          )}
+
+            <Input
+              label="Custom Session Code (Optional)"
+              value={customSessionCode}
+              onChange={(e) => setCustomSessionCode(e.target.value.toUpperCase())}
+              placeholder="Leave blank to auto-generate (e.g. UNIXYZ)"
+            />
+
+            <div className="pt-3 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setLaunchModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm" loading={isLaunching} icon={Play} className="font-bold">
+                Start Live Auditorium Stage
+              </Button>
+            </div>
+          </form>
         </Modal>
       )}
     </div>

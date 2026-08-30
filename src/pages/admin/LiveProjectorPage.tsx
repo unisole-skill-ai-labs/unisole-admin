@@ -29,6 +29,9 @@ import {
   UserCheck,
   Search,
   ShieldAlert,
+  Copy,
+  Check,
+  ExternalLink,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
@@ -70,10 +73,21 @@ export default function LiveProjectorPage() {
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [reactions, setReactions] = useState<{ id: string; emoji: string }[]>([]);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
+  const [copied, setCopied] = useState(false);
 
   const socketRef = useRef<Socket | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const timerIntervalRef = useRef<any>(null);
+
+  const handleCopyUrl = useCallback((e?: React.MouseEvent) => {
+    if (e) e.stopPropagation();
+    const seoBase = (import.meta as any).env?.VITE_SEO_URL || "https://unisole.org";
+    const url = session?.joinUrl || `${seoBase.replace(/\/+$/, "")}/live/${session?.sessionCode || ""}`;
+    if (!url) return;
+    navigator.clipboard.writeText(url);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2500);
+  }, [session]);
 
   // Fetch initial session & presentation data
   useEffect(() => {
@@ -600,6 +614,19 @@ export default function LiveProjectorPage() {
             <QrCode className="w-3.5 h-3.5" />
             <span>Scan to Join</span>
           </button>
+
+          <button
+            onClick={handleCopyUrl}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer ${
+              copied
+                ? "bg-emerald-500/20 border-emerald-500/50 text-emerald-300"
+                : "bg-white/10 hover:bg-white/20 border-white/15 text-zinc-200"
+            }`}
+            title="Copy Audience Join URL"
+          >
+            {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{copied ? "Link Copied!" : "Copy Link"}</span>
+          </button>
         </div>
 
         {/* Right: Stage Control & Start Presentation Action */}
@@ -699,17 +726,43 @@ export default function LiveProjectorPage() {
                 </div>
               </div>
 
-              {/* Session Code Readout */}
-              <div className="space-y-1 p-3 rounded-2xl bg-white/5 border border-white/10">
+              {/* Session Code Readout & 1-Click Copy Bar */}
+              <div className="space-y-2 p-3.5 rounded-2xl bg-white/5 border border-white/10">
                 <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block">
                   Session Join Code
                 </span>
-                <span className="text-3xl sm:text-4xl font-black font-mono tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-violet-300">
+                <span className="text-3xl sm:text-4xl font-black font-mono tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-violet-300 block">
                   {session.sessionCode}
                 </span>
-                <p className="text-[11px] font-mono text-zinc-400 truncate mt-1">
-                  {joinUrl}
-                </p>
+
+                {/* Direct Copyable Join URL */}
+                <div className="flex items-center gap-1.5 pt-1">
+                  <div className="flex-1 px-3 py-2 bg-black/50 border border-white/10 rounded-xl text-[11px] font-mono text-zinc-300 truncate text-left select-all">
+                    {joinUrl}
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCopyUrl}
+                    className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer shrink-0 ${
+                      copied
+                        ? "bg-emerald-600 text-white"
+                        : "bg-indigo-600 hover:bg-indigo-500 text-white"
+                    }`}
+                    title="Copy direct audience join link to clipboard"
+                  >
+                    {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                    <span>{copied ? "Copied!" : "Copy Link"}</span>
+                  </button>
+                  <a
+                    href={joinUrl}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition-colors shrink-0"
+                    title="Open Student Join Page in new tab"
+                  >
+                    <ExternalLink className="w-4 h-4" />
+                  </a>
+                </div>
               </div>
 
               {/* Primary Presenter Start Button */}
@@ -1260,22 +1313,45 @@ export default function LiveProjectorPage() {
               </span>
             </div>
 
-            <div className="p-2.5 rounded-2xl bg-white/5 border border-white/10 w-full text-center space-y-1">
-              <p className="text-[10px] text-zinc-400 font-mono">
+            <div className="p-3 rounded-2xl bg-white/5 border border-white/10 w-full space-y-2 text-center">
+              <span className="text-[10px] text-zinc-400 font-mono block">
                 Direct Join URL:
-              </p>
-              <a
-                href={joinUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="text-xs font-bold text-indigo-400 hover:text-indigo-300 underline font-mono break-all block"
-              >
-                {joinUrl}
-              </a>
+              </span>
+              <div className="flex items-center gap-1.5">
+                <input
+                  type="text"
+                  readOnly
+                  value={joinUrl}
+                  className="px-3 py-2 bg-black/50 border border-white/10 rounded-xl text-xs font-mono text-indigo-300 w-full text-center truncate select-all"
+                  onClick={(e) => (e.target as HTMLInputElement).select()}
+                />
+                <button
+                  type="button"
+                  onClick={handleCopyUrl}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all shadow-md cursor-pointer shrink-0 ${
+                    copied
+                      ? "bg-emerald-600 text-white"
+                      : "bg-indigo-600 hover:bg-indigo-500 text-white"
+                  }`}
+                  title="Copy link to clipboard"
+                >
+                  {copied ? <Check className="w-3.5 h-3.5" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{copied ? "Copied!" : "Copy"}</span>
+                </button>
+                <a
+                  href={joinUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white transition-colors shrink-0"
+                  title="Open in new tab"
+                >
+                  <ExternalLink className="w-4 h-4" />
+                </a>
+              </div>
             </div>
 
             <p className="text-[11px] text-zinc-400">
-              Students can open camera to scan or navigate directly to the URL.
+              Students can scan this QR code or navigate directly to the link above to join.
             </p>
           </div>
 
