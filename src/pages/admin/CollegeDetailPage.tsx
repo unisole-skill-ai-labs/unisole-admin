@@ -45,7 +45,7 @@ export default function CollegeDetailPage() {
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
 
   // Queries
-  const { data: colleges = [], refetch: refetchColleges } = useGetCollegesQuery(baseUrl);
+  const { data: colleges = [], isLoading: isLoadingColleges, refetch: refetchColleges } = useGetCollegesQuery(baseUrl);
   const { data: branches = [], isLoading: isLoadingBranches, refetch: refetchBranches } = useGetBranchesQuery(
     { baseUrl, collegeId: id! },
     { skip: !id }
@@ -213,10 +213,14 @@ export default function CollegeDetailPage() {
         }
         setEditingBranch(null);
       } else {
+        if (!currentCollege) {
+          setBranchFormError("Cannot create branch: Active institution not found. Please return to partner universities.");
+          return;
+        }
         await createBranch({
           baseUrl,
           body: {
-            collegeId: currentCollege?.id || id,
+            collegeId: currentCollege.id,
             name: branchName.trim(),
             code: branchCode.trim() || undefined,
             description: branchDesc.trim() || undefined,
@@ -275,6 +279,10 @@ export default function CollegeDetailPage() {
     }
 
     try {
+      if (!currentCollege) {
+        setStudentFormError("Cannot save student: Active institution not found. Please return to partner universities.");
+        return;
+      }
       if (editingStudent) {
         await updateStudent({
           baseUrl,
@@ -282,8 +290,8 @@ export default function CollegeDetailPage() {
           body: {
             name: studentName.trim() || undefined,
             phone: studentPhone.trim(),
-            collegeId: currentCollege?.id || id,
-            collegeName: currentCollege?.name,
+            collegeId: currentCollege.id,
+            collegeName: currentCollege.name,
             branch: studentBranch.trim() || undefined,
           },
         }).unwrap();
@@ -294,8 +302,8 @@ export default function CollegeDetailPage() {
           body: {
             name: studentName.trim() || undefined,
             phone: studentPhone.trim(),
-            collegeId: currentCollege?.id || id,
-            collegeName: currentCollege?.name,
+            collegeId: currentCollege.id,
+            collegeName: currentCollege.name,
             branch: studentBranch.trim() || undefined,
             role: "STUDENT",
           },
@@ -371,7 +379,16 @@ export default function CollegeDetailPage() {
     }
   };
 
-  if (colleges.length > 0 && !currentCollege) {
+  if (isLoadingColleges) {
+    return (
+      <div className="p-16 text-center text-zinc-400">
+        <div className="inline-block w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mb-3" />
+        <p className="text-sm font-semibold text-zinc-600 dark:text-zinc-300">Loading university details...</p>
+      </div>
+    );
+  }
+
+  if (!currentCollege) {
     return (
       <div className="text-center py-20 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 max-w-lg mx-auto my-12 shadow-sm">
         <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center mx-auto mb-4 border border-amber-200/50">
@@ -379,7 +396,7 @@ export default function CollegeDetailPage() {
         </div>
         <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Partner University Not Found</h2>
         <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 mb-6">
-          The institution you are looking for does not exist or may have been deleted.
+          The institution with identifier <code className="font-mono text-xs px-1.5 py-0.5 bg-zinc-100 dark:bg-zinc-800 rounded text-rose-500">{id}</code> does not exist in the database or may have been deleted.
         </p>
         <Button onClick={() => navigate("/colleges")} className="bg-indigo-600 hover:bg-indigo-700 text-white">
           <ArrowLeft className="w-4 h-4 mr-2" /> Back to Partner Universities
