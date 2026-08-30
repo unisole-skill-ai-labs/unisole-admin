@@ -866,44 +866,65 @@ export default function LiveAudiencePage() {
             </p>
           </div>
 
-          {/* Peer-to-Peer QR Sharing Card */}
-          <div className="p-4 rounded-3xl bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-zinc-900 border border-indigo-500/30 flex flex-col sm:flex-row items-center justify-between gap-4 shadow-xl text-center sm:text-left">
-            <div className="flex items-center gap-3.5 min-w-0">
-              <div className="w-11 h-11 rounded-2xl bg-indigo-500/20 border border-indigo-500/30 flex items-center justify-center text-indigo-300 shrink-0 shadow-inner">
-                <QrCode className="w-6 h-6" />
+          {/* Direct Peer-to-Peer QR Share Card */}
+          <div className="w-full max-w-md mx-auto p-5 sm:p-6 rounded-3xl bg-zinc-900/90 border border-indigo-500/30 shadow-2xl backdrop-blur-xl space-y-4 text-center">
+            <div className="space-y-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold">
+                <QrCode className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Share QR With Friends</span>
               </div>
-              <div className="min-w-0">
-                <h4 className="font-bold text-xs sm:text-sm text-white flex items-center gap-1.5 justify-center sm:justify-start">
-                  <span>Help Peers Join From Your Screen</span>
-                  <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-mono text-[9px] font-bold">
-                    PEER QR
-                  </span>
-                </h4>
-                <p className="text-[11px] text-zinc-400 truncate">
-                  If someone is sitting far from the projector, show them your QR code.
-                </p>
+              <h3 className="text-base sm:text-lg font-black text-white">
+                Peers Can Scan Directly From Your Phone
+              </h3>
+              <p className="text-xs text-zinc-400 max-w-xs mx-auto">
+                Hold this up if someone sitting far from the stage needs to join.
+              </p>
+            </div>
+
+            {/* Direct High-Resolution QR Code Frame */}
+            <div className="relative group w-fit mx-auto my-1">
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl blur-sm opacity-60" />
+              <div className="relative p-3 rounded-2xl bg-white shadow-2xl">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
+                    `https://unisole.org/live/${code}`
+                  )}`}
+                  alt="Scan QR to Join"
+                  className="w-44 h-44 sm:w-52 sm:h-52 rounded-xl object-contain mx-auto"
+                />
               </div>
             </div>
 
-            <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
-              <button
-                type="button"
-                onClick={() => setPeerQrModalOpen(true)}
-                className="flex-1 sm:flex-initial px-4 py-2 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-indigo-600/25 active:scale-95 transition-all cursor-pointer"
-              >
-                <QrCode className="w-3.5 h-3.5" />
-                <span>Show QR Code</span>
-              </button>
+            {/* Session Join Code */}
+            <div className="p-2.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between px-4 max-w-xs mx-auto text-xs">
+              <span className="font-mono text-zinc-400 text-[11px] font-bold">SESSION CODE:</span>
+              <span className="font-black font-mono tracking-widest text-indigo-300 text-sm">
+                {code}
+              </span>
+            </div>
 
+            {/* 1-Click Action Buttons: Copy Link & WhatsApp */}
+            <div className="grid grid-cols-2 gap-2.5 max-w-xs mx-auto pt-1">
               <button
                 type="button"
                 onClick={handlePeerCopy}
-                className="px-3.5 py-2 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-                title="Copy session join link"
+                className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
               >
                 {peerCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
                 <span>{peerCopied ? "Copied!" : "Copy Link"}</span>
               </button>
+
+              <a
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                  `Join our live ${session?.collegeName || "Unisole"} college presentation session here: https://unisole.org/live/${code}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/25 transition-all cursor-pointer"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>WhatsApp</span>
+              </a>
             </div>
           </div>
 
@@ -1369,16 +1390,6 @@ export default function LiveAudiencePage() {
 
           <button
             type="button"
-            onClick={() => setPeerQrModalOpen(true)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/30 text-indigo-300 hover:text-white text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer shrink-0"
-            title="Show Presentation QR for Friends to Scan"
-          >
-            <QrCode className="w-3 h-3 text-indigo-400" />
-            <span className="hidden xs:inline">Share </span><span>QR</span>
-          </button>
-
-          <button
-            type="button"
             onClick={handleExitShow}
             className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer shrink-0"
             title="Exit Show & Explore AI Pathways"
@@ -1504,85 +1515,6 @@ export default function LiveAudiencePage() {
           ))}
         </div>
       </footer>
-
-      {/* ==================== PEER-TO-PEER QR MODAL ==================== */}
-      {peerQrModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
-          <div className="relative w-full max-w-sm rounded-3xl bg-zinc-900 border border-indigo-500/40 p-6 shadow-2xl space-y-5 text-center text-white animate-scale-in">
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={() => setPeerQrModalOpen(false)}
-              className="absolute top-4 right-4 p-2 rounded-xl bg-white/5 hover:bg-white/15 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-            >
-              <X className="w-4 h-4" />
-            </button>
-
-            <div className="space-y-1.5">
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold">
-                <QrCode className="w-3.5 h-3.5" />
-                <span>Peer-to-Peer QR Join</span>
-              </div>
-              <h3 className="text-lg font-black tracking-tight text-zinc-100">
-                Scan from this Screen
-              </h3>
-              <p className="text-xs text-zinc-400">
-                {session?.collegeName || "Live College Presentation"}
-              </p>
-            </div>
-
-            {/* High-Resolution QR Frame */}
-            <div className="relative group w-fit mx-auto">
-              <div className="absolute -inset-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur-md opacity-60" />
-              <div className="relative p-3.5 rounded-2xl bg-white shadow-2xl">
-                <img
-                  src={`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(
-                    session?.joinUrl || `https://unisole.org/live/${code}`
-                  )}`}
-                  alt="Scan to Join"
-                  className="w-52 h-52 rounded-xl object-contain"
-                />
-              </div>
-            </div>
-
-            {/* Join Code Display */}
-            <div className="p-3 rounded-2xl bg-white/5 border border-white/10 space-y-0.5">
-              <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400 block">
-                Session Code
-              </span>
-              <span className="text-2xl font-black font-mono tracking-widest text-indigo-300">
-                {code}
-              </span>
-            </div>
-
-            {/* Actions: Copy Link & WhatsApp Share */}
-            <div className="grid grid-cols-2 gap-2.5 pt-1">
-              <button
-                type="button"
-                onClick={handlePeerCopy}
-                className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
-              >
-                {peerCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{peerCopied ? "Copied!" : "Copy Link"}</span>
-              </button>
-
-              <a
-                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                  `Join our live ${session?.collegeName || "Unisole"} presentation session here: ${
-                    session?.joinUrl || `https://unisole.org/live/${code}`
-                  }`
-                )}`}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/25 transition-all cursor-pointer"
-              >
-                <Share2 className="w-3.5 h-3.5" />
-                <span>WhatsApp</span>
-              </a>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
