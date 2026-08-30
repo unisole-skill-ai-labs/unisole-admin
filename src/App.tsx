@@ -6,7 +6,7 @@ import AdminShell from "./components/layout/AdminShell";
 import DashboardPage from "./pages/admin/DashboardPage";
 import PathwaysPage from "./pages/admin/PathwaysPage";
 import CurriculumPage from "./pages/admin/CurriculumPage";
-import MetadataPage from "./pages/admin/MetadataPage";
+import CollegesPage from "./pages/admin/CollegesPage";
 import StudentsPage from "./pages/admin/StudentsPage";
 import PaymentsPage from "./pages/admin/PaymentsPage";
 import PresentationsPage from "./pages/admin/PresentationsPage";
@@ -55,8 +55,8 @@ export default function App() {
           <Route path="presentations/builder/:id?" element={<PresentationBuilderPage />} />
           <Route path="leads" element={<Navigate to="/colleges" replace />} />
           <Route path="lead-diversification" element={<Navigate to="/colleges" replace />} />
-          <Route path="metadata" element={<MetadataPage />} />
-          <Route path="colleges" element={<MetadataPage />} />
+          <Route path="metadata" element={<CollegesPage />} />
+          <Route path="colleges" element={<CollegesPage />} />
           <Route path="colleges/:id" element={<CollegeDetailPage />} />
           <Route path="students" element={<StudentsPage />} />
           <Route path="payments" element={<PaymentsPage />} />

@@ -64,7 +64,20 @@ export const adminApi = createApi({
   endpoints: (build) => ({
     // Students
     getStudents: build.query({
-      query: (baseUrl) => ({ url: `${baseUrl}/api/admin/students` }),
+      query: (arg) => {
+        const baseUrl = typeof arg === "string" ? arg : arg?.baseUrl;
+        const params: Record<string, string> = {};
+        if (typeof arg === "object" && arg) {
+          if (arg.collegeId) params.collegeId = arg.collegeId;
+          if (arg.branch) params.branch = arg.branch;
+          if (arg.role) params.role = arg.role;
+          if (arg.search) params.search = arg.search;
+        }
+        return {
+          url: `${baseUrl}/api/admin/students`,
+          params: Object.keys(params).length > 0 ? params : undefined,
+        };
+      },
       providesTags: ["Students"],
     }),
     createStudent: build.mutation({
@@ -73,7 +86,7 @@ export const adminApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Students"],
+      invalidatesTags: ["Students", "Colleges", "Branches"],
     }),
     updateStudent: build.mutation({
       query: ({ baseUrl, id, body }) => ({
@@ -81,14 +94,21 @@ export const adminApi = createApi({
         method: "PUT",
         body,
       }),
-      invalidatesTags: ["Students"],
+      invalidatesTags: ["Students", "Colleges", "Branches"],
+    }),
+    deleteStudent: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/students/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Students", "Colleges", "Branches"],
     }),
     deactivateStudent: build.mutation({
       query: ({ baseUrl, id }) => ({
         url: `${baseUrl}/api/admin/students/${id}/deactivate`,
         method: "POST",
       }),
-      invalidatesTags: ["Students"],
+      invalidatesTags: ["Students", "Colleges", "Branches"],
     }),
 
     // Colleges
@@ -732,6 +752,7 @@ export const {
   useGetStudentsQuery,
   useCreateStudentMutation,
   useUpdateStudentMutation,
+  useDeleteStudentMutation,
   useDeactivateStudentMutation,
   // Colleges
   useGetCollegesQuery,

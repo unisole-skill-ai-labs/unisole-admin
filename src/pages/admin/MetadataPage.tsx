@@ -1,8 +1,6 @@
 import React from "react";
-import { useSelector } from "react-redux";
-import CollegeDirectoryHub from "../../components/metadata/CollegeDirectoryHub";
+import CollegesPage from "./CollegesPage";
 
 export default function MetadataPage() {
-  const baseUrl = useSelector((s: any) => s.settings.baseUrl);
-  return <CollegeDirectoryHub baseUrl={baseUrl} />;
+  return <CollegesPage />;
 }
