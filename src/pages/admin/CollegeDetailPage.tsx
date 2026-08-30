@@ -153,14 +153,23 @@ export default function CollegeDetailPage() {
           </div>
         </div>
 
-        <div className="flex items-center gap-2 shrink-0">
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => navigate("/leads")}
+            icon={TrendingUp}
+            title="View All Campus Lead Diversification"
+          >
+            Leads Hub
+          </Button>
           <Button
             variant="secondary"
             size="sm"
             onClick={() => setEditingCollege(true)}
             icon={Edit2}
           >
-            Edit Campus Details
+            Edit Campus
           </Button>
           <Button
             variant="primary"

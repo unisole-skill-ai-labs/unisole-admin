@@ -116,6 +116,10 @@ export const adminApi = createApi({
       query: ({ baseUrl, id }) => ({ url: `${baseUrl}/api/admin/colleges/${id}/analytics` }),
       providesTags: (_res, _err, { id }) => [{ type: "Colleges", id }, "Branches", "Sessions", "Leads"],
     }),
+    getLeadDiversification: build.query({
+      query: (baseUrl) => ({ url: `${baseUrl}/api/admin/colleges/lead-diversification` }),
+      providesTags: ["Colleges", "Sessions", "Leads", "Branches"],
+    }),
 
     // Branches
     getBranches: build.query({
@@ -775,6 +779,7 @@ export const {
   useLaunchSessionMutation,
   useUpdateSessionStatusMutation,
   useGetSessionLeadsQuery,
+  useGetLeadDiversificationQuery,
   // Team & Tasks
   useGetTasksQuery,
   useGetTaskByIdQuery,

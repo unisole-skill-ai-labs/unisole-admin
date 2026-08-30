@@ -25,6 +25,7 @@ import {
   CalendarCheck,
   AlertCircle,
   Clock,
+  TrendingUp,
 } from "lucide-react";
 
 export default function AdminShell() {
@@ -323,7 +324,7 @@ export default function AdminShell() {
               to="/presentations"
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
+                  isActive || location.pathname.startsWith("/presentations/analytics")
                     ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
                     : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
                 }`
@@ -331,6 +332,20 @@ export default function AdminShell() {
             >
               <Sparkles className="w-4 h-4 text-amber-500" />
               <span>Roadshows & Pitch Decks</span>
+            </NavLink>
+
+            <NavLink
+              to="/leads"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive || location.pathname.startsWith("/lead-diversification")
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                }`
+              }
+            >
+              <TrendingUp className="w-4 h-4 text-emerald-500" />
+              <span>Lead Diversification</span>
             </NavLink>
           </div>
 

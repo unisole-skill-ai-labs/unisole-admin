@@ -14,6 +14,7 @@ import PresentationBuilderPage from "./pages/admin/PresentationBuilderPage";
 import LiveProjectorPage from "./pages/admin/LiveProjectorPage";
 import SessionAnalyticsPage from "./pages/admin/SessionAnalyticsPage";
 import CollegeDetailPage from "./pages/admin/CollegeDetailPage";
+import LeadDiversificationPage from "./pages/admin/LeadDiversificationPage";
 import TasksPage from "./pages/admin/TasksPage";
 import TeamMembersPage from "./pages/admin/TeamMembersPage";
 import SOPTemplatesPage from "./pages/admin/SOPTemplatesPage";
@@ -51,14 +52,16 @@ export default function App() {
           <Route path="dashboard" element={<DashboardPage />} />
           <Route path="pathways" element={<PathwaysPage />} />
           <Route path="curriculum" element={<CurriculumPage />} />
+          <Route path="presentations" element={<PresentationsPage />} />
+          <Route path="presentations/builder/:id?" element={<PresentationBuilderPage />} />
+          <Route path="presentations/analytics/:sessionId" element={<SessionAnalyticsPage />} />
+          <Route path="leads" element={<LeadDiversificationPage />} />
+          <Route path="lead-diversification" element={<LeadDiversificationPage />} />
           <Route path="metadata" element={<MetadataPage />} />
           <Route path="colleges" element={<MetadataPage />} />
           <Route path="colleges/:id" element={<CollegeDetailPage />} />
           <Route path="students" element={<StudentsPage />} />
           <Route path="payments" element={<PaymentsPage />} />
-          <Route path="presentations" element={<PresentationsPage />} />
-          <Route path="presentations/builder/:id?" element={<PresentationBuilderPage />} />
-          <Route path="presentations/analytics/:sessionId" element={<SessionAnalyticsPage />} />
           <Route path="*" element={<Navigate to="tasks" replace />} />
         </Route>
       </Route>
