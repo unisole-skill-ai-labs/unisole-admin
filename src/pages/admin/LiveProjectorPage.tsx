@@ -32,6 +32,7 @@ import {
   Copy,
   Check,
   ExternalLink,
+  LogOut,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
@@ -88,6 +89,15 @@ export default function LiveProjectorPage() {
     setCopied(true);
     setTimeout(() => setCopied(false), 2500);
   }, [session]);
+
+  const handleExitShow = useCallback(() => {
+    if (socketRef.current && session?.sessionCode) {
+      socketRef.current.emit("admin:end_session", {
+        sessionCode: session.sessionCode,
+      });
+    }
+    navigate("/presentations");
+  }, [navigate, session?.sessionCode]);
 
   // Fetch initial session & presentation data
   useEffect(() => {
@@ -552,9 +562,9 @@ export default function LiveProjectorPage() {
       <header className="px-6 py-3.5 flex items-center justify-between bg-zinc-950/70 backdrop-blur-md border-b border-white/10 z-30">
         <div className="flex items-center gap-4">
           <button
-            onClick={() => navigate("/presentations")}
-            className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-colors"
-            title="Exit Projector"
+            onClick={handleExitShow}
+            className="p-2 rounded-xl text-zinc-400 hover:text-white hover:bg-white/10 transition-colors cursor-pointer"
+            title="Exit Show & Return to Presentations"
           >
             <ChevronLeft className="w-5 h-5" />
           </button>
@@ -582,11 +592,12 @@ export default function LiveProjectorPage() {
             </div>
           ) : (
             <button
-              onClick={handleReturnToLobby}
-              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-300 text-xs font-bold transition-all cursor-pointer"
-              title="Return to Check-in Lobby Stage"
+              onClick={handleExitShow}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-xs font-bold transition-all cursor-pointer shadow-sm"
+              title="Exit Show & Close Presentation"
             >
-              <span>Return to Lobby</span>
+              <LogOut className="w-3.5 h-3.5" />
+              <span>Exit Show</span>
             </button>
           )}
         </div>
@@ -1053,23 +1064,33 @@ export default function LiveProjectorPage() {
                 <span className="hidden sm:inline">Prev</span>
               </Button>
 
-              <Button
-                variant="primary"
-                size="sm"
-                disabled={
-                  currentSlideIndex === slides.length - 1 && buildStep >= maxSteps
-                }
-                onClick={handleNextAction}
-                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg"
-                title="Next Step / Slide (→ / Space)"
-              >
-                <span>
-                  {buildStep < maxSteps
-                    ? `Next Step (${buildStep + 1}/${maxSteps})`
-                    : "Next Slide"}
-                </span>
-                <ChevronRight className="w-4 h-4 ml-1 inline" />
-              </Button>
+              {currentSlideIndex === slides.length - 1 && buildStep >= maxSteps ? (
+                <Button
+                  variant="danger"
+                  size="sm"
+                  onClick={handleExitShow}
+                  className="bg-gradient-to-r from-rose-600 to-red-600 hover:from-rose-500 hover:to-red-500 text-white font-black shadow-lg flex items-center gap-1.5 px-4 cursor-pointer"
+                  title="Complete presentation and exit to presentations list"
+                >
+                  <LogOut className="w-4 h-4" />
+                  <span>Exit Show</span>
+                </Button>
+              ) : (
+                <Button
+                  variant="primary"
+                  size="sm"
+                  onClick={handleNextAction}
+                  className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg"
+                  title="Next Step / Slide (→ / Space)"
+                >
+                  <span>
+                    {buildStep < maxSteps
+                      ? `Next Step (${buildStep + 1}/${maxSteps})`
+                      : "Next Slide"}
+                  </span>
+                  <ChevronRight className="w-4 h-4 ml-1 inline" />
+                </Button>
+              )}
             </>
           )}
         </div>
