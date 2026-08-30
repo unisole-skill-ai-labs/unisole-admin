@@ -6,6 +6,7 @@ import {
   useDeletePresentationMutation,
   useGetSessionsQuery,
   useLaunchSessionMutation,
+  useUpdateSessionStatusMutation,
   useGetCollegesQuery,
 } from "../../store";
 import {
@@ -23,6 +24,7 @@ import {
   Activity,
   ArrowRight,
   Radio,
+  StopCircle,
 } from "lucide-react";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
@@ -46,12 +48,14 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
   const [createPresentation, { isLoading: isCreating }] = useCreatePresentationMutation();
   const [deletePresentation, { isLoading: isDeleting }] = useDeletePresentationMutation();
   const [launchSession, { isLoading: isLaunching }] = useLaunchSessionMutation();
+  const [updateSessionStatus] = useUpdateSessionStatusMutation();
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [launchModalOpen, setLaunchModalOpen] = useState(false);
   const [deletingDeck, setDeletingDeck] = useState<any>(null);
   const [activeDeck, setActiveDeck] = useState<any>(null);
   const [launchingDeckId, setLaunchingDeckId] = useState<string | null>(null);
+  const [endingSessionId, setEndingSessionId] = useState<string | null>(null);
 
   const [titleInput, setTitleInput] = useState("");
   const [descInput, setDescInput] = useState("");
@@ -176,7 +180,30 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
       await deletePresentation({ baseUrl, id: deletingDeck.id }).unwrap();
       setDeletingDeck(null);
     } catch (err: any) {
-      alert("Failed to delete pitch deck: " + (err?.data?.message || err.message));
+      alert("Failed to delete deck: " + (err?.data?.message || err.message));
+    }
+  };
+
+  const handleEndSession = async (sessionId: string) => {
+    if (
+      !window.confirm(
+        "Are you sure you want to end this live presentation session? The stage will be finalized and no new students can join."
+      )
+    ) {
+      return;
+    }
+    try {
+      setEndingSessionId(sessionId);
+      await updateSessionStatus({
+        baseUrl,
+        id: sessionId,
+        sessionId,
+        body: { status: "ENDED" },
+      }).unwrap();
+    } catch (err: any) {
+      alert("Failed to end session: " + (err?.data?.message || err.message));
+    } finally {
+      setEndingSessionId(null);
     }
   };
 
@@ -475,11 +502,23 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
                         <td className="py-4 px-5 text-right">
                           <div className="flex items-center justify-end gap-2">
                             {sess.status === "LIVE" && (
-                              <Link to={`/presentations/live/${sess.id}`}>
-                                <Button variant="primary" size="sm" icon={Play} className="text-xs font-bold shadow-xs">
-                                  Projector Stage
+                              <>
+                                <Link to={`/presentations/live/${sess.id}`}>
+                                  <Button variant="primary" size="sm" icon={Play} className="text-xs font-bold shadow-xs">
+                                    Projector Stage
+                                  </Button>
+                                </Link>
+                                <Button
+                                  variant="danger"
+                                  size="sm"
+                                  icon={StopCircle}
+                                  loading={endingSessionId === sess.id}
+                                  onClick={() => handleEndSession(sess.id)}
+                                  className="text-xs font-bold bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/40 dark:hover:bg-rose-900/60 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-800 shadow-xs cursor-pointer"
+                                >
+                                  End Session
                                 </Button>
-                              </Link>
+                              </>
                             )}
                             <Link to={`/presentations/sessions/${sess.id}/analytics`}>
                               <Button variant="secondary" size="sm" icon={BarChart3} className="text-xs font-bold">
