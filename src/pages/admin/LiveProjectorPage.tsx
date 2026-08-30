@@ -164,6 +164,14 @@ export default function LiveProjectorPage() {
       if (quizState) setQuizState(quizState);
     });
 
+    socket.on("slides_reloaded", ({ slides: updatedSlides, currentSlideIndex: sIdx, buildStep: bStep }) => {
+      if (updatedSlides) {
+        setPresentation((prev: any) => ({ ...prev, slides: updatedSlides }));
+      }
+      if (typeof sIdx === "number") setCurrentSlideIndex(sIdx);
+      if (typeof bStep === "number") setBuildStep(bStep);
+    });
+
     socket.on("quiz_started", (qData) => {
       setQuizState((prev: any) => ({
         ...prev,

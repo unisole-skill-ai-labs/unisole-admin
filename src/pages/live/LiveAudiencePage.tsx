@@ -21,7 +21,11 @@ import {
   ExternalLink,
   Copy,
   Check,
+  Crown,
+  Medal,
+  UserX,
 } from "lucide-react";
+import SlideRenderer from "../../components/presentations/SlideRenderer";
 
 export default function LiveAudiencePage() {
   const { sessionCode } = useParams<{ sessionCode: string }>();
@@ -47,6 +51,7 @@ export default function LiveAudiencePage() {
 
   // Real-time state
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
+  const [buildStep, setBuildStep] = useState(0);
   const [attendeeCount, setAttendeeCount] = useState(0);
   const [quizState, setQuizState] = useState<any>({
     isQuizActive: false,
@@ -67,21 +72,51 @@ export default function LiveAudiencePage() {
   const [reactions, setReactions] = useState<{ id: string; emoji: string }[]>([]);
   const [copied, setCopied] = useState(false);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
+  const [isKicked, setIsKicked] = useState(false);
+  const [kickedMessage, setKickedMessage] = useState("");
 
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<any>(null);
 
-  // Redirect to main SEO portal login with return redirect to this presentation
+  // Fetch session details on mount
   useEffect(() => {
     if (!code) return;
 
-    const seoBaseUrl =
-      (import.meta as any).env?.VITE_SEO_URL || "https://unisole.org";
-    window.location.href = `${seoBaseUrl.replace(
-      /\/+$/,
-      ""
-    )}/live/${code}`;
-  }, [code]);
+    setIsLoadingSession(true);
+    setSessionError(null);
+
+    fetch(`${baseUrl}/api/public/presentations/sessions/${code}`)
+      .then((res) => {
+        if (!res.ok) throw new Error("Presentation session not found");
+        return res.json();
+      })
+      .then((data) => {
+        if (data.data) {
+          setSession(data.data.session);
+          setPresentation(data.data.presentation);
+          setCurrentSlideIndex(data.data.session.currentSlideIndex || 0);
+
+          // Check if previously joined from localStorage
+          const savedLead = localStorage.getItem(`unisole_lead_${code}`);
+          if (savedLead) {
+            try {
+              const parsed = JSON.parse(savedLead);
+              if (parsed?.id) {
+                setLead(parsed);
+              }
+            } catch (e) {
+              console.error(e);
+            }
+          }
+        }
+      })
+      .catch((err) => {
+        setSessionError(err.message || "Failed to connect to presentation");
+      })
+      .finally(() => {
+        setIsLoadingSession(false);
+      });
+  }, [baseUrl, code]);
 
   // Connect Socket.io once lead is registered
   useEffect(() => {
@@ -104,6 +139,9 @@ export default function LiveAudiencePage() {
       if (typeof state.currentSlideIndex === "number") {
         setCurrentSlideIndex(state.currentSlideIndex);
       }
+      if (typeof state.buildStep === "number") {
+        setBuildStep(state.buildStep);
+      }
       if (typeof state.attendeeCount === "number") {
         setAttendeeCount(state.attendeeCount);
       }
@@ -112,6 +150,9 @@ export default function LiveAudiencePage() {
       }
       if (state.myRank) {
         setMyRank(state.myRank);
+      }
+      if (state.leaderboard) {
+        setLeaderboard(state.leaderboard);
       }
       if (state.quizState) {
         setQuizState(state.quizState);
@@ -126,11 +167,24 @@ export default function LiveAudiencePage() {
       setAttendeeCount(count);
     });
 
-    socket.on("slide_updated", ({ slideIndex, quizState: qState }) => {
+    socket.on("slide_updated", ({ slideIndex, buildStep: bStep, quizState: qState }) => {
       setCurrentSlideIndex(slideIndex);
+      if (typeof bStep === "number") {
+        setBuildStep(bStep);
+      } else {
+        setBuildStep(0);
+      }
       setSelectedOption(null);
       setIsSubmitted(false);
       if (qState) setQuizState(qState);
+    });
+
+    socket.on("slides_reloaded", ({ slides: updatedSlides, currentSlideIndex: sIdx, buildStep: bStep }) => {
+      if (updatedSlides) {
+        setPresentation((prev: any) => ({ ...prev, slides: updatedSlides }));
+      }
+      if (typeof sIdx === "number") setCurrentSlideIndex(sIdx);
+      if (typeof bStep === "number") setBuildStep(bStep);
     });
 
     socket.on("quiz_started", (qData) => {
@@ -202,6 +256,12 @@ export default function LiveAudiencePage() {
           setMyRank({ rank: myIndex + 1, totalPlayers: lb.length });
         }
       }
+    });
+
+    socket.on("audience:kicked", ({ message }: { message: string }) => {
+      setIsKicked(true);
+      setKickedMessage(message || "You have been removed from this live presentation by the host.");
+      socket.disconnect();
     });
 
     socket.on("reaction_pulse", ({ emoji, id }) => {
@@ -327,6 +387,39 @@ export default function LiveAudiencePage() {
           <span className="text-xs font-mono text-zinc-400">
             Connecting to Live Presentation Arena...
           </span>
+        </div>
+      </div>
+    );
+  }
+
+  // Kicked Screen
+  if (isKicked) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white flex items-center justify-center p-6 text-center">
+        <div className="max-w-md w-full p-8 rounded-3xl bg-zinc-900 border border-rose-500/30 text-center space-y-5 shadow-2xl animate-fade-in">
+          <div className="w-14 h-14 rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center mx-auto border border-rose-500/30">
+            <UserX className="w-7 h-7" />
+          </div>
+          <div className="space-y-2">
+            <h2 className="text-xl font-bold text-white">Removed from Session</h2>
+            <p className="text-xs text-zinc-400 leading-relaxed">
+              {kickedMessage || "You have been removed from this live presentation by the host."}
+            </p>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <Link
+              to="/programs"
+              className="flex-1 py-2.5 rounded-xl bg-white/10 hover:bg-white/20 text-white font-bold text-xs transition-colors text-center"
+            >
+              Explore Programs
+            </Link>
+            <Link
+              to="/"
+              className="flex-1 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-bold text-xs transition-colors text-center"
+            >
+              Back Home
+            </Link>
+          </div>
         </div>
       </div>
     );
@@ -507,15 +600,27 @@ export default function LiveAudiencePage() {
 
       {/* Top Mobile Status Header */}
       <header className="px-4 py-3 bg-zinc-900/80 backdrop-blur-xl border-b border-white/10 flex items-center justify-between z-30 sticky top-0">
-        <div className="flex items-center gap-2.5">
-          <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
-          <span className="text-xs font-black tracking-tight text-zinc-100">
-            {lead.name}
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+            <span className="text-xs font-black tracking-tight text-zinc-100">
+              {lead.name}
+            </span>
+          </div>
+
+          <span className="hidden sm:inline-block text-zinc-600">|</span>
+
+          <span className="hidden sm:inline-block text-[11px] font-mono text-zinc-400">
+            {session.collegeName || "Unisole Campus Presentation"}
           </span>
         </div>
 
-        {/* Live Score & Rank Badges */}
+        {/* Live Score, Rank Badges & Slide Progress */}
         <div className="flex items-center gap-2">
+          <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-[11px] font-mono font-bold">
+            Slide {currentSlideIndex + 1}/{slides.length}
+          </div>
+
           <div className="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono font-bold flex items-center gap-1">
             <Flame className="w-3 h-3 text-amber-400" />
             <span>{myScore} pts</span>
@@ -530,262 +635,101 @@ export default function LiveAudiencePage() {
         </div>
       </header>
 
-      {/* Main Interactive Screen */}
-      <main className="flex-1 flex flex-col justify-center p-4 sm:p-6 max-w-lg w-full mx-auto z-20 space-y-5">
-        {currentSlide && (
-          <div className="space-y-4">
-            {/* Top Slide Meta */}
-            <div className="flex items-center justify-between text-[11px] text-zinc-400 font-mono">
-              <span>{session.collegeName || "Unisole Roadshow"}</span>
-              <span>Slide {currentSlideIndex + 1}/{slides.length}</span>
+      {/* Main Interactive Stage Canvas */}
+      <main className="flex-1 relative flex items-center justify-center p-4 sm:p-8 lg:p-12 z-20 overflow-y-auto w-full">
+        {/* Glow ambient lights */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Live Leaderboard Podium Overlay if Active */}
+        {quizState.isLeaderboardActive ? (
+          <div className="w-full max-w-4xl mx-auto space-y-6 pt-2 animate-fade-in text-center z-10">
+            <div className="flex items-center justify-center gap-2 mb-2">
+              <Trophy className="w-7 h-7 text-amber-400" />
+              <h2 className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-yellow-400">
+                Live Leaderboard Podium
+              </h2>
             </div>
 
-            {/* Slide Title */}
-            <h2 className="text-xl sm:text-2xl font-black text-white tracking-tight leading-snug">
-              {currentSlide.title}
-            </h2>
-
-            {currentSlide.subtitle && (
-              <p className="text-xs sm:text-sm text-zinc-300 leading-relaxed">
-                {currentSlide.subtitle}
-              </p>
-            )}
-
-            {/* CONTENT Slide Bullets */}
-            {currentSlide.type === "CONTENT" &&
-              Array.isArray(currentSlide.bullets) && (
-                <div className="space-y-2 pt-2">
-                  {currentSlide.bullets.map((b: string, i: number) => (
-                    <div
-                      key={i}
-                      className="p-3.5 rounded-2xl bg-zinc-900/80 border border-zinc-800 flex items-start gap-3"
-                    >
-                      <span className="w-2 h-2 rounded-full bg-indigo-400 mt-1.5 shrink-0" />
-                      <span className="text-xs text-zinc-200">{b}</span>
-                    </div>
-                  ))}
+            {/* Personal Student Rank Banner */}
+            {myRank && (
+              <div className="p-4 rounded-3xl bg-gradient-to-r from-indigo-900/70 to-violet-900/70 border border-indigo-500/40 text-center max-w-md mx-auto space-y-1 shadow-xl">
+                <span className="text-xs text-indigo-300 font-bold uppercase tracking-wider">
+                  Your Live Standing
+                </span>
+                <div className="text-3xl font-black text-amber-300">
+                  Rank #{myRank.rank}{" "}
+                  <span className="text-sm text-zinc-400 font-normal">
+                    of {myRank.totalPlayers}
+                  </span>
                 </div>
-              )}
-
-            {/* STATS Slide Grid */}
-            {currentSlide.type === "STATS" &&
-              Array.isArray(currentSlide.stats) && (
-                <div className="grid grid-cols-3 gap-2.5 pt-2">
-                  {currentSlide.stats.map((st: any, i: number) => (
-                    <div
-                      key={i}
-                      className="p-3.5 rounded-2xl bg-zinc-900/90 border border-zinc-800 text-center"
-                    >
-                      <div className="text-lg font-black text-indigo-400">
-                        {st.value}
-                      </div>
-                      <div className="text-[10px] text-zinc-400 mt-0.5">
-                        {st.label}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              )}
-
-            {/* LIVE POLL View */}
-            {currentSlide.type === "POLL" && (
-              <div className="space-y-3 pt-2">
-                <div className="text-sm font-bold text-cyan-300 flex items-center gap-2">
-                  <BarChart3 className="w-4 h-4" />
-                  <span>{currentSlide.question || "Tap your choice below"}</span>
-                </div>
-
-                <div className="space-y-2.5">
-                  {(currentSlide.options || []).map(
-                    (opt: string, optIdx: number) => {
-                      const count = quizState.pollCounts?.[optIdx] || 0;
-                      const totalVotes = Object.values(
-                        quizState.pollCounts || {}
-                      ).reduce((a: any, b: any) => a + b, 0) as number;
-                      const percent =
-                        totalVotes > 0
-                          ? Math.round((count / totalVotes) * 100)
-                          : 0;
-                      const isSelected = selectedOption === optIdx;
-
-                      return (
-                        <button
-                          key={optIdx}
-                          type="button"
-                          disabled={!quizState.isQuizActive && !isSubmitted}
-                          onClick={() => handleSelectOption(optIdx)}
-                          className={`relative w-full p-4 rounded-2xl border text-left transition-all overflow-hidden cursor-pointer active:scale-98 ${
-                            isSelected
-                              ? "border-cyan-400 bg-cyan-950/60 ring-2 ring-cyan-400 shadow-lg"
-                              : "border-zinc-800 bg-zinc-900/80 hover:border-zinc-700"
-                          }`}
-                        >
-                          {/* Live percentage fill when submitted */}
-                          {isSubmitted && (
-                            <div
-                              className="absolute inset-y-0 left-0 bg-cyan-500/20 transition-all duration-500"
-                              style={{ width: `${percent}%` }}
-                            />
-                          )}
-
-                          <div className="relative flex items-center justify-between gap-3">
-                            <div className="flex items-center gap-3">
-                              <span className="w-7 h-7 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold text-xs">
-                                {String.fromCharCode(65 + optIdx)}
-                              </span>
-                              <span className="text-xs sm:text-sm font-bold text-white">
-                                {opt}
-                              </span>
-                            </div>
-                            {isSubmitted && (
-                              <span className="font-mono font-bold text-xs text-cyan-400">
-                                {percent}%
-                              </span>
-                            )}
-                          </div>
-                        </button>
-                      );
-                    }
-                  )}
+                <div className="text-xs font-mono font-bold text-indigo-200">
+                  Total Score: {myScore} pts
                 </div>
               </div>
             )}
 
-            {/* KAHOOT-STYLE TIMED QUIZ View */}
-            {currentSlide.type === "QUIZ" && !quizState.isLeaderboardActive && (
-              <div className="space-y-4 pt-2">
-                <div className="flex items-center justify-between">
-                  <div className="text-sm font-bold text-amber-300 flex items-center gap-1.5">
-                    <Flame className="w-4 h-4 text-amber-400" />
-                    <span>Speed Challenge</span>
-                  </div>
-
-                  {remainingTime !== null && (
-                    <div className="px-3 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono font-bold text-xs flex items-center gap-1">
-                      <Clock className="w-3.5 h-3.5" />
-                      <span>{remainingTime}s</span>
-                    </div>
-                  )}
+            {/* Top 3 Podium Cards */}
+            <div className="grid grid-cols-3 gap-3 max-w-xl mx-auto items-end pt-4">
+              {/* Rank 2 */}
+              <div className="p-3.5 rounded-3xl bg-white/10 border border-slate-400/40 text-center space-y-1.5 order-1 shadow-xl">
+                <Medal className="w-6 h-6 text-slate-300 mx-auto" />
+                <div className="font-extrabold text-xs sm:text-sm text-zinc-100 truncate">
+                  {leaderboard[1]?.name || "—"}
                 </div>
-
-                <p className="text-sm font-bold text-zinc-100">
-                  {currentSlide.question}
-                </p>
-
-                {/* 4 Colored Option Cards */}
-                <div className="grid grid-cols-2 gap-3 pt-1">
-                  {(currentSlide.options || []).map(
-                    (opt: any, optIdx: number) => {
-                      const colors = [
-                        "bg-rose-600/30 border-rose-500/50 hover:bg-rose-600/40 text-rose-100",
-                        "bg-blue-600/30 border-blue-500/50 hover:bg-blue-600/40 text-blue-100",
-                        "bg-amber-600/30 border-amber-500/50 hover:bg-amber-600/40 text-amber-100",
-                        "bg-emerald-600/30 border-emerald-500/50 hover:bg-emerald-600/40 text-emerald-100",
-                      ];
-                      const isSelected = selectedOption === optIdx;
-                      const isRevealed = quizState.isAnswerRevealed;
-                      const isCorrect = opt.isCorrect;
-
-                      return (
-                        <button
-                          key={optIdx}
-                          type="button"
-                          disabled={!quizState.isQuizActive || isSubmitted}
-                          onClick={() => handleSelectOption(optIdx)}
-                          className={`p-4 rounded-2xl border flex flex-col justify-between min-h-[90px] text-left transition-all active:scale-95 cursor-pointer ${
-                            colors[optIdx % 4]
-                          } ${
-                            isSelected
-                              ? "ring-4 ring-white shadow-xl scale-102"
-                              : isSubmitted
-                              ? "opacity-60"
-                              : ""
-                          } ${
-                            isRevealed && isCorrect
-                              ? "ring-4 ring-emerald-400 bg-emerald-600/60 opacity-100"
-                              : ""
-                          }`}
-                        >
-                          <span className="w-6 h-6 rounded-lg bg-white/20 flex items-center justify-center font-bold text-xs">
-                            {String.fromCharCode(65 + optIdx)}
-                          </span>
-                          <span className="text-xs sm:text-sm font-bold mt-2">
-                            {opt.text}
-                          </span>
-                        </button>
-                      );
-                    }
-                  )}
+                <div className="text-[10px] font-mono font-bold text-indigo-300">
+                  {leaderboard[1]?.score || 0} pts
                 </div>
-
-                {isSubmitted && !quizState.isAnswerRevealed && (
-                  <div className="p-3 rounded-2xl bg-indigo-950/60 border border-indigo-500/30 text-center text-xs font-bold text-indigo-300">
-                    ⚡ Answer locked in! Waiting for presenter reveal...
-                  </div>
-                )}
+                <div className="h-12 bg-slate-400/20 rounded-xl flex items-center justify-center font-black text-lg text-slate-300">
+                  #2
+                </div>
               </div>
-            )}
 
-            {/* LEADERBOARD Podium View on Mobile */}
-            {quizState.isLeaderboardActive && (
-              <div className="space-y-4 pt-2 text-center animate-fade-in">
-                <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 font-bold text-xs">
-                  <Trophy className="w-4 h-4 text-amber-400" />
-                  <span>Live Roadshow Standings</span>
+              {/* Rank 1 */}
+              <div className="p-4 rounded-3xl bg-gradient-to-b from-amber-500/30 to-amber-500/10 border border-amber-400/60 text-center space-y-2 order-2 shadow-2xl scale-105">
+                <Crown className="w-8 h-8 text-amber-300 mx-auto animate-bounce" />
+                <div className="font-black text-sm sm:text-base text-amber-200 truncate">
+                  {leaderboard[0]?.name || "—"}
                 </div>
-
-                {myRank && (
-                  <div className="p-5 rounded-3xl bg-gradient-to-r from-indigo-900/60 to-violet-900/60 border border-indigo-500/40 text-center space-y-1 shadow-xl">
-                    <span className="text-xs text-indigo-300 font-medium">
-                      Your Position
-                    </span>
-                    <div className="text-3xl font-black text-amber-300">
-                      Rank #{myRank.rank}
-                    </div>
-                    <div className="text-xs font-mono text-zinc-300">
-                      Score: {myScore} points
-                    </div>
-                  </div>
-                )}
-              </div>
-            )}
-
-            {/* OFFER CTA Screen */}
-            {currentSlide.type === "OFFER_CTA" && (
-              <div className="p-6 rounded-3xl bg-gradient-to-br from-indigo-950 via-zinc-900 to-violet-950 border border-indigo-500/40 space-y-4 shadow-2xl">
-                <div className="inline-block px-3 py-1 rounded-full bg-amber-500/20 text-amber-300 font-bold text-[11px]">
-                  {currentSlide.badge || "Campus Roadshow Special"}
+                <div className="text-xs font-mono font-black text-amber-400">
+                  {leaderboard[0]?.score || 0} pts
                 </div>
-                <h3 className="text-lg sm:text-xl font-black text-white">
-                  {currentSlide.title}
-                </h3>
-                <p className="text-xs text-zinc-300">
-                  {currentSlide.subtitle || "Claim your scholarship grant for Unisole programs today!"}
-                </p>
-
-                {currentSlide.couponCode && (
-                  <div className="flex items-center gap-2 p-2 bg-black/40 rounded-xl border border-amber-400/30 font-mono text-xs text-amber-300">
-                    <span className="font-bold flex-1">{currentSlide.couponCode}</span>
-                    <button
-                      onClick={() => copyCoupon(currentSlide.couponCode)}
-                      className="px-2.5 py-1 rounded-lg bg-amber-500/20 hover:bg-amber-500/30 text-[11px] font-bold transition-colors cursor-pointer"
-                    >
-                      {copied ? "Copied!" : "Copy Code"}
-                    </button>
-                  </div>
-                )}
-
-                <a
-                  href={currentSlide.targetUrl || "https://unisole.in/programs"}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="w-full py-3 px-4 rounded-xl bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold text-xs shadow-lg text-center flex items-center justify-center gap-2"
-                >
-                  <span>{currentSlide.buttonText || "Explore Unisole Programs"}</span>
-                  <ExternalLink className="w-3.5 h-3.5" />
-                </a>
+                <div className="h-16 bg-amber-500/30 rounded-xl flex items-center justify-center font-black text-xl text-amber-300">
+                  #1
+                </div>
               </div>
-            )}
+
+              {/* Rank 3 */}
+              <div className="p-3.5 rounded-3xl bg-white/10 border border-amber-700/40 text-center space-y-1.5 order-3 shadow-xl">
+                <Award className="w-6 h-6 text-amber-600 mx-auto" />
+                <div className="font-extrabold text-xs sm:text-sm text-zinc-100 truncate">
+                  {leaderboard[2]?.name || "—"}
+                </div>
+                <div className="text-[10px] font-mono font-bold text-indigo-300">
+                  {leaderboard[2]?.score || 0} pts
+                </div>
+                <div className="h-10 bg-amber-700/20 rounded-xl flex items-center justify-center font-black text-sm text-amber-600">
+                  #3
+                </div>
+              </div>
+            </div>
+          </div>
+        ) : (
+          /* Render Active Slide with Progressive Step Animations */
+          <div className="w-full max-w-5xl mx-auto z-10">
+            <SlideRenderer
+              key={`slide-${currentSlideIndex}`}
+              slide={currentSlide}
+              buildStep={buildStep}
+              presentationTitle={presentation?.title}
+              isProjector={false}
+              quizState={quizState}
+              remainingTime={remainingTime}
+              leaderboard={leaderboard}
+              onSelectOption={handleSelectOption}
+              selectedOption={selectedOption}
+              isSubmitted={isSubmitted}
+            />
           </div>
         )}
       </main>
