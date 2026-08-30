@@ -293,11 +293,11 @@ function renderSlideContent({
       return (
         <div className="w-full max-w-4xl mx-auto text-center space-y-6 sm:space-y-8 py-6 sm:py-10 animate-fade-in">
           <div
-            className={`transition-all duration-500 ease-out transform ${
+            className={`transition-all duration-500 ease-out transform py-2 ${
               currentStep >= 0 ? "opacity-100 scale-100" : "opacity-0 scale-95"
             }`}
           >
-            <h1 className="text-4xl sm:text-7xl lg:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 drop-shadow-2xl font-serif tracking-tight">
+            <h1 className="text-4xl sm:text-7xl lg:text-8xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 drop-shadow-2xl font-serif leading-[1.3] sm:leading-[1.35] py-3 sm:py-6 px-2">
               {slide.title || "आगे क्या सोचा है?"}
             </h1>
           </div>
