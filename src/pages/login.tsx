@@ -5,17 +5,11 @@ import { setCredentials } from "../store/auth-slice";
 import { useTheme } from "../context/ThemeContext";
 import {
   ShieldCheck,
-  Phone,
-  KeyRound,
   ArrowRight,
-  ArrowLeft,
-  RefreshCw,
   AlertCircle,
   Sun,
   Moon,
-  Sparkles,
 } from "lucide-react";
-import Input from "../components/ui/Input";
 import Button from "../components/ui/Button";
 
 export default function LoginPage() {
@@ -25,10 +19,7 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
-  const [step, setStep] = useState<"phone" | "otp">("phone");
   const [phone, setPhone] = useState("+919876543210");
-  const [otp, setOtp] = useState("1234");
-  const [devOtp, setDevOtp] = useState<string | null>("1234");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -38,50 +29,16 @@ export default function LoginPage() {
     }
   }, [isAuthenticated, navigate]);
 
-  const handleSendOtp = async (e?: React.FormEvent) => {
+  const handleLogin = async (e?: React.FormEvent) => {
     e?.preventDefault();
     setError(null);
     setLoading(true);
 
     try {
-      const res = await fetch(`${baseUrl}/api/auth/send-otp`, {
+      const res = await fetch(`${baseUrl}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || data.error || `HTTP ${res.status}`);
-      }
-
-      const receivedOtp = data.dummyOtp || "1234";
-      setDevOtp(receivedOtp);
-      setOtp(receivedOtp);
-      setStep("otp");
-    } catch (err: any) {
-      // In mock OTP mode fallback to 1234
-      setDevOtp("1234");
-      setOtp("1234");
-      setStep("otp");
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleVerifyOtp = async (e?: React.FormEvent) => {
-    e?.preventDefault();
-    setError(null);
-    setLoading(true);
-
-    const submissionOtp = (otp || devOtp || "1234").trim();
-
-    try {
-      const res = await fetch(`${baseUrl}/api/auth/verify-otp`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone, otp: submissionOtp }),
       });
 
       const data = await res.json();
@@ -103,7 +60,6 @@ export default function LoginPage() {
 
   const handleQuickSelect = (phoneNumber: string) => {
     setPhone(`+91${phoneNumber}`);
-    setOtp("1234");
   };
 
   return (
@@ -135,61 +91,49 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Mock OTP Mode Banner */}
-        <div className="mb-4 p-3 rounded-2xl bg-amber-500/10 border border-amber-500/20 text-amber-900 dark:text-amber-300 text-xs flex items-center justify-between gap-2">
-          <div className="flex items-center gap-2">
-            <Sparkles className="w-4 h-4 text-amber-500 shrink-0" />
-            <span>
-              Mock OTP Mode Active &bull; Default OTP: <strong>1234</strong>
-            </span>
+        {/* Quick Demo Profile Chips */}
+        <div className="mb-5 p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800">
+          <span className="text-[10px] font-mono uppercase font-bold text-zinc-400 block mb-2">
+            ⚡ 1-Click Demo Profiles:
+          </span>
+          <div className="grid grid-cols-2 gap-1.5 text-left">
+            <button
+              type="button"
+              onClick={() => handleQuickSelect("9876543210")}
+              className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-amber-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="font-bold truncate">Girish (Super)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickSelect("9816012345")}
+              className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-amber-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span className="w-2 h-2 rounded-full bg-amber-500" />
+              <span className="font-bold truncate">Ajay Mokta (Super)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickSelect("9811122233")}
+              className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-indigo-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span className="w-2 h-2 rounded-full bg-indigo-500" />
+              <span className="font-bold truncate">Priya (Admin)</span>
+            </button>
+
+            <button
+              type="button"
+              onClick={() => handleQuickSelect("9844455566")}
+              className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-emerald-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+            >
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              <span className="font-bold truncate">Sneha (Member)</span>
+            </button>
           </div>
         </div>
-
-        {/* Quick Demo Profile Chips */}
-        {step === "phone" && (
-          <div className="mb-5 p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800">
-            <span className="text-[10px] font-mono uppercase font-bold text-zinc-400 block mb-2">
-              ⚡ 1-Click Demo Profiles:
-            </span>
-            <div className="grid grid-cols-2 gap-1.5 text-left">
-              <button
-                type="button"
-                onClick={() => handleQuickSelect("9876543210")}
-                className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-amber-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span className="font-bold truncate">Girish (Super)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickSelect("9816012345")}
-                className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-amber-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <span className="w-2 h-2 rounded-full bg-amber-500" />
-                <span className="font-bold truncate">Ajay Mokta (Super)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickSelect("9811122233")}
-                className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-indigo-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <span className="w-2 h-2 rounded-full bg-indigo-500" />
-                <span className="font-bold truncate">Priya (Admin)</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => handleQuickSelect("9844455566")}
-                className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-emerald-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-              >
-                <span className="w-2 h-2 rounded-full bg-emerald-500" />
-                <span className="font-bold truncate">Sneha (Member)</span>
-              </button>
-            </div>
-          </div>
-        )}
 
         {/* Error Message */}
         {error && (
@@ -199,95 +143,38 @@ export default function LoginPage() {
           </div>
         )}
 
-        {step === "phone" ? (
-          <form onSubmit={handleSendOtp} className="space-y-4">
-            <div>
-              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                Staff Mobile Number
-              </label>
-              <div className="relative">
-                <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1 border-r border-zinc-200 dark:border-zinc-800 pr-2 font-mono">
-                  🇮🇳 +91
-                </div>
-                <input
-                  type="tel"
-                  value={phone.replace(/^\+91/, "")}
-                  onChange={(e) => setPhone(`+91${e.target.value.replace(/\D/g, "")}`)}
-                  placeholder="9876543210"
-                  required
-                  autoFocus
-                  className="w-full pl-20 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono font-bold"
-                />
+        <form onSubmit={handleLogin} className="space-y-4">
+          <div>
+            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+              Staff Mobile Number
+            </label>
+            <div className="relative">
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1 border-r border-zinc-200 dark:border-zinc-800 pr-2 font-mono">
+                🇮🇳 +91
               </div>
-            </div>
-
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              className="w-full shadow-lg shadow-indigo-500/20"
-              loading={loading}
-              icon={ArrowRight}
-            >
-              Send Authentication Code
-            </Button>
-          </form>
-        ) : (
-          <form onSubmit={handleVerifyOtp} className="space-y-4">
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                  Verification Code
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setStep("phone")}
-                  className="text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center gap-1 cursor-pointer"
-                >
-                  <ArrowLeft className="w-3 h-3" /> Change Number
-                </button>
-              </div>
-
-              <Input
-                type="text"
-                value={otp}
-                onChange={(e) => setOtp(e.target.value)}
-                placeholder="1234"
-                maxLength={6}
+              <input
+                type="tel"
+                value={phone.replace(/^\+91/, "")}
+                onChange={(e) => setPhone(`+91${e.target.value.replace(/\D/g, "")}`)}
+                placeholder="9876543210"
                 required
                 autoFocus
-                icon={KeyRound}
-                className="text-center font-mono text-lg tracking-widest"
+                className="w-full pl-20 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono font-bold"
               />
-              <small className="block mt-1 text-[11px] text-zinc-400 font-mono">
-                Enter code <strong>1234</strong> for {phone}
-              </small>
             </div>
+          </div>
 
-            <Button
-              type="submit"
-              variant="primary"
-              size="lg"
-              className="w-full shadow-lg shadow-indigo-500/20"
-              loading={loading}
-              disabled={!otp}
-            >
-              Verify & Sign In
-            </Button>
-
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="w-full text-xs"
-              onClick={handleSendOtp}
-              disabled={loading}
-              icon={RefreshCw}
-            >
-              Resend Code
-            </Button>
-          </form>
-        )}
+          <Button
+            type="submit"
+            variant="primary"
+            size="lg"
+            className="w-full shadow-lg shadow-indigo-500/20"
+            loading={loading}
+            icon={ArrowRight}
+          >
+            Sign In to Admin
+          </Button>
+        </form>
       </div>
     </div>
   );
