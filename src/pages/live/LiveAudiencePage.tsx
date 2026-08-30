@@ -1230,27 +1230,16 @@ export default function LiveAudiencePage() {
               <span>#{myRank.rank}</span>
             </div>
           )}
-
-          {/* Fullscreen Landscape Trigger Button */}
-          <button
-            type="button"
-            onClick={toggleFullscreenLandscape}
-            className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-[10px] sm:text-[11px] font-extrabold shadow-md shadow-indigo-600/25 active:scale-95 transition-all cursor-pointer shrink-0"
-            title="Open Presentation in Fullscreen Landscape Mode"
-          >
-            <Maximize2 className="w-3.5 h-3.5" />
-            <span className="hidden xs:inline">Landscape</span>
-          </button>
         </div>
       </header>
 
-      {/* Main Interactive Stage Canvas (Responsive & Readable on Mobile Portrait) */}
-      <main className="flex-1 min-h-0 relative flex flex-col items-center justify-start p-3 sm:p-5 z-20 overflow-y-auto w-full overscroll-contain">
+      {/* Main Interactive Stage Canvas (Responsive & Full-Width on Mobile) */}
+      <main className="flex-1 min-h-0 relative w-full overflow-y-auto px-3 sm:px-6 py-4 sm:py-6 z-20 overscroll-contain flex flex-col items-stretch">
         {/* Glow ambient lights */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
 
-        <div className="w-full max-w-xl mx-auto my-auto py-2 z-10 animate-fade-in">
+        <div className="w-full max-w-2xl mx-auto my-auto min-w-[280px] flex-1 flex flex-col justify-center shrink-0 z-10 animate-fade-in">
           {quizState.isLeaderboardActive ? (
             <div className="w-full space-y-4 pt-1 animate-fade-in text-center">
               <div className="flex items-center justify-center gap-2 mb-1">

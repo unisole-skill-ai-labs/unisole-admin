@@ -50,7 +50,7 @@ interface SlideRendererProps {
   isSubmitted?: boolean;
 }
 
-export default function SlideRenderer({
+function renderSlideContent({
   slide,
   buildStep = 999, // default to all revealed in static preview
   presentationTitle = "UNISOLE AI CAMPUS PROGRAM",
@@ -133,9 +133,9 @@ export default function SlideRenderer({
             </span>
           </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
+          <div className="w-full grid grid-cols-1 lg:grid-cols-12 gap-6 sm:gap-8 items-center">
             {/* Left: Avatar & Credentials */}
-            <div className="lg:col-span-5 flex flex-col items-center text-center space-y-4">
+            <div className="w-full lg:col-span-5 flex flex-col items-center text-center space-y-4">
               <div
                 className={`w-32 h-32 sm:w-44 sm:h-44 rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-500 p-1 shadow-2xl transition-all duration-300 ease-out ${
                   currentStep >= 0 ? "scale-100 opacity-100" : "scale-95 opacity-0"
@@ -151,7 +151,7 @@ export default function SlideRenderer({
                 </div>
               </div>
 
-              <div>
+              <div className="w-full">
                 <h3 className="text-xl sm:text-3xl font-black text-white">{slide.title || "AJAY MOKTA"}</h3>
                 <p className="text-xs sm:text-sm text-indigo-300 font-medium mt-0.5">
                   {slide.subtitle || "Founder, UNISOLE Skill AI Labs · B.Tech, NIT Hamirpur"}
@@ -160,7 +160,7 @@ export default function SlideRenderer({
             </div>
 
             {/* Right: Journey & Quote */}
-            <div className="lg:col-span-7 space-y-4 sm:space-y-5">
+            <div className="w-full lg:col-span-7 space-y-4 sm:space-y-5">
               <div
                 className={`space-y-2.5 transition-all duration-300 ease-out ${
                   currentStep >= 1 ? "opacity-100 translate-x-0" : "opacity-0 translate-x-3"
@@ -3258,4 +3258,14 @@ export default function SlideRenderer({
       );
     }
   }
+}
+
+export default function SlideRenderer(props: SlideRendererProps) {
+  const content = renderSlideContent(props);
+  if (!content) return null;
+  return (
+    <div className="w-full min-w-[280px] max-w-5xl mx-auto flex flex-col justify-center shrink-0">
+      {content}
+    </div>
+  );
 }
