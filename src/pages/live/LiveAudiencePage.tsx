@@ -738,11 +738,11 @@ export default function LiveAudiencePage() {
                 >
                   <option value="">Select Branch</option>
                   <option value="BA">BA</option>
+                  <option value="BBA">BBA</option>
                   <option value="BCOM">BCOM</option>
                   <option value="BCA">BCA</option>
-                  <option value="DCA">DCA</option>
                   <option value="MCA">MCA</option>
-                  <option value="BSC non med">BSC non med</option>
+                  <option value="BSC Non-Med">BSC Non-Med</option>
                   <option value="BSC Med">BSC Med</option>
                   <option value="Others">Others</option>
                 </select>
@@ -965,11 +965,11 @@ export default function LiveAudiencePage() {
                     className="px-2.5 py-1 bg-zinc-950 border border-indigo-500 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
                   >
                     <option value="BA">BA</option>
+                    <option value="BBA">BBA</option>
                     <option value="BCOM">BCOM</option>
                     <option value="BCA">BCA</option>
-                    <option value="DCA">DCA</option>
                     <option value="MCA">MCA</option>
-                    <option value="BSC non med">BSC non med</option>
+                    <option value="BSC Non-Med">BSC Non-Med</option>
                     <option value="BSC Med">BSC Med</option>
                     <option value="Others">Others</option>
                   </select>
