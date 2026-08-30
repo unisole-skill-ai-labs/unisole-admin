@@ -222,7 +222,11 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
                       {s.phone ? `+91 ${s.phone}` : "—"}
                     </td>
                     <td className="py-3.5 px-4">
-                      {s.signupSource === "PAMPHLET_QR" || s.signupSource === "PAMPHLET" ? (
+                      {s.role !== "STUDENT" ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20 font-mono">
+                          🛡️ Staff / Admin
+                        </span>
+                      ) : s.signupSource === "PAMPHLET_QR" || s.signupSource === "PAMPHLET" ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono">
                           📰 Pamphlet QR
                         </span>
@@ -244,15 +248,28 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
                       )}
                     </td>
                     <td className="py-3.5 px-4">
-                      <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">
-                        {s.collegeName || s.signupCollegeName || "—"}
-                      </div>
-                      <div className="text-[11px] text-zinc-400 font-mono truncate max-w-[180px]">
-                        {s.branch || "General"}
-                      </div>
+                      {s.role !== "STUDENT" ? (
+                        <div>
+                          <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">
+                            {s.designation || "Core Team"}
+                          </div>
+                          <div className="text-[11px] text-zinc-400 font-mono truncate max-w-[180px]">
+                            Internal Staff
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">
+                            {s.collegeName || s.signupCollegeName || "—"}
+                          </div>
+                          <div className="text-[11px] text-zinc-400 font-mono truncate max-w-[180px]">
+                            {s.branch || "General"}
+                          </div>
+                        </div>
+                      )}
                     </td>
                     <td className="py-3.5 px-4">
-                      <Badge variant={s.role === "ADMIN" ? "rose" : "brand"} size="sm">
+                      <Badge variant={s.role === "SUPER_ADMIN" ? "rose" : s.role === "ADMIN" ? "rose" : s.role === "MEMBER" ? "brand" : "default"} size="sm">
                         {s.role || "STUDENT"}
                       </Badge>
                     </td>
