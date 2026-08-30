@@ -4,9 +4,13 @@ import { useSelector } from "react-redux";
 import {
   useGetCollegeAnalyticsQuery,
   useUpdateCollegeMutation,
+  useDeleteCollegeMutation,
   useCreateBranchMutation,
   useUpdateBranchMutation,
   useDeleteBranchMutation,
+  useCreatePresentationMutation,
+  useDeletePresentationMutation,
+  useLaunchSessionMutation,
 } from "../../store";
 import {
   ArrowLeft,
@@ -27,9 +31,22 @@ import {
   TrendingUp,
   Percent,
   Award,
+  Trash2,
+  ExternalLink,
+  QrCode,
+  Copy,
+  Check,
+  AlertTriangle,
+  Download,
+  Phone,
+  BarChart3,
+  Building2,
+  Radio,
+  FileText,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
+import Modal from "../../components/ui/Modal";
 import Input from "../../components/ui/Input";
 
 export default function CollegeDetailPage() {
@@ -43,46 +60,86 @@ export default function CollegeDetailPage() {
   );
 
   const [updateCollege, { isLoading: isUpdatingCollege }] = useUpdateCollegeMutation();
+  const [deleteCollege, { isLoading: isDeletingCollege }] = useDeleteCollegeMutation();
   const [createBranch, { isLoading: isCreatingBranch }] = useCreateBranchMutation();
   const [updateBranch, { isLoading: isUpdatingBranch }] = useUpdateBranchMutation();
+  const [deleteBranch, { isLoading: isDeletingBranch }] = useDeleteBranchMutation();
+  const [createPresentation, { isLoading: isCreatingDeck }] = useCreatePresentationMutation();
+  const [deletePresentation, { isLoading: isDeletingDeck }] = useDeletePresentationMutation();
+  const [launchSession, { isLoading: isLaunchingSession }] = useLaunchSessionMutation();
 
-  const [activeTab, setActiveTab] = useState<"branches" | "sessions" | "leads" | "students">("branches");
+  const [activeTab, setActiveTab] = useState<
+    "presentations" | "sessions" | "branches" | "leads" | "students" | "analytics"
+  >("presentations");
+
+  // Modals state
   const [editingCollege, setEditingCollege] = useState(false);
+  const [deletingCollege, setDeletingCollege] = useState(false);
   const [editingBranch, setEditingBranch] = useState<any>(null);
+  const [deletingBranch, setDeletingBranch] = useState<any>(null);
+  const [creatingDeck, setCreatingDeck] = useState(false);
+  const [deletingDeck, setDeletingDeck] = useState<any>(null);
+  const [launchingSessionForDeck, setLaunchingSessionForDeck] = useState<any>(null);
 
+  // Deck creation inputs
+  const [newDeckTitle, setNewDeckTitle] = useState("");
+  const [newDeckDesc, setNewDeckDesc] = useState("");
+
+  // Launch session state
+  const [customSessionCode, setCustomSessionCode] = useState("");
+  const [launchedData, setLaunchedData] = useState<{
+    session: any;
+    qrCodeDataUrl: string;
+    joinUrl: string;
+  } | null>(null);
+  const [copiedLink, setCopiedLink] = useState(false);
+
+  // Search & filter states
   const [searchLeads, setSearchLeads] = useState("");
+  const [leadBranchFilter, setLeadBranchFilter] = useState("ALL");
   const [searchStudents, setSearchStudents] = useState("");
 
   if (isLoading) {
     return (
-      <div className="h-[60vh] flex items-center justify-center">
-        <div className="w-8 h-8 rounded-full border-3 border-indigo-500/20 border-t-indigo-600 animate-spin" />
+      <div className="h-[60vh] flex items-center justify-center flex-col gap-3">
+        <div className="w-10 h-10 rounded-full border-3 border-indigo-500/20 border-t-indigo-600 animate-spin" />
+        <span className="text-xs text-zinc-400 font-medium">Loading University Campus Hub...</span>
       </div>
     );
   }
 
   if (!analytics || !analytics.college) {
     return (
-      <div className="p-12 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl">
-        <GraduationCap className="w-10 h-10 text-zinc-400 mx-auto mb-3" />
-        <h2 className="text-base font-bold text-zinc-800 dark:text-zinc-200">University Not Found</h2>
-        <p className="text-xs text-zinc-500 mt-1 mb-4">The university or college you requested does not exist or has been removed.</p>
-        <Button variant="secondary" size="sm" onClick={() => navigate("/metadata")}>
-          Back to Metadata & Colleges
+      <div className="p-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl space-y-4">
+        <GraduationCap className="w-12 h-12 text-zinc-400 mx-auto" />
+        <h2 className="text-lg font-bold text-zinc-800 dark:text-zinc-200">University Not Found</h2>
+        <p className="text-xs text-zinc-500 max-w-sm mx-auto">The university or college you requested does not exist or has been removed.</p>
+        <Button variant="primary" size="sm" onClick={() => navigate("/colleges")}>
+          Back to University Partners
         </Button>
       </div>
     );
   }
 
-  const { college, stats, branchBreakdown = [], sessions = [], recentLeads = [], enrolledStudents = [] } = analytics;
+  const {
+    college,
+    stats,
+    branchBreakdown = [],
+    presentations = [],
+    sessions = [],
+    recentLeads = [],
+    enrolledStudents = [],
+  } = analytics;
 
   const filteredLeads = recentLeads.filter((l: any) => {
     const q = searchLeads.toLowerCase();
-    return (
+    const matchesSearch =
       (l.name || "").toLowerCase().includes(q) ||
       (l.phone || "").toLowerCase().includes(q) ||
-      (l.branch || "").toLowerCase().includes(q)
-    );
+      (l.branch || "").toLowerCase().includes(q);
+    const matchesBranch =
+      leadBranchFilter === "ALL" || (l.branch || "").toLowerCase().includes(leadBranchFilter.toLowerCase());
+    return matchesSearch && matchesBranch;
   });
 
   const filteredStudents = enrolledStudents.filter((s: any) => {
@@ -100,6 +157,15 @@ export default function CollegeDetailPage() {
     refetch();
   };
 
+  const handleDeleteCollege = async () => {
+    try {
+      await deleteCollege({ baseUrl, id: college.id }).unwrap();
+      navigate("/colleges");
+    } catch (err: any) {
+      alert("Failed to delete university: " + (err?.data?.message || err.message));
+    }
+  };
+
   const handleSaveBranch = async (formData: any) => {
     if (editingBranch === "create") {
       await createBranch({
@@ -110,387 +176,815 @@ export default function CollegeDetailPage() {
       await updateBranch({
         baseUrl,
         id: editingBranch.id,
-        body: formData,
+        body: { ...formData, collegeId: college.id },
       }).unwrap();
     }
     setEditingBranch(null);
     refetch();
   };
 
+  const handleDeleteBranch = async () => {
+    if (!deletingBranch) return;
+    try {
+      await deleteBranch({ baseUrl, id: deletingBranch.id }).unwrap();
+      setDeletingBranch(null);
+      refetch();
+    } catch (err: any) {
+      alert("Failed to delete branch: " + (err?.data?.message || err.message));
+    }
+  };
+
+  const handleCreateDeck = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newDeckTitle.trim()) return;
+    try {
+      const res: any = await createPresentation({
+        baseUrl,
+        body: {
+          title: newDeckTitle.trim(),
+          description: newDeckDesc.trim(),
+          collegeId: college.id,
+        },
+      }).unwrap();
+      setCreatingDeck(false);
+      setNewDeckTitle("");
+      setNewDeckDesc("");
+      refetch();
+      if (res?.data?.id) {
+        navigate(`/presentations/builder/${res.data.id}`);
+      }
+    } catch (err: any) {
+      alert("Failed to create pitch deck: " + (err?.data?.message || err.message));
+    }
+  };
+
+  const handleDeleteDeck = async () => {
+    if (!deletingDeck) return;
+    try {
+      await deletePresentation({ baseUrl, id: deletingDeck.id }).unwrap();
+      setDeletingDeck(null);
+      refetch();
+    } catch (err: any) {
+      alert("Failed to delete pitch deck: " + (err?.data?.message || err.message));
+    }
+  };
+
+  const handleLaunchSession = async (deck: any) => {
+    try {
+      const res: any = await launchSession({
+        baseUrl,
+        id: deck.id,
+        body: {
+          collegeId: college.id,
+          customCode: customSessionCode.trim() || undefined,
+        },
+      }).unwrap();
+      setLaunchedData(res?.data || null);
+      setCustomSessionCode("");
+      refetch();
+    } catch (err: any) {
+      alert("Failed to launch session: " + (err?.data?.message || err.message));
+    }
+  };
+
+  const handleCopyLink = (text: string) => {
+    navigator.clipboard.writeText(text);
+    setCopiedLink(true);
+    setTimeout(() => setCopiedLink(false), 2000);
+  };
+
+  // CSV Export for this college's captured leads
+  const handleExportCSV = () => {
+    if (recentLeads.length === 0) {
+      alert("No student leads to export for this college yet.");
+      return;
+    }
+
+    const headers = [
+      "Student Name",
+      "WhatsApp Mobile",
+      "University / College",
+      "Academic Branch",
+      "Year of Study",
+      "Quiz / Engagement Score",
+      "Joined Date & Time",
+    ];
+
+    const csvRows = [
+      headers.join(","),
+      ...recentLeads.map((l: any) =>
+        [
+          `"${(l.name || "").replace(/"/g, '""')}"`,
+          `"${(l.phone || "").replace(/"/g, '""')}"`,
+          `"${(college.name || "").replace(/"/g, '""')}"`,
+          `"${(l.branch || "Unspecified").replace(/"/g, '""')}"`,
+          `"${(l.yearOfStudy || "—").replace(/"/g, '""')}"`,
+          l.totalScore || 0,
+          `"${l.joinedAt ? new Date(l.joinedAt).toLocaleString() : ""}"`,
+        ].join(",")
+      ),
+    ];
+
+    const blob = new Blob([csvRows.join("\n")], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.setAttribute("href", url);
+    link.setAttribute(
+      "download",
+      `unisole_leads_${college.slug || college.id}_${new Date().toISOString().split("T")[0]}.csv`
+    );
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
   return (
     <div className="space-y-6 animate-fade-in pb-16">
       {/* ─── 1. Header Banner & Quick Actions ─────────────────────────────── */}
-      <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-3xl p-6 shadow-xs">
+      <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 rounded-3xl p-6 sm:p-7 shadow-xs">
         <div className="flex items-start gap-4">
           <Button
             variant="ghost"
             size="sm"
-            onClick={() => navigate("/metadata")}
-            className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 p-2 rounded-xl mt-1"
+            onClick={() => navigate("/colleges")}
+            className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 p-2.5 rounded-2xl mt-1 border border-zinc-200/80 dark:border-zinc-800"
           >
             <ArrowLeft className="w-4 h-4" />
           </Button>
 
-          <div className="space-y-1">
+          <div className="space-y-1.5">
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-xs font-mono font-bold px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+              <span className="text-xs font-mono font-black px-3 py-0.5 rounded-full bg-gradient-to-r from-indigo-500/10 to-violet-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
                 {college.shortName || college.slug?.toUpperCase() || "CAMPUS"}
               </span>
               <Badge variant={college.isActive ? "emerald" : "default"}>
-                {college.isActive ? "Active University" : "Inactive Partner"}
+                {college.isActive ? "Active University Partner" : "Inactive"}
               </Badge>
               <span className="text-xs text-zinc-400 font-mono">ID: {college.id}</span>
             </div>
 
-            <h1 className="text-xl sm:text-2xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
+            <h1 className="text-xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
               {college.name}
             </h1>
             {college.description && (
-              <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-2xl leading-relaxed">
+              <p className="text-xs sm:text-sm text-zinc-500 dark:text-zinc-400 max-w-2xl leading-relaxed">
                 {college.description}
               </p>
             )}
           </div>
         </div>
 
-        <div className="flex flex-wrap items-center gap-2 shrink-0">
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => navigate("/leads")}
-            icon={TrendingUp}
-            title="View All Campus Lead Diversification"
-          >
-            Leads Hub
-          </Button>
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => setEditingCollege(true)}
-            icon={Edit2}
-          >
-            Edit Campus
-          </Button>
+        {/* Action Buttons Toolbar */}
+        <div className="flex flex-wrap items-center gap-2 pt-2 lg:pt-0">
           <Button
             variant="primary"
             size="sm"
-            onClick={() => navigate("/presentations")}
+            onClick={() => {
+              if (presentations.length > 0) {
+                setLaunchingSessionForDeck(presentations[0]);
+              } else {
+                setCreatingDeck(true);
+              }
+            }}
             icon={Play}
+            className="font-bold shadow-md shadow-indigo-500/10"
           >
-            Roadshows & Decks
+            Launch Roadshow
           </Button>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setCreatingDeck(true)}
+            icon={Sparkles}
+          >
+            New Pitch Deck
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setEditingBranch("create")}
+            icon={Plus}
+          >
+            Add Branch
+          </Button>
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setEditingCollege(true)}
+            icon={Edit2}
+            className="p-2.5 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-800 rounded-xl"
+            title="Edit University"
+          />
+
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={() => setDeletingCollege(true)}
+            icon={Trash2}
+            className="p-2.5 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-zinc-200 dark:border-zinc-800 rounded-xl"
+            title="Delete University"
+          />
         </div>
       </div>
 
-      {/* ─── 2. Executive KPI Cards ───────────────────────────────────────── */}
-      <div className="grid grid-cols-2 lg:grid-cols-5 gap-3.5 sm:gap-4">
-        {/* Decks Given */}
-        <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-              Roadshows Given
+      {/* ─── 2. Executive KPI Cards ────────────────────────────────────────── */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3.5">
+        <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            Pitch Decks
+          </span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl sm:text-2xl font-black font-mono text-indigo-600 dark:text-indigo-400">
+              {presentations.length}
             </span>
-            <div className="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-              <Sparkles className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 font-mono">
-              {stats.totalDecksGiven}
-            </span>
-            <span className="block text-[10px] text-zinc-400 mt-0.5">Presentation sessions</span>
+            <span className="text-[10px] text-zinc-400">college-specific</span>
           </div>
         </div>
 
-        {/* Total Captured Leads */}
-        <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-              Campus Leads
+        <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            Roadshows Hosted
+          </span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl sm:text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+              {sessions.length}
             </span>
-            <div className="w-7 h-7 rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-              <Users className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 font-mono">
-              {stats.totalLeadsCaptured}
-            </span>
-            <span className="block text-[10px] text-zinc-400 mt-0.5">Total attendees captured</span>
+            <span className="text-[10px] text-zinc-400">sessions</span>
           </div>
         </div>
 
-        {/* LMS Enrollments */}
-        <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-              LMS Enrollments
+        <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            Captured Leads
+          </span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl sm:text-2xl font-black font-mono text-zinc-900 dark:text-zinc-100">
+              {stats.totalLeadsCaptured || recentLeads.length}
             </span>
-            <div className="w-7 h-7 rounded-xl bg-violet-50 dark:bg-violet-950/60 text-violet-600 dark:text-violet-400 flex items-center justify-center">
-              <BookOpen className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 font-mono">
-              {stats.totalEnrollmentsCount}
-            </span>
-            <span className="block text-[10px] text-zinc-400 mt-0.5">
-              Across {stats.totalLearnersEnrolled} students
-            </span>
+            <span className="text-[10px] text-zinc-400">students</span>
           </div>
         </div>
 
-        {/* Active Academic Branches */}
-        <div className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-              Active Branches
+        <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            Enrolled Learners
+          </span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl sm:text-2xl font-black font-mono text-violet-600 dark:text-violet-400">
+              {stats.totalLearnersEnrolled || enrolledStudents.length}
             </span>
-            <div className="w-7 h-7 rounded-xl bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 flex items-center justify-center">
-              <Layers className="w-3.5 h-3.5" />
-            </div>
-          </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 font-mono">
-              {stats.totalBranchesCount}
-            </span>
-            <span className="block text-[10px] text-zinc-400 mt-0.5">Departments configured</span>
+            <span className="text-[10px] text-zinc-400">users</span>
           </div>
         </div>
 
-        {/* Quiz Avg Score */}
-        <div className="col-span-2 lg:col-span-1 p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs flex flex-col justify-between">
-          <div className="flex items-center justify-between">
-            <span className="text-[10px] sm:text-[11px] font-bold text-zinc-400 uppercase tracking-wider">
-              Avg Roadshow Score
+        <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            Avg Quiz Points
+          </span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl sm:text-2xl font-black font-mono text-amber-500">
+              {stats.averageQuizScore || 0}
             </span>
-            <div className="w-7 h-7 rounded-xl bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center">
-              <Flame className="w-3.5 h-3.5" />
-            </div>
+            <span className="text-[10px] text-zinc-400">pts</span>
           </div>
-          <div className="mt-3">
-            <span className="text-2xl sm:text-3xl font-black text-zinc-900 dark:text-zinc-100 font-mono">
-              {stats.averageQuizScore} <span className="text-sm font-normal text-zinc-400">pts</span>
+        </div>
+
+        <div className="p-4 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs flex flex-col justify-between">
+          <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block mb-1">
+            Active Branches
+          </span>
+          <div className="flex items-baseline gap-2">
+            <span className="text-xl sm:text-2xl font-black font-mono text-zinc-900 dark:text-zinc-100">
+              {branchBreakdown.length}
             </span>
-            <span className="block text-[10px] text-zinc-400 mt-0.5">
-              Top: {stats.topScorer ? `${stats.topScorer.name} (${stats.topScorer.totalScore} pts)` : "—"}
-            </span>
+            <span className="text-[10px] text-zinc-400">dept</span>
           </div>
         </div>
       </div>
 
-      {/* ─── 3. Navigation Tabs ───────────────────────────────────────────── */}
-      <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+      {/* ─── 3. Modular Tab Navigation ────────────────────────────────────── */}
+      <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2 overflow-x-auto">
         <button
-          onClick={() => setActiveTab("branches")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
-            activeTab === "branches"
+          onClick={() => setActiveTab("presentations")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+            activeTab === "presentations"
               ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
               : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
           }`}
         >
-          <Layers className="w-3.5 h-3.5" />
-          <span>Academic Branches & Participation ({branchBreakdown.length})</span>
+          <Sparkles className="w-4 h-4 text-amber-500" />
+          <span>Pitch Decks ({presentations.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab("sessions")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
             activeTab === "sessions"
               ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
               : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
           }`}
         >
-          <Sparkles className="w-3.5 h-3.5" />
-          <span>Roadshow Decks ({sessions.length})</span>
+          <Radio className="w-4 h-4 text-emerald-500" />
+          <span>Roadshow Sessions ({sessions.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("branches")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+            activeTab === "branches"
+              ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+          }`}
+        >
+          <BookOpen className="w-4 h-4 text-indigo-500" />
+          <span>Academic Branches ({branchBreakdown.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab("leads")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
             activeTab === "leads"
               ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
               : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
           }`}
         >
-          <Users className="w-3.5 h-3.5" />
-          <span>Campus Attendees ({recentLeads.length})</span>
+          <Users className="w-4 h-4 text-cyan-500" />
+          <span>Campus Leads ({recentLeads.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab("students")}
-          className={`px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-2 ${
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
             activeTab === "students"
               ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
               : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
           }`}
         >
-          <BookOpen className="w-3.5 h-3.5" />
-          <span>Enrolled LMS Learners ({enrolledStudents.length})</span>
+          <GraduationCap className="w-4 h-4 text-violet-500" />
+          <span>Enrolled Learners ({enrolledStudents.length})</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab("analytics")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
+            activeTab === "analytics"
+              ? "bg-zinc-900 text-white dark:bg-white dark:text-zinc-900 shadow-sm"
+              : "text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+          }`}
+        >
+          <TrendingUp className="w-4 h-4 text-rose-500" />
+          <span>Branch Diversification</span>
         </button>
       </div>
 
-      {/* ─── TAB 1: ACADEMIC BRANCHES & PARTICIPATION BREAKDOWN ───────────── */}
-      {activeTab === "branches" && (
-        <div className="space-y-6 animate-fade-in">
-          {/* Visual Percentage Distribution Header */}
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 p-6 shadow-xs space-y-4">
-            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-              <div>
-                <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
-                  <TrendingUp className="w-4 h-4 text-indigo-500" />
-                  Branch-wise Roadshow Participation Share
-                </h3>
-                <p className="text-xs text-zinc-400 mt-0.5">
-                  Real-time breakdown of campus attendee share (%) across engineering & science departments.
-                </p>
-              </div>
+      {/* ─── TAB 1: PRESENTATIONS & PITCH DECKS ────────────────────────────── */}
+      {activeTab === "presentations" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Pitch Decks for {college.name}
+              </h3>
+              <p className="text-[11px] text-zinc-400">
+                Presentations tailored specifically for this university auditorium and roadshows.
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setCreatingDeck(true)}
+              icon={Plus}
+            >
+              Create Presentation Deck
+            </Button>
+          </div>
 
+          {presentations.length === 0 ? (
+            <div className="p-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl space-y-3">
+              <Sparkles className="w-10 h-10 mx-auto text-amber-400" />
+              <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                No presentation decks created yet for {college.name}
+              </p>
+              <p className="text-xs text-zinc-400 max-w-md mx-auto">
+                Create a presentation deck specifically for this campus to host animated roadshow sessions and interactive live quizzes.
+              </p>
               <Button
                 variant="primary"
                 size="sm"
-                onClick={() => setEditingBranch("create")}
+                onClick={() => setCreatingDeck(true)}
                 icon={Plus}
               >
-                Add Branch to {college.shortName || "University"}
+                Create Deck for {college.shortName || "this College"}
               </Button>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {presentations.map((deck: any) => {
+                const slides = Array.isArray(deck.slides) ? deck.slides : [];
+                return (
+                  <div
+                    key={deck.id}
+                    className="p-5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xs hover:border-indigo-500/50 transition-all flex flex-col justify-between group"
+                  >
+                    <div className="space-y-3">
+                      <div className="flex items-start justify-between gap-2">
+                        <div>
+                          <span className="text-[10px] font-mono font-bold px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
+                            {college.shortName || "CAMPUS"}
+                          </span>
+                          <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 line-clamp-1 mt-1.5 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
+                            {deck.title}
+                          </h4>
+                        </div>
+                        <Badge variant="emerald">{slides.length} Slides</Badge>
+                      </div>
 
-            {/* Visual Progress Stacked Bar */}
-            <div className="space-y-3 pt-2">
-              <div className="w-full h-4 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden flex">
-                {branchBreakdown.map((b: any, idx: number) => {
-                  const colors = [
-                    "bg-indigo-500",
-                    "bg-emerald-500",
-                    "bg-amber-500",
-                    "bg-rose-500",
-                    "bg-violet-500",
-                    "bg-cyan-500",
-                    "bg-orange-500",
-                    "bg-pink-500",
-                    "bg-teal-500",
-                    "bg-slate-400",
-                  ];
-                  const color = colors[idx % colors.length];
-                  if (b.participationPercentage === 0) return null;
-                  return (
-                    <div
-                      key={b.id}
-                      style={{ width: `${b.participationPercentage}%` }}
-                      className={`${color} h-full transition-all duration-500`}
-                      title={`${b.name}: ${b.participationPercentage}% (${b.leadsCount} leads)`}
-                    />
-                  );
-                })}
-              </div>
+                      {deck.description && (
+                        <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed">
+                          {deck.description}
+                        </p>
+                      )}
 
-              {/* Legend Badges */}
-              <div className="flex flex-wrap items-center gap-2 pt-1">
-                {branchBreakdown.map((b: any, idx: number) => {
-                  const dotColors = [
-                    "bg-indigo-500",
-                    "bg-emerald-500",
-                    "bg-amber-500",
-                    "bg-rose-500",
-                    "bg-violet-500",
-                    "bg-cyan-500",
-                    "bg-orange-500",
-                    "bg-pink-500",
-                    "bg-teal-500",
-                    "bg-slate-400",
-                  ];
-                  return (
-                    <div
-                      key={b.id}
-                      className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800 text-[11px]"
-                    >
-                      <span className={`w-2 h-2 rounded-full ${dotColors[idx % dotColors.length]}`} />
-                      <span className="font-semibold text-zinc-800 dark:text-zinc-200">
-                        {b.code || b.name}
-                      </span>
-                      <span className="font-mono text-zinc-400 font-bold">
-                        {b.participationPercentage}%
-                      </span>
+                      <div className="flex items-center gap-3 text-[11px] text-zinc-400 pt-1 font-mono">
+                        <span>Theme: {deck.theme || "dark"}</span>
+                        <span>•</span>
+                        <span>
+                          {deck.createdAt ? new Date(deck.createdAt).toLocaleDateString() : ""}
+                        </span>
+                      </div>
                     </div>
-                  );
-                })}
-              </div>
+
+                    <div className="pt-4 mt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between gap-2">
+                      <Button
+                        variant="primary"
+                        size="sm"
+                        icon={Play}
+                        onClick={() => {
+                          setLaunchingSessionForDeck(deck);
+                          handleLaunchSession(deck);
+                        }}
+                        className="text-xs font-bold"
+                      >
+                        Launch
+                      </Button>
+
+                      <Link to={`/presentations/builder/${deck.id}`}>
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          icon={Edit2}
+                          className="text-xs font-bold"
+                        >
+                          Edit Slides
+                        </Button>
+                      </Link>
+
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeletingDeck(deck)}
+                        icon={Trash2}
+                        className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                        title="Delete Deck"
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── TAB 2: ROADSHOW SESSIONS ─────────────────────────────────────── */}
+      {activeTab === "sessions" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Auditorium Roadshow Sessions
+              </h3>
+              <p className="text-[11px] text-zinc-400">
+                Active projector stages and past roadshows conducted at {college.name}.
+              </p>
+            </div>
+
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => {
+                if (presentations.length > 0) {
+                  setLaunchingSessionForDeck(presentations[0]);
+                } else {
+                  setCreatingDeck(true);
+                }
+              }}
+              icon={Play}
+            >
+              Start New Live Session
+            </Button>
           </div>
 
-          {/* Branches Detailed Table */}
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs overflow-hidden">
-            <div className="p-4 sm:px-6 border-b border-zinc-100 dark:border-zinc-800/80 flex items-center justify-between">
-              <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 font-mono">
-                Configured Academic Branches ({branchBreakdown.length})
+          {sessions.length === 0 ? (
+            <div className="p-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl space-y-3">
+              <Radio className="w-10 h-10 mx-auto text-zinc-400" />
+              <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                No roadshow sessions hosted yet for {college.name}
+              </p>
+              <p className="text-xs text-zinc-400 max-w-md mx-auto">
+                Launch a live presentation to project the interactive deck in the auditorium and capture student leads in real time.
+              </p>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-zinc-50/80 dark:bg-zinc-800/40 text-zinc-500 dark:text-zinc-400 font-semibold border-b border-zinc-200 dark:border-zinc-800">
+                    <tr>
+                      <th className="py-3.5 px-5">Session Code</th>
+                      <th className="py-3.5 px-4">Pitch Deck</th>
+                      <th className="py-3.5 px-4">Status</th>
+                      <th className="py-3.5 px-4">Attendees</th>
+                      <th className="py-3.5 px-4">Started Time</th>
+                      <th className="py-3.5 px-5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                    {sessions.map((sess: any) => (
+                      <tr
+                        key={sess.id}
+                        className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
+                      >
+                        <td className="py-3.5 px-5 font-mono font-bold text-indigo-600 dark:text-indigo-400 text-sm">
+                          {sess.sessionCode}
+                        </td>
+                        <td className="py-3.5 px-4 font-bold text-zinc-800 dark:text-zinc-200">
+                          {sess.presentationTitle || "Campus Pitch Deck"}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                              sess.status === "LIVE"
+                                ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 animate-pulse"
+                                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                sess.status === "LIVE" ? "bg-emerald-500" : "bg-zinc-400"
+                              }`}
+                            />
+                            {sess.status}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-zinc-600 dark:text-zinc-400">
+                          {sess.activeAttendeesCount || 0} active
+                        </td>
+                        <td className="py-3.5 px-4 text-zinc-500 font-mono text-[11px]">
+                          {sess.startedAt
+                            ? new Date(sess.startedAt).toLocaleString()
+                            : sess.createdAt
+                            ? new Date(sess.createdAt).toLocaleString()
+                            : "—"}
+                        </td>
+                        <td className="py-3.5 px-5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            <Link to={`/presentations/live/${sess.id}`}>
+                              <Button variant="primary" size="sm" icon={Play} className="text-xs font-bold">
+                                Projector Stage
+                              </Button>
+                            </Link>
+                            <Link to={`/presentations/analytics/${sess.id}`}>
+                              <Button variant="secondary" size="sm" icon={BarChart3} className="text-xs">
+                                Analytics
+                              </Button>
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* ─── TAB 3: ACADEMIC BRANCHES ─────────────────────────────────────── */}
+      {activeTab === "branches" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+            <div>
+              <h3 className="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                Academic Branches & Specializations
               </h3>
+              <p className="text-[11px] text-zinc-400">
+                Departments registered under {college.name} for audience fast-pass onboarding.
+              </p>
+            </div>
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={() => setEditingBranch("create")}
+              icon={Plus}
+            >
+              Add Academic Branch
+            </Button>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+            {branchBreakdown.map((b: any) => (
+              <div
+                key={b.id}
+                className="p-5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xs hover:border-emerald-500/50 transition-all flex flex-col justify-between group"
+              >
+                <div className="space-y-3">
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-xs font-mono shadow-xs">
+                        {b.code || b.name.slice(0, 3).toUpperCase()}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 line-clamp-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                          {b.name}
+                        </h4>
+                        <span className="text-[10px] text-zinc-400 font-mono uppercase">
+                          Code: {b.code || "DEPT"}
+                        </span>
+                      </div>
+                    </div>
+                    <Badge variant={b.isActive !== false ? "emerald" : "default"}>
+                      {b.isActive !== false ? "Active" : "Inactive"}
+                    </Badge>
+                  </div>
+
+                  {b.description && (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-2 leading-relaxed">
+                      {b.description}
+                    </p>
+                  )}
+
+                  {/* Branch Metrics */}
+                  <div className="grid grid-cols-3 gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/80">
+                    <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/60 text-center">
+                      <span className="text-[10px] text-zinc-400 block font-semibold">Leads</span>
+                      <span className="text-xs font-black text-zinc-800 dark:text-zinc-200 font-mono">
+                        {b.leadsCount || 0}
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/60 text-center">
+                      <span className="text-[10px] text-zinc-400 block font-semibold">Share</span>
+                      <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                        {b.participationPercentage || b.percentage || 0}%
+                      </span>
+                    </div>
+                    <div className="p-2 rounded-xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-100 dark:border-zinc-800/60 text-center">
+                      <span className="text-[10px] text-zinc-400 block font-semibold">Avg Score</span>
+                      <span className="text-xs font-black text-amber-500 font-mono">
+                        {b.averageScore || 0} pts
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-4 mt-4 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-400">
+                  <span className="font-mono text-[10px]">ID: {b.id}</span>
+                  {b.id !== "other" && (
+                    <div className="flex items-center gap-1">
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setEditingBranch(b)}
+                        icon={Edit2}
+                        className="p-2 text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100"
+                        title="Edit Branch"
+                      />
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setDeletingBranch(b)}
+                        icon={Trash2}
+                        className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                        title="Delete Branch"
+                      />
+                    </div>
+                  )}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {/* ─── TAB 4: CAMPUS LEADS & LEADERBOARD ────────────────────────────── */}
+      {activeTab === "leads" && (
+        <div className="space-y-4">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:max-w-2xl">
+              <div className="relative w-full sm:w-72">
+                <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  placeholder="Search students by name, phone, branch..."
+                  value={searchLeads}
+                  onChange={(e) => setSearchLeads(e.target.value)}
+                  className="w-full pl-9 pr-3 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
+                />
+              </div>
+
+              <select
+                value={leadBranchFilter}
+                onChange={(e) => setLeadBranchFilter(e.target.value)}
+                className="w-full sm:w-auto px-3.5 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-bold text-zinc-800 dark:text-zinc-200 focus:outline-hidden"
+              >
+                <option value="ALL">All Academic Branches</option>
+                {branchBreakdown.map((b: any) => (
+                  <option key={b.id} value={b.name}>
+                    {b.name} ({b.leadsCount || 0} leads)
+                  </option>
+                ))}
+              </select>
             </div>
 
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={handleExportCSV}
+              icon={Download}
+              className="w-full sm:w-auto text-xs font-bold"
+            >
+              Export Leads (CSV)
+            </Button>
+          </div>
+
+          <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs overflow-hidden">
             <div className="overflow-x-auto">
               <table className="w-full text-left text-xs">
                 <thead className="bg-zinc-50/80 dark:bg-zinc-800/40 text-zinc-500 dark:text-zinc-400 font-semibold border-b border-zinc-200 dark:border-zinc-800">
                   <tr>
-                    <th className="py-3 px-5">Department / Branch</th>
-                    <th className="py-3 px-4">Code</th>
-                    <th className="py-3 px-4 text-center">Participation %</th>
-                    <th className="py-3 px-4 text-center">Captured Leads</th>
-                    <th className="py-3 px-4 text-center">Enrolled Students</th>
-                    <th className="py-3 px-4 text-center">Avg Quiz Score</th>
-                    <th className="py-3 px-4">Status</th>
-                    <th className="py-3 px-5 text-right">Actions</th>
+                    <th className="py-3.5 px-5">Rank</th>
+                    <th className="py-3.5 px-4">Student Name</th>
+                    <th className="py-3.5 px-4">WhatsApp Phone</th>
+                    <th className="py-3.5 px-4">Branch / Year</th>
+                    <th className="py-3.5 px-4">Quiz Score</th>
+                    <th className="py-3.5 px-5 text-right">Joined Date</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                  {branchBreakdown.map((b: any) => (
-                    <tr
-                      key={b.id}
-                      className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
-                    >
-                      <td className="py-3.5 px-5 font-bold text-zinc-900 dark:text-zinc-100">
-                        {b.name}
-                        {b.description && (
-                          <span className="block text-[11px] font-normal text-zinc-400 line-clamp-1 mt-0.5">
-                            {b.description}
-                          </span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono font-bold text-indigo-600 dark:text-indigo-400 uppercase">
-                        {b.code || "—"}
-                      </td>
-                      <td className="py-3.5 px-4 text-center">
-                        <div className="inline-flex items-center gap-1.5 font-mono font-black text-zinc-800 dark:text-zinc-200 bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md text-[11px]">
-                          {b.participationPercentage}%
-                        </div>
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-mono font-bold text-zinc-900 dark:text-zinc-100">
-                        {b.leadsCount}
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-mono text-zinc-600 dark:text-zinc-400">
-                        {b.studentsCount || 0}
-                      </td>
-                      <td className="py-3.5 px-4 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        {b.averageScore} pts
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <Badge variant={b.isActive ? "emerald" : "default"}>
-                          {b.isActive ? "Active" : "Inactive"}
-                        </Badge>
-                      </td>
-                      <td className="py-3.5 px-5 text-right">
-                        {b.id !== "other" && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setEditingBranch(b)}
-                            icon={Edit2}
-                          >
-                            Edit
-                          </Button>
-                        )}
+                  {filteredLeads.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-16 text-center text-zinc-400 text-xs">
+                        No student leads found matching your criteria.
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    filteredLeads.map((lead: any, idx: number) => (
+                      <tr
+                        key={lead.id}
+                        className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
+                      >
+                        <td className="py-3.5 px-5">
+                          <span
+                            className={`font-mono font-bold px-2 py-0.5 rounded-md text-[11px] ${
+                              idx === 0
+                                ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
+                                : idx === 1
+                                ? "bg-slate-400/10 text-slate-400"
+                                : idx === 2
+                                ? "bg-amber-700/10 text-amber-700"
+                                : "text-zinc-500"
+                            }`}
+                          >
+                            #{idx + 1}
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-4 font-bold text-zinc-900 dark:text-zinc-100">
+                          {lead.name}
+                        </td>
+                        <td className="py-3.5 px-4 font-mono text-zinc-600 dark:text-zinc-400">
+                          +91 {lead.phone}
+                        </td>
+                        <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-300">
+                          <span className="font-semibold">{lead.branch || "Unspecified"}</span>
+                          {lead.yearOfStudy && (
+                            <span className="text-zinc-400 ml-1">({lead.yearOfStudy})</span>
+                          )}
+                        </td>
+                        <td className="py-3.5 px-4">
+                          <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
+                            {lead.totalScore || 0} pts
+                          </span>
+                        </td>
+                        <td className="py-3.5 px-5 text-right font-mono text-zinc-400 text-[11px]">
+                          {lead.joinedAt ? new Date(lead.joinedAt).toLocaleString() : "—"}
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -498,73 +992,64 @@ export default function CollegeDetailPage() {
         </div>
       )}
 
-      {/* ─── TAB 2: ROADSHOW SESSIONS DELIVERED ───────────────────────────── */}
-      {activeTab === "sessions" && (
-        <div className="space-y-4 animate-fade-in">
-          {sessions.length === 0 ? (
-            <div className="p-12 text-center bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl">
-              <Sparkles className="w-8 h-8 mx-auto text-zinc-400 mb-2" />
-              <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">No Roadshows Conducted Yet</p>
-              <p className="text-[11px] text-zinc-400 mt-1 mb-4">
-                Launch a live presentation session linked to {college.name} to start collecting attendee analytics.
+      {/* ─── TAB 5: ENROLLED LEARNERS ─────────────────────────────────────── */}
+      {activeTab === "students" && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+            <div className="relative w-full sm:w-80">
+              <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search enrolled learners by name or phone..."
+                value={searchStudents}
+                onChange={(e) => setSearchStudents(e.target.value)}
+                className="w-full pl-9 pr-3 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
+              />
+            </div>
+            <span className="text-xs text-zinc-400 font-bold">
+              {filteredStudents.length} Registered Learners
+            </span>
+          </div>
+
+          {filteredStudents.length === 0 ? (
+            <div className="p-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl space-y-3">
+              <GraduationCap className="w-10 h-10 mx-auto text-zinc-400" />
+              <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
+                No enrolled learners found for {college.name}
               </p>
-              <Button variant="primary" size="sm" onClick={() => navigate("/presentations")} icon={Play}>
-                Launch Presentation Session
-              </Button>
+              <p className="text-xs text-zinc-400 max-w-md mx-auto">
+                Students who enroll in AI pathways and courses will appear here with active learning metrics.
+              </p>
             </div>
           ) : (
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {sessions.map((sess: any) => (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+              {filteredStudents.map((st: any) => (
                 <div
-                  key={sess.id}
-                  className="p-5 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs flex flex-col justify-between space-y-4 hover:border-indigo-500/40 transition-all"
+                  key={st.id}
+                  className="p-5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xs space-y-3"
                 >
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <span className="text-xs font-mono font-black px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
-                        {sess.sessionCode}
-                      </span>
-                      <Badge
-                        variant={
-                          sess.status === "LIVE"
-                            ? "rose"
-                            : sess.status === "ENDED"
-                            ? "emerald"
-                            : "default"
-                        }
-                      >
-                        {sess.status}
-                      </Badge>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-2xl bg-violet-50 dark:bg-violet-950/60 text-violet-600 dark:text-violet-400 flex items-center justify-center font-bold text-xs">
+                        {(st.name || "S").charAt(0).toUpperCase()}
+                      </div>
+                      <div>
+                        <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+                          {st.name || "Student"}
+                        </h4>
+                        <p className="text-xs text-zinc-400 font-mono">+91 {st.phone}</p>
+                      </div>
                     </div>
-
-                    <h4 className="text-sm font-extrabold text-zinc-900 dark:text-zinc-100">
-                      {sess.presentationTitle || "Campus Tech Pitch Deck"}
-                    </h4>
-
-                    <div className="flex items-center gap-3 text-xs text-zinc-500 dark:text-zinc-400 pt-1 font-mono">
-                      <span>Attendees: <strong>{sess.activeAttendeesCount}</strong></span>
-                      <span>•</span>
-                      <span>{new Date(sess.createdAt).toLocaleDateString()}</span>
-                    </div>
+                    <Badge variant="emerald">{st.enrolledCount || 1} Enrolled</Badge>
                   </div>
 
-                  <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => navigate(`/presentations/analytics/${sess.id}`)}
-                      icon={Users}
-                    >
-                      Lead Analytics
-                    </Button>
-                    <Button
-                      variant="primary"
-                      size="sm"
-                      onClick={() => navigate(`/presentations/live/${sess.id}`)}
-                      icon={Play}
-                    >
-                      Open Projector
-                    </Button>
+                  <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800/80 space-y-1.5">
+                    <span className="text-[10px] text-zinc-400 font-bold uppercase tracking-wider block">
+                      Branch & Intake
+                    </span>
+                    <p className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                      {st.branch || "General / Multidisciplinary"}
+                    </p>
                   </div>
                 </div>
               ))}
@@ -573,367 +1058,446 @@ export default function CollegeDetailPage() {
         </div>
       )}
 
-      {/* ─── TAB 3: CAPTURED ATTENDEES & LEADS ─────────────────────────────── */}
-      {activeTab === "leads" && (
-        <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs overflow-hidden animate-fade-in">
-          <div className="p-4 sm:px-6 border-b border-zinc-100 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 font-mono">
-              Roadshow Attendees ({filteredLeads.length})
-            </h3>
-            <div className="relative w-full sm:w-72">
-              <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search leads by name, phone, branch..."
-                value={searchLeads}
-                onChange={(e) => setSearchLeads(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
-              />
+      {/* ─── TAB 6: BRANCH DIVERSIFICATION & ANALYTICS ─────────────────────── */}
+      {activeTab === "analytics" && (
+        <div className="space-y-6">
+          <div className="p-6 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xs space-y-5">
+            <div>
+              <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                Department Participation Share
+              </h3>
+              <p className="text-xs text-zinc-400 mt-0.5">
+                Relative attendance and engagement breakdown across academic branches for {college.name}.
+              </p>
             </div>
-          </div>
 
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-zinc-50/80 dark:bg-zinc-800/40 text-zinc-500 dark:text-zinc-400 font-semibold border-b border-zinc-200 dark:border-zinc-800">
-                <tr>
-                  <th className="py-3 px-5">Rank</th>
-                  <th className="py-3 px-4">Student Name</th>
-                  <th className="py-3 px-4">WhatsApp Phone</th>
-                  <th className="py-3 px-4">Branch / Year</th>
-                  <th className="py-3 px-4 text-center">Score</th>
-                  <th className="py-3 px-5 text-right">Joined Time</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                {filteredLeads.length === 0 ? (
-                  <tr>
-                    <td colSpan={6} className="py-10 text-center text-zinc-400 text-xs">
-                      No attendee leads found for this college.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredLeads.map((lead: any, idx: number) => (
-                    <tr
-                      key={lead.id}
-                      className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
-                    >
-                      <td className="py-3 px-5">
-                        <span
-                          className={`font-mono font-bold px-2 py-0.5 rounded-md text-[11px] ${
-                            idx === 0
-                              ? "bg-amber-500/10 text-amber-500 border border-amber-500/20"
-                              : idx === 1
-                              ? "bg-slate-400/10 text-slate-400"
-                              : idx === 2
-                              ? "bg-amber-700/10 text-amber-700"
-                              : "text-zinc-500"
-                          }`}
-                        >
-                          #{idx + 1}
+            <div className="space-y-4">
+              {branchBreakdown.map((b: any) => {
+                const pct = b.participationPercentage || b.percentage || 0;
+                return (
+                  <div key={b.id} className="space-y-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="font-bold text-zinc-800 dark:text-zinc-200">
+                        {b.name} <span className="font-mono text-zinc-400">({b.code || "DEPT"})</span>
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-zinc-500 font-mono">{b.leadsCount || 0} leads</span>
+                        <span className="font-mono font-black text-indigo-600 dark:text-indigo-400">
+                          {pct}%
                         </span>
-                      </td>
-                      <td className="py-3 px-4 font-bold text-zinc-900 dark:text-zinc-100">
-                        {lead.name}
-                      </td>
-                      <td className="py-3 px-4 font-mono text-zinc-600 dark:text-zinc-400">
-                        +91 {lead.phone}
-                      </td>
-                      <td className="py-3 px-4 text-zinc-500 dark:text-zinc-400 font-medium">
-                        {lead.branch || "—"} {lead.yearOfStudy ? `(${lead.yearOfStudy})` : ""}
-                      </td>
-                      <td className="py-3 px-4 text-center font-mono font-bold text-emerald-600 dark:text-emerald-400">
-                        {lead.totalScore || 0} pts
-                      </td>
-                      <td className="py-3 px-5 text-right font-mono text-zinc-400 text-[11px]">
-                        {lead.joinedAt ? new Date(lead.joinedAt).toLocaleDateString() : "—"}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
-
-      {/* ─── TAB 4: REGISTERED LMS LEARNERS & ENROLLMENTS ─────────────────── */}
-      {activeTab === "students" && (
-        <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs overflow-hidden animate-fade-in">
-          <div className="p-4 sm:px-6 border-b border-zinc-100 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 font-mono">
-              Enrolled Learners ({filteredStudents.length})
-            </h3>
-            <div className="relative w-full sm:w-72">
-              <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Search registered learners..."
-                value={searchStudents}
-                onChange={(e) => setSearchStudents(e.target.value)}
-                className="w-full pl-9 pr-3 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
-              />
+                      </div>
+                    </div>
+                    <div className="w-full h-2.5 rounded-full bg-zinc-100 dark:bg-zinc-800 overflow-hidden">
+                      <div
+                        className="h-full bg-gradient-to-r from-indigo-500 to-violet-600 rounded-full transition-all duration-500"
+                        style={{ width: `${Math.max(pct, 2)}%` }}
+                      />
+                    </div>
+                  </div>
+                );
+              })}
             </div>
           </div>
-
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-xs">
-              <thead className="bg-zinc-50/80 dark:bg-zinc-800/40 text-zinc-500 dark:text-zinc-400 font-semibold border-b border-zinc-200 dark:border-zinc-800">
-                <tr>
-                  <th className="py-3 px-5">Student Name</th>
-                  <th className="py-3 px-4">WhatsApp Phone</th>
-                  <th className="py-3 px-4">Branch</th>
-                  <th className="py-3 px-4">Enrolled Pathways</th>
-                  <th className="py-3 px-5 text-right">Registration Date</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                {filteredStudents.length === 0 ? (
-                  <tr>
-                    <td colSpan={5} className="py-10 text-center text-zinc-400 text-xs">
-                      No registered LMS learners found from this college yet.
-                    </td>
-                  </tr>
-                ) : (
-                  filteredStudents.map((st: any) => (
-                    <tr
-                      key={st.id}
-                      className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
-                    >
-                      <td className="py-3.5 px-5 font-bold text-zinc-900 dark:text-zinc-100">
-                        {st.name || "Learner"}
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-zinc-600 dark:text-zinc-400">
-                        +91 {st.phone}
-                      </td>
-                      <td className="py-3.5 px-4 text-zinc-500 dark:text-zinc-400 font-medium">
-                        {st.branch || "—"}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        {st.enrollments && st.enrollments.length > 0 ? (
-                          <div className="flex flex-wrap gap-1.5">
-                            {st.enrollments.map((enr: any) => (
-                              <span
-                                key={enr.id}
-                                className="inline-flex items-center px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 font-mono text-[10px] font-bold border border-indigo-200/50 dark:border-indigo-800/50"
-                              >
-                                {enr.pathwayTitle || "Pathway"}
-                              </span>
-                            ))}
-                          </div>
-                        ) : (
-                          <span className="text-zinc-400 italic">No pathway active</span>
-                        )}
-                      </td>
-                      <td className="py-3.5 px-5 text-right font-mono text-zinc-400 text-[11px]">
-                        {new Date(st.createdAt).toLocaleDateString()}
-                      </td>
-                    </tr>
-                  ))
-                )}
-              </tbody>
-            </table>
-          </div>
         </div>
       )}
 
-      {/* ─── MODALS ───────────────────────────────────────────────────────── */}
-      {/* College Edit Modal */}
+      {/* ─── MODALS ────────────────────────────────────────────────────────── */}
+
+      {/* Edit College Modal */}
       {editingCollege && (
-        <CollegeModal
-          college={college}
-          isLoading={isUpdatingCollege}
+        <Modal
+          isOpen={true}
           onClose={() => setEditingCollege(false)}
-          onSave={handleSaveCollege}
-        />
+          title="Edit University Partner"
+          maxWidth="max-w-lg"
+        >
+          <CollegeEditForm
+            college={college}
+            isLoading={isUpdatingCollege}
+            onClose={() => setEditingCollege(false)}
+            onSave={handleSaveCollege}
+          />
+        </Modal>
       )}
 
-      {/* Branch Create/Edit Modal */}
+      {/* Delete College Modal */}
+      {deletingCollege && (
+        <Modal
+          isOpen={true}
+          onClose={() => setDeletingCollege(false)}
+          title="Delete University Partner"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              <div className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">
+                <p className="font-bold mb-1">Critical Action Confirmation</p>
+                Are you sure you want to permanently delete <span className="font-bold underline">{college.name}</span>?
+                This will automatically delete all {presentations.length} pitch decks, {sessions.length} roadshows, and {branchBreakdown.length} branches attached to this university.
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setDeletingCollege(false)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                loading={isDeletingCollege}
+                onClick={handleDeleteCollege}
+                icon={Trash2}
+              >
+                Confirm Delete University
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Add / Edit Branch Modal */}
       {editingBranch && (
-        <BranchModal
-          branch={editingBranch === "create" ? null : editingBranch}
-          collegeName={college.name}
-          isLoading={isCreatingBranch || isUpdatingBranch}
+        <Modal
+          isOpen={true}
           onClose={() => setEditingBranch(null)}
-          onSave={handleSaveBranch}
-        />
+          title={editingBranch === "create" ? `Add Branch for ${college.name}` : "Edit Academic Branch"}
+          maxWidth="max-w-lg"
+        >
+          <BranchForm
+            branch={editingBranch === "create" ? null : editingBranch}
+            collegeName={college.name}
+            isLoading={isCreatingBranch || isUpdatingBranch}
+            onClose={() => setEditingBranch(null)}
+            onSave={handleSaveBranch}
+          />
+        </Modal>
+      )}
+
+      {/* Delete Branch Modal */}
+      {deletingBranch && (
+        <Modal
+          isOpen={true}
+          onClose={() => setDeletingBranch(null)}
+          title="Delete Academic Branch"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              <div className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">
+                <p className="font-bold mb-1">Confirm Branch Deletion</p>
+                Delete branch <span className="font-bold underline">{deletingBranch.name}</span> from {college.name}?
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setDeletingBranch(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                loading={isDeletingBranch}
+                onClick={handleDeleteBranch}
+                icon={Trash2}
+              >
+                Confirm Delete
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Create Pitch Deck Modal */}
+      {creatingDeck && (
+        <Modal
+          isOpen={true}
+          onClose={() => setCreatingDeck(false)}
+          title={`Create Pitch Deck for ${college.name}`}
+          maxWidth="max-w-lg"
+        >
+          <form onSubmit={handleCreateDeck} className="space-y-4">
+            <div className="p-3 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800/60 flex items-center gap-2.5">
+              <Sparkles className="w-4 h-4 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <span className="text-xs text-indigo-700 dark:text-indigo-300 font-semibold">
+                Will be populated with the animated UNISOLE AI Campus roadshow slide deck template.
+              </span>
+            </div>
+
+            <Input
+              label="Presentation Deck Title"
+              value={newDeckTitle}
+              onChange={(e) => setNewDeckTitle(e.target.value)}
+              placeholder={`e.g. UNISOLE AI Campus Roadshow — ${college.shortName || "Campus"}`}
+              required
+            />
+
+            <div>
+              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                Description (Optional)
+              </label>
+              <textarea
+                rows={3}
+                value={newDeckDesc}
+                onChange={(e) => setNewDeckDesc(e.target.value)}
+                placeholder="Auditorium batch, target semester, keynote topic..."
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
+              />
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setCreatingDeck(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm" loading={isCreatingDeck} icon={Sparkles}>
+                Create & Open Slide Builder
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Delete Pitch Deck Modal */}
+      {deletingDeck && (
+        <Modal
+          isOpen={true}
+          onClose={() => setDeletingDeck(null)}
+          title="Delete Pitch Deck"
+          maxWidth="max-w-md"
+        >
+          <div className="space-y-4">
+            <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-800 flex items-start gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 mt-0.5" />
+              <div className="text-xs text-rose-700 dark:text-rose-300 leading-relaxed">
+                <p className="font-bold mb-1">Confirm Deck Deletion</p>
+                Delete pitch deck <span className="font-bold underline">{deletingDeck.title}</span>?
+              </div>
+            </div>
+
+            <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setDeletingDeck(null)}>
+                Cancel
+              </Button>
+              <Button
+                type="button"
+                variant="danger"
+                size="sm"
+                loading={isDeletingDeck}
+                onClick={handleDeleteDeck}
+                icon={Trash2}
+              >
+                Confirm Delete Deck
+              </Button>
+            </div>
+          </div>
+        </Modal>
+      )}
+
+      {/* Launched Session Live Modal */}
+      {launchedData && (
+        <Modal
+          isOpen={true}
+          onClose={() => setLaunchedData(null)}
+          title="Live Roadshow Stage Ready"
+          maxWidth="max-w-lg"
+        >
+          <div className="space-y-5 text-center py-2">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 font-bold text-xs animate-pulse">
+              <span className="w-2 h-2 rounded-full bg-emerald-500" />
+              LIVE AUDITORIUM SESSION ACTIVE
+            </div>
+
+            <div>
+              <span className="text-xs text-zinc-400 block mb-1">Session Code</span>
+              <span className="text-3xl font-black font-mono tracking-widest text-indigo-600 dark:text-indigo-400">
+                {launchedData.session.sessionCode}
+              </span>
+            </div>
+
+            {launchedData.qrCodeDataUrl && (
+              <div className="flex justify-center p-3 bg-white rounded-2xl border border-zinc-200 dark:border-zinc-800 w-fit mx-auto shadow-sm">
+                <img
+                  src={launchedData.qrCodeDataUrl}
+                  alt="Student Fast-Pass QR Code"
+                  className="w-48 h-48 rounded-xl object-contain"
+                />
+              </div>
+            )}
+
+            <div className="flex items-center gap-2 justify-center">
+              <input
+                type="text"
+                readOnly
+                value={launchedData.joinUrl}
+                className="px-3 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono text-zinc-700 dark:text-zinc-300 w-72 text-center"
+              />
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleCopyLink(launchedData.joinUrl)}
+                icon={copiedLink ? Check : Copy}
+              >
+                {copiedLink ? "Copied" : "Copy"}
+              </Button>
+            </div>
+
+            <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-center gap-3">
+              <Button variant="secondary" size="sm" onClick={() => setLaunchedData(null)}>
+                Close
+              </Button>
+              <Link to={`/presentations/live/${launchedData.session.id}`}>
+                <Button variant="primary" size="sm" icon={Play} className="font-bold">
+                  Open Auditorium Projector Stage
+                </Button>
+              </Link>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
 }
 
-// ─── Modal Subcomponents ───────────────────────────────────────────────────────
-function CollegeModal({
-  college,
-  isLoading,
-  onClose,
-  onSave,
-}: {
-  college: any;
-  isLoading: boolean;
-  onClose: () => void;
-  onSave: (data: any) => void;
-}) {
+// ─── HELPER FORMS ─────────────────────────────────────────────────────────────
+
+function CollegeEditForm({ college, isLoading, onClose, onSave }: any) {
   const [name, setName] = useState(college?.name || "");
   const [slug, setSlug] = useState(college?.slug || "");
   const [shortName, setShortName] = useState(college?.shortName || "");
   const [description, setDescription] = useState(college?.description || "");
-  const [isActive, setIsActive] = useState(college?.isActive ?? true);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({ name, slug, shortName, description, isActive });
-  };
+  const [isActive, setIsActive] = useState(college ? !!college.isActive : true);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-        <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-          Edit University / College
-        </h3>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="College / University Name *"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            placeholder="e.g. Delhi Technological University"
-          />
-          <Input
-            label="Short Name / Code"
-            value={shortName}
-            onChange={(e) => setShortName(e.target.value)}
-            placeholder="e.g. DTU"
-          />
-          <Input
-            label="URL Slug *"
-            value={slug}
-            onChange={(e) => setSlug(e.target.value)}
-            required
-            placeholder="e.g. dtu-delhi"
-          />
-          <div>
-            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Campus details, location, notes..."
-              className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
-            />
-          </div>
-
-          <label className="flex items-center gap-2 cursor-pointer pt-1">
-            <input
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="rounded-md border-zinc-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-            />
-            <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-              Active University Partner
-            </span>
-          </label>
-
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <Button variant="ghost" size="sm" type="button" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button variant="primary" size="sm" type="submit" loading={isLoading}>
-              Save Changes
-            </Button>
-          </div>
-        </form>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave({ name, slug, shortName: shortName || null, description: description || null, isActive });
+      }}
+      className="space-y-4"
+    >
+      <Input
+        label="College / University Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+      />
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <Input
+          label="Slug Identifier"
+          value={slug}
+          onChange={(e) => setSlug(e.target.value)}
+          required
+        />
+        <Input
+          label="Short Code / Acronym"
+          value={shortName}
+          onChange={(e) => setShortName(e.target.value)}
+        />
       </div>
-    </div>
+      <div>
+        <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+          Description (Optional)
+        </label>
+        <textarea
+          rows={3}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
+        />
+      </div>
+      <div className="flex items-center gap-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800">
+        <input
+          type="checkbox"
+          id="clg-edit-active"
+          checked={isActive}
+          onChange={(e) => setIsActive(e.target.checked)}
+          className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+        />
+        <label htmlFor="clg-edit-active" className="text-xs font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer">
+          Active University Partner
+        </label>
+      </div>
+      <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="submit" variant="primary" size="sm" loading={isLoading}>
+          Save Changes
+        </Button>
+      </div>
+    </form>
   );
 }
 
-function BranchModal({
-  branch,
-  collegeName,
-  isLoading,
-  onClose,
-  onSave,
-}: {
-  branch: any;
-  collegeName: string;
-  isLoading: boolean;
-  onClose: () => void;
-  onSave: (data: any) => void;
-}) {
+function BranchForm({ branch, collegeName, isLoading, onClose, onSave }: any) {
   const [name, setName] = useState(branch?.name || "");
   const [code, setCode] = useState(branch?.code || "");
   const [description, setDescription] = useState(branch?.description || "");
-  const [isActive, setIsActive] = useState(branch?.isActive ?? true);
-
-  const handleSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    onSave({ name, code, description, isActive });
-  };
+  const [isActive, setIsActive] = useState(branch ? !!branch.isActive : true);
 
   return (
-    <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4">
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl p-6 max-w-md w-full shadow-2xl space-y-4">
-        <div>
-          <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-            {branch ? "Edit Academic Branch" : "Add Branch to College"}
-          </h3>
-          <p className="text-xs text-zinc-400 mt-0.5">
-            Configuring branch for <strong className="text-zinc-700 dark:text-zinc-300">{collegeName}</strong>
-          </p>
-        </div>
-
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <Input
-            label="Branch / Department Name *"
-            value={name}
-            onChange={(e) => setName(e.target.value)}
-            required
-            placeholder="e.g. Computer Science & Engineering"
-          />
-          <Input
-            label="Branch Code / Abbreviation"
-            value={code}
-            onChange={(e) => setCode(e.target.value.toUpperCase())}
-            placeholder="e.g. CSE"
-          />
-          <div>
-            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-              Description
-            </label>
-            <textarea
-              value={description}
-              onChange={(e) => setDescription(e.target.value)}
-              rows={3}
-              placeholder="Department notes or specializations..."
-              className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 focus:outline-hidden"
-            />
-          </div>
-
-          <label className="flex items-center gap-2 cursor-pointer pt-1">
-            <input
-              type="checkbox"
-              checked={isActive}
-              onChange={(e) => setIsActive(e.target.checked)}
-              className="rounded-md border-zinc-300 text-indigo-600 focus:ring-indigo-500 w-4 h-4"
-            />
-            <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-              Active Branch in this Campus
-            </span>
-          </label>
-
-          <div className="flex items-center justify-end gap-2 pt-2">
-            <Button variant="ghost" size="sm" type="button" onClick={onClose}>
-              Cancel
-            </Button>
-            <Button variant="primary" size="sm" type="submit" loading={isLoading}>
-              Save Branch
-            </Button>
-          </div>
-        </form>
+    <form
+      onSubmit={(e) => {
+        e.preventDefault();
+        onSave({ name, code: code || null, description: description || null, isActive });
+      }}
+      className="space-y-4"
+    >
+      <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
+        <Building2 className="w-4 h-4 text-indigo-500 shrink-0" />
+        <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">
+          Target College: {collegeName}
+        </span>
       </div>
-    </div>
+
+      <Input
+        label="Branch / Specialization Name"
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        required
+        placeholder="e.g. Computer Science & Engineering"
+      />
+      <Input
+        label="Branch Code / Acronym"
+        value={code}
+        onChange={(e) => setCode(e.target.value)}
+        placeholder="e.g. CSE, AIML, ECE"
+      />
+      <div>
+        <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+          Description (Optional)
+        </label>
+        <textarea
+          rows={2}
+          value={description}
+          onChange={(e) => setDescription(e.target.value)}
+          className="w-full px-3.5 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
+          placeholder="Branch overview, department info..."
+        />
+      </div>
+      <div className="flex items-center gap-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800">
+        <input
+          type="checkbox"
+          id="brn-edit-active"
+          checked={isActive}
+          onChange={(e) => setIsActive(e.target.checked)}
+          className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+        />
+        <label htmlFor="brn-edit-active" className="text-xs font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer">
+          Active and visible in registration dropdowns
+        </label>
+      </div>
+      <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+        <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+          Cancel
+        </Button>
+        <Button type="submit" variant="primary" size="sm" loading={isLoading}>
+          Save Branch
+        </Button>
+      </div>
+    </form>
   );
 }

@@ -112,9 +112,16 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Colleges"],
     }),
+    deleteCollege: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/colleges/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Colleges", "Branches", "Presentations", "Sessions", "Leads"],
+    }),
     getCollegeAnalytics: build.query({
       query: ({ baseUrl, id }) => ({ url: `${baseUrl}/api/admin/colleges/${id}/analytics` }),
-      providesTags: (_res, _err, { id }) => [{ type: "Colleges", id }, "Branches", "Sessions", "Leads"],
+      providesTags: (_res, _err, { id }) => [{ type: "Colleges", id }, "Branches", "Presentations", "Sessions", "Leads"],
     }),
     getLeadDiversification: build.query({
       query: (baseUrl) => ({ url: `${baseUrl}/api/admin/colleges/lead-diversification` }),
@@ -405,7 +412,15 @@ export const adminApi = createApi({
 
     // Presentations & Roadshows
     getPresentations: build.query({
-      query: (baseUrl) => ({ url: `${baseUrl}/api/admin/presentations` }),
+      query: (arg) => {
+        const baseUrl = typeof arg === "string" ? arg : arg.baseUrl;
+        const collegeId = typeof arg === "object" ? arg.collegeId : undefined;
+        return {
+          url: `${baseUrl}/api/admin/presentations${
+            collegeId ? `?collegeId=${collegeId}` : ""
+          }`,
+        };
+      },
       providesTags: ["Presentations"],
     }),
     getPresentation: build.query({
@@ -723,6 +738,7 @@ export const {
   useGetCollegeAnalyticsQuery,
   useCreateCollegeMutation,
   useUpdateCollegeMutation,
+  useDeleteCollegeMutation,
   // Branches
   useGetBranchesQuery,
   useCreateBranchMutation,

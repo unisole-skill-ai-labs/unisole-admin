@@ -3,6 +3,7 @@ import { useParams, useNavigate } from "react-router-dom";
 import {
   useGetPresentationQuery,
   useUpdatePresentationMutation,
+  useGetCollegesQuery,
 } from "../../store";
 import {
   ArrowLeft,
@@ -18,6 +19,7 @@ import {
   BarChart2,
   CheckCircle2,
   Layers,
+  Building2,
   Clock,
   Award,
   Zap,
@@ -708,10 +710,12 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
     { baseUrl, id: id! },
     { skip: !id }
   );
+  const { data: colleges = [] } = useGetCollegesQuery(baseUrl);
   const [updatePresentation, { isLoading: isSaving }] =
     useUpdatePresentationMutation();
 
   const [title, setTitle] = useState("");
+  const [collegeId, setCollegeId] = useState("");
   const [description, setDescription] = useState("");
   const [theme, setTheme] = useState("dark");
   const [slides, setSlides] = useState<any[]>([]);
@@ -727,6 +731,7 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
     if (presRes?.data) {
       const d = presRes.data;
       setTitle(d.title || "");
+      setCollegeId(d.collegeId || "");
       setDescription(d.description || "");
       setTheme(d.theme || "dark");
       setSlides(Array.isArray(d.slides) ? d.slides : []);
@@ -822,6 +827,7 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
         id: id!,
         body: {
           title,
+          collegeId: collegeId || undefined,
           description,
           theme,
           slides,
@@ -865,14 +871,29 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
             <ArrowLeft className="w-4 h-4" />
           </Button>
           <div>
-            <input
-              type="text"
-              value={title}
-              onChange={(e) => setTitle(e.target.value)}
-              placeholder="Presentation Deck Title"
-              className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 bg-transparent border-b border-transparent hover:border-zinc-300 dark:hover:border-zinc-700 focus:border-indigo-500 focus:outline-hidden px-1 transition-colors"
-            />
-            <span className="text-[11px] text-zinc-400 block px-1">
+            <div className="flex items-center gap-2">
+              <input
+                type="text"
+                value={title}
+                onChange={(e) => setTitle(e.target.value)}
+                placeholder="Presentation Deck Title"
+                className="text-lg sm:text-xl font-black text-zinc-900 dark:text-zinc-100 bg-transparent border-b border-transparent hover:border-zinc-300 dark:hover:border-zinc-700 focus:border-indigo-500 focus:outline-hidden px-1 transition-colors"
+              />
+              {collegeId && (
+                <select
+                  value={collegeId}
+                  onChange={(e) => setCollegeId(e.target.value)}
+                  className="px-2 py-0.5 bg-indigo-50 dark:bg-indigo-950/60 border border-indigo-200/60 dark:border-indigo-800/60 rounded-lg text-xs font-bold text-indigo-700 dark:text-indigo-300 focus:outline-hidden"
+                >
+                  {colleges.map((c: any) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name} ({c.shortName || "CAMPUS"})
+                    </option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <span className="text-[11px] text-zinc-400 block px-1 mt-0.5">
               {slides.length} slides • Animated Pitch Deck & Live Roadshow Arena
             </span>
           </div>
