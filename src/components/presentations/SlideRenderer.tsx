@@ -776,20 +776,22 @@ function renderSlideContent({
           </div>
 
           <div
-            className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-1 transition-all duration-300 ease-out ${
+            className={`grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-4 pt-1 transition-all duration-300 ease-out ${
               currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
           >
             {benefits.map((b: any, idx: number) => (
               <div
                 key={idx}
-                className="p-3.5 sm:p-4 rounded-3xl bg-white/5 border border-white/10 text-center space-y-1.5 hover:border-indigo-500/40 transition-all shadow-md"
+                className="p-3.5 sm:p-4 rounded-3xl bg-white/5 border border-white/10 text-center space-y-1.5 hover:border-indigo-500/40 transition-all shadow-md min-w-0 overflow-hidden"
               >
-                <span className="text-[10px] font-mono text-zinc-400 font-bold block leading-tight">
+                <span className="text-[10px] sm:text-xs font-mono text-zinc-400 font-bold block leading-tight truncate">
                   {b.title}
                 </span>
-                <div className="text-xl sm:text-3xl font-black text-indigo-300">{b.value}</div>
-                <span className="text-[10px] text-zinc-400 block">{b.sub}</span>
+                <div className="text-base sm:text-xl md:text-2xl font-black text-indigo-300 leading-tight break-words px-1">
+                  {b.value}
+                </div>
+                <span className="text-[10px] sm:text-xs text-zinc-400 block leading-tight">{b.sub}</span>
               </div>
             ))}
           </div>
