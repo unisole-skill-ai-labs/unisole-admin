@@ -45,7 +45,7 @@ export default function JoinSessionPage() {
             Enter Session Code
           </h1>
           <p className="text-xs text-zinc-400">
-            Type the 6-character code displayed on the auditorium screen to join.
+            Type the 4-digit code displayed on the auditorium screen to join.
           </p>
         </div>
 
@@ -56,12 +56,21 @@ export default function JoinSessionPage() {
           <div>
             <input
               type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               required
-              maxLength={10}
+              maxLength={8}
+              autoFocus
               value={code}
-              onChange={(e) => setCode(e.target.value.toUpperCase())}
-              placeholder="e.g. UNIQPMS"
-              className="w-full px-4 py-3 bg-zinc-950 border border-zinc-800 rounded-2xl text-center text-xl font-mono font-black text-indigo-400 tracking-widest placeholder:text-zinc-700 placeholder:font-normal focus:outline-hidden focus:border-indigo-500 uppercase"
+              onChange={(e) => {
+                const val = e.target.value.trim().toUpperCase();
+                setCode(val);
+                if (val.length === 4 && /^\d{4}$/.test(val)) {
+                  navigate(`/live/${val}`);
+                }
+              }}
+              placeholder="e.g. 4829"
+              className="w-full px-4 py-3.5 bg-zinc-950 border border-zinc-800 rounded-2xl text-center text-3xl font-mono font-black text-indigo-400 tracking-[0.25em] placeholder:text-zinc-700 placeholder:tracking-normal placeholder:font-normal focus:outline-hidden focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500/20 uppercase shadow-inner"
             />
           </div>
 
