@@ -205,6 +205,7 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
       const res: any = await launchSession({
         baseUrl,
         id: activeDeck.id,
+        presentationId: activeDeck.id,
         body: {
           collegeId: activeDeck.collegeId || selectedCollegeId || undefined,
           customCode: customSessionCode.trim() || undefined,

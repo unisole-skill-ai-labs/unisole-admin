@@ -475,38 +475,43 @@ export const adminApi = createApi({
 
     // Live Sessions
     getSessions: build.query({
-      query: ({ baseUrl, presentationId }) => ({
-        url: `${baseUrl}/api/admin/presentations/sessions/all${
-          presentationId ? `?presentationId=${presentationId}` : ""
-        }`,
-      }),
+      query: (arg) => {
+        const baseUrl = typeof arg === "string" ? arg : arg?.baseUrl;
+        const presentationId =
+          typeof arg === "object" ? arg.presentationId || arg.id : undefined;
+        return {
+          url: `${baseUrl}/api/admin/presentations/sessions/all${
+            presentationId ? `?presentationId=${presentationId}` : ""
+          }`,
+        };
+      },
       providesTags: ["Sessions"],
     }),
     getSession: build.query({
-      query: ({ baseUrl, id }) => ({
-        url: `${baseUrl}/api/admin/presentations/sessions/${id}`,
+      query: ({ baseUrl, id, sessionId }: any) => ({
+        url: `${baseUrl}/api/admin/presentations/sessions/${id || sessionId}`,
       }),
       providesTags: ["Sessions"],
     }),
     launchSession: build.mutation({
-      query: ({ baseUrl, presentationId, body }) => ({
-        url: `${baseUrl}/api/admin/presentations/${presentationId}/launch`,
+      query: ({ baseUrl, presentationId, id, body }: any) => ({
+        url: `${baseUrl}/api/admin/presentations/${presentationId || id}/launch`,
         method: "POST",
         body,
       }),
       invalidatesTags: ["Sessions"],
     }),
     updateSessionStatus: build.mutation({
-      query: ({ baseUrl, id, body }) => ({
-        url: `${baseUrl}/api/admin/presentations/sessions/${id}/status`,
+      query: ({ baseUrl, id, sessionId, body }: any) => ({
+        url: `${baseUrl}/api/admin/presentations/sessions/${id || sessionId}/status`,
         method: "PATCH",
         body,
       }),
       invalidatesTags: ["Sessions"],
     }),
     getSessionLeads: build.query({
-      query: ({ baseUrl, sessionId }) => ({
-        url: `${baseUrl}/api/admin/presentations/sessions/${sessionId}/leads`,
+      query: ({ baseUrl, sessionId, id }: any) => ({
+        url: `${baseUrl}/api/admin/presentations/sessions/${sessionId || id}/leads`,
       }),
       providesTags: ["Leads"],
     }),
