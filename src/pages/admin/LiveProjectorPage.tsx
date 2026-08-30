@@ -96,8 +96,8 @@ export default function LiveProjectorPage() {
         sessionCode: session.sessionCode,
       });
     }
-    navigate("/presentations");
-  }, [navigate, session?.sessionCode]);
+    navigate(`/presentations/sessions/${sessionId}/analytics`);
+  }, [navigate, session?.sessionCode, sessionId]);
 
   // Fetch initial session & presentation data
   useEffect(() => {

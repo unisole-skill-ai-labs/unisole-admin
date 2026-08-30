@@ -19,6 +19,10 @@ import {
   Search,
   Building2,
   AlertTriangle,
+  Clock,
+  Activity,
+  ArrowRight,
+  Radio,
 } from "lucide-react";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
@@ -31,11 +35,12 @@ interface PresentationListProps {
 
 export default function PresentationList({ baseUrl }: PresentationListProps) {
   const navigate = useNavigate();
+  const [mainViewTab, setMainViewTab] = useState<"decks" | "sessions">("decks");
   const [selectedCollegeFilter, setSelectedCollegeFilter] = useState<string>("ALL");
   const { data: presRes, isLoading: isPresLoading } = useGetPresentationsQuery(
     selectedCollegeFilter !== "ALL" ? { baseUrl, collegeId: selectedCollegeFilter } : baseUrl
   );
-  const { data: sessionsRes } = useGetSessionsQuery({ baseUrl });
+  const { data: sessionsRes, isLoading: isSessionsLoading } = useGetSessionsQuery({ baseUrl });
   const { data: colleges = [] } = useGetCollegesQuery(baseUrl);
 
   const [createPresentation, { isLoading: isCreating }] = useCreatePresentationMutation();
@@ -205,8 +210,39 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
         </div>
       </div>
 
-      {/* ─── 2. Search & Filter Bar ──────────────────────────────────────── */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+      {/* ─── 1.5 View Switcher Tabs ───────────────────────────────────────── */}
+      <div className="flex items-center gap-2 border-b border-zinc-200 dark:border-zinc-800 pb-2">
+        <button
+          type="button"
+          onClick={() => setMainViewTab("decks")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+            mainViewTab === "decks"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/25"
+              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          }`}
+        >
+          <Sparkles className="w-4 h-4" />
+          <span>Pitch Decks ({presentations.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setMainViewTab("sessions")}
+          className={`flex items-center gap-2 px-4 py-2 rounded-2xl text-xs font-bold transition-all cursor-pointer ${
+            mainViewTab === "sessions"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/25"
+              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          }`}
+        >
+          <BarChart3 className="w-4 h-4" />
+          <span>Live & Past Sessions Analytics ({sessions.length})</span>
+        </button>
+      </div>
+
+      {mainViewTab === "decks" ? (
+        <>
+          {/* ─── 2. Search & Filter Bar ──────────────────────────────────────── */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
         <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:max-w-2xl">
           <div className="relative w-full sm:w-80">
             <Search className="w-4 h-4 text-zinc-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
@@ -344,98 +380,123 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
           })}
         </div>
       )}
-
-      {/* ─── 4. Live Sessions Overview Table ─────────────────────────────── */}
-      <div className="space-y-4 pt-6 border-t border-zinc-200 dark:border-zinc-800">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-lg font-black text-zinc-900 dark:text-zinc-100 tracking-tight">
-              Recent Live Roadshow Sessions
-            </h2>
-            <p className="text-xs text-zinc-400 mt-0.5">
-              Auditorium sessions hosted across partner universities.
-            </p>
-          </div>
-        </div>
-
-        {sessions.length === 0 ? (
-          <div className="p-10 text-center bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl text-xs text-zinc-400">
-            No live sessions conducted yet. Launch a pitch deck to host a live presentation.
-          </div>
-        ) : (
-          <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs overflow-hidden">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead className="bg-zinc-50/80 dark:bg-zinc-800/40 text-zinc-500 dark:text-zinc-400 font-semibold border-b border-zinc-200 dark:border-zinc-800">
-                  <tr>
-                    <th className="py-3.5 px-5">Session Code</th>
-                    <th className="py-3.5 px-4">University / College</th>
-                    <th className="py-3.5 px-4">Pitch Deck</th>
-                    <th className="py-3.5 px-4">Status</th>
-                    <th className="py-3.5 px-4">Active Attendees</th>
-                    <th className="py-3.5 px-4">Created Time</th>
-                    <th className="py-3.5 px-5 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                  {sessions.slice(0, 15).map((sess: any) => (
-                    <tr
-                      key={sess.id}
-                      className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
-                    >
-                      <td className="py-3.5 px-5 font-mono font-black text-indigo-600 dark:text-indigo-400 text-sm">
-                        {sess.sessionCode}
-                      </td>
-                      <td className="py-3.5 px-4 font-bold text-zinc-900 dark:text-zinc-100">
-                        {sess.collegeName || "Partner College"}
-                      </td>
-                      <td className="py-3.5 px-4 text-zinc-600 dark:text-zinc-300">
-                        {sess.presentationTitle || "Campus Deck"}
-                      </td>
-                      <td className="py-3.5 px-4">
-                        <span
-                          className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
-                            sess.status === "LIVE"
-                              ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 animate-pulse"
-                              : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500"
-                          }`}
-                        >
-                          <span
-                            className={`w-1.5 h-1.5 rounded-full ${
-                              sess.status === "LIVE" ? "bg-emerald-500" : "bg-zinc-400"
-                            }`}
-                          />
-                          {sess.status}
-                        </span>
-                      </td>
-                      <td className="py-3.5 px-4 font-mono text-zinc-600 dark:text-zinc-400 font-bold">
-                        {sess.activeAttendeesCount || 0}
-                      </td>
-                      <td className="py-3.5 px-4 text-zinc-400 font-mono text-[11px]">
-                        {sess.createdAt ? new Date(sess.createdAt).toLocaleString() : "—"}
-                      </td>
-                      <td className="py-3.5 px-5 text-right">
-                        <div className="flex items-center justify-end gap-2">
-                          <Link to={`/presentations/live/${sess.id}`}>
-                            <Button variant="primary" size="sm" icon={Play} className="text-xs font-bold">
-                              Projector Stage
-                            </Button>
-                          </Link>
-                          <Link to={`/presentations/analytics/${sess.id}`}>
-                            <Button variant="secondary" size="sm" icon={BarChart3} className="text-xs">
-                              Analytics
-                            </Button>
-                          </Link>
-                        </div>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+        </>
+      ) : (
+        /* ─── 4. Live & Past Sessions Analytics View ───────────────────────── */
+        <div className="space-y-5 animate-fade-in">
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+            <div>
+              <h2 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                Auditorium & Campus Roadshow Sessions
+              </h2>
+              <p className="text-xs text-zinc-500">
+                Live and completed presentation stages with full student attendance and response telemetry.
+              </p>
             </div>
+
+            <span className="text-xs font-bold text-zinc-400">
+              {sessions.length} Recorded Sessions
+            </span>
           </div>
-        )}
-      </div>
+
+          {isSessionsLoading ? (
+            <div className="p-16 text-center text-xs text-zinc-400 flex flex-col items-center justify-center gap-3">
+              <div className="w-8 h-8 rounded-full border-3 border-indigo-500/20 border-t-indigo-600 animate-spin" />
+              <span>Loading presentation sessions...</span>
+            </div>
+          ) : sessions.length === 0 ? (
+            <div className="p-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl space-y-3">
+              <BarChart3 className="w-12 h-12 text-zinc-400 mx-auto" />
+              <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200">
+                No Roadshow Sessions Yet
+              </h3>
+              <p className="text-xs text-zinc-500 max-w-md mx-auto">
+                Launch a presentation deck onto the auditorium projector to conduct live interactive sessions and capture analytics.
+              </p>
+              <Button variant="primary" size="sm" onClick={() => setMainViewTab("decks")}>
+                Browse Pitch Decks
+              </Button>
+            </div>
+          ) : (
+            <div className="bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs overflow-hidden">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead className="bg-zinc-50/80 dark:bg-zinc-800/40 text-zinc-500 dark:text-zinc-400 font-semibold border-b border-zinc-200 dark:border-zinc-800">
+                    <tr>
+                      <th className="py-3.5 px-5">Session Code</th>
+                      <th className="py-3.5 px-4">University / College</th>
+                      <th className="py-3.5 px-4">Pitch Deck</th>
+                      <th className="py-3.5 px-4">Status</th>
+                      <th className="py-3.5 px-4">Attendees</th>
+                      <th className="py-3.5 px-4">Date / Time</th>
+                      <th className="py-3.5 px-5 text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                    {sessions.map((sess: any) => (
+                      <tr
+                        key={sess.id}
+                        className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 transition-colors"
+                      >
+                        <td className="py-4 px-5 font-mono font-black text-indigo-600 dark:text-indigo-400 text-sm">
+                          {sess.sessionCode}
+                        </td>
+                        <td className="py-4 px-4 font-bold text-zinc-900 dark:text-zinc-100">
+                          {sess.collegeName || "Partner College"}
+                        </td>
+                        <td className="py-4 px-4 text-zinc-600 dark:text-zinc-300 font-medium">
+                          {sess.presentationTitle || "Campus Deck"}
+                        </td>
+                        <td className="py-4 px-4">
+                          <span
+                            className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full font-bold text-[10px] ${
+                              sess.status === "LIVE"
+                                ? "bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30 animate-pulse"
+                                : "bg-zinc-100 dark:bg-zinc-800 text-zinc-500 border border-zinc-200 dark:border-zinc-700"
+                            }`}
+                          >
+                            <span
+                              className={`w-1.5 h-1.5 rounded-full ${
+                                sess.status === "LIVE" ? "bg-emerald-500" : "bg-zinc-400"
+                              }`}
+                            />
+                            {sess.status === "LIVE" ? "ACTIVE NOW" : "FINISHED"}
+                          </span>
+                        </td>
+                        <td className="py-4 px-4 font-mono text-zinc-800 dark:text-zinc-200 font-bold">
+                          {sess.activeAttendeesCount || 0} students
+                        </td>
+                        <td className="py-4 px-4 text-zinc-400 font-mono text-[11px]">
+                          {sess.createdAt ? new Date(sess.createdAt).toLocaleDateString() : "—"}{" "}
+                          <span className="text-zinc-500 text-[10px]">
+                            {sess.createdAt ? new Date(sess.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : ""}
+                          </span>
+                        </td>
+                        <td className="py-4 px-5 text-right">
+                          <div className="flex items-center justify-end gap-2">
+                            {sess.status === "LIVE" && (
+                              <Link to={`/presentations/live/${sess.id}`}>
+                                <Button variant="primary" size="sm" icon={Play} className="text-xs font-bold shadow-xs">
+                                  Projector Stage
+                                </Button>
+                              </Link>
+                            )}
+                            <Link to={`/presentations/sessions/${sess.id}/analytics`}>
+                              <Button variant="secondary" size="sm" icon={BarChart3} className="text-xs font-bold">
+                                View Analytics
+                              </Button>
+                            </Link>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
+      )}
 
       {/* ─── 5. Modals ────────────────────────────────────────────────────── */}
 

@@ -515,6 +515,12 @@ export const adminApi = createApi({
       }),
       providesTags: ["Leads"],
     }),
+    getSessionAnalytics: build.query({
+      query: ({ baseUrl, sessionId, id }: any) => ({
+        url: `${baseUrl}/api/admin/presentations/sessions/${sessionId || id}/analytics`,
+      }),
+      providesTags: ["Sessions", "Leads"],
+    }),
     // ==================== TEAM & TASK MANAGEMENT ====================
     getTasks: build.query({
       query: ({ baseUrl, params }) => ({
@@ -821,6 +827,7 @@ export const {
   useLaunchSessionMutation,
   useUpdateSessionStatusMutation,
   useGetSessionLeadsQuery,
+  useGetSessionAnalyticsQuery,
   useGetLeadDiversificationQuery,
   // Team & Tasks
   useGetTasksQuery,

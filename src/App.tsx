@@ -53,6 +53,8 @@ export default function App() {
           <Route path="curriculum" element={<CurriculumPage />} />
           <Route path="presentations" element={<PresentationsPage />} />
           <Route path="presentations/builder/:id?" element={<PresentationBuilderPage />} />
+          <Route path="presentations/sessions/:sessionId/analytics" element={<SessionAnalyticsPage />} />
+          <Route path="presentations/analytics/:sessionId" element={<SessionAnalyticsPage />} />
           <Route path="leads" element={<Navigate to="/colleges" replace />} />
           <Route path="lead-diversification" element={<Navigate to="/colleges" replace />} />
           <Route path="metadata" element={<CollegesPage />} />
