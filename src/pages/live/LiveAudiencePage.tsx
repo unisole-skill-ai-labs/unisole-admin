@@ -31,6 +31,10 @@ import {
 } from "lucide-react";
 import SlideRenderer from "../../components/presentations/SlideRenderer";
 import AutoFitSlideStage from "../../components/presentations/AutoFitSlideStage";
+import BranchDistributionPieChart, {
+  BranchStats,
+  getBranchColorStyle,
+} from "../../components/presentations/BranchDistributionPieChart";
 
 export default function LiveAudiencePage() {
   const { sessionCode } = useParams<{ sessionCode: string }>();
@@ -53,6 +57,12 @@ export default function LiveAudiencePage() {
   const [yearInput, setYearInput] = useState("");
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
+
+  // Real-time presentation state
+  const [isPresentationStarted, setIsPresentationStarted] = useState(false);
+  const [branchStats, setBranchStats] = useState<BranchStats | null>(null);
+  const [attendeesList, setAttendeesList] = useState<any[]>([]);
+  const [branchSelectorOpen, setBranchSelectorOpen] = useState(false);
 
   // Real-time state
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
@@ -224,17 +234,28 @@ export default function LiveAudiencePage() {
       leadId: lead.id,
       studentName: lead.name,
       phone: lead.phone,
+      branch: lead.branch,
+      yearOfStudy: lead.yearOfStudy,
     });
 
     socket.on("sync_state", (state) => {
       if (typeof state.currentSlideIndex === "number") {
         setCurrentSlideIndex(state.currentSlideIndex);
       }
+      if (typeof state.isPresentationStarted === "boolean") {
+        setIsPresentationStarted(state.isPresentationStarted);
+      }
       if (typeof state.buildStep === "number") {
         setBuildStep(state.buildStep);
       }
       if (typeof state.attendeeCount === "number") {
         setAttendeeCount(state.attendeeCount);
+      }
+      if (Array.isArray(state.attendees)) {
+        setAttendeesList(state.attendees);
+      }
+      if (state.branchStats) {
+        setBranchStats(state.branchStats);
       }
       if (typeof state.myScore === "number") {
         setMyScore(state.myScore);
@@ -256,6 +277,46 @@ export default function LiveAudiencePage() {
 
     socket.on("attendee_count", ({ count }) => {
       setAttendeeCount(count);
+    });
+
+    socket.on("attendee_joined", ({ attendees: list, count, branchStats: bStats }) => {
+      setAttendeeCount(count);
+      if (list) setAttendeesList(list);
+      if (bStats) setBranchStats(bStats);
+    });
+
+    socket.on("attendee_left", ({ attendees: list, count, branchStats: bStats }) => {
+      setAttendeeCount(count);
+      if (list) setAttendeesList(list);
+      if (bStats) setBranchStats(bStats);
+    });
+
+    socket.on("attendee_kicked", ({ attendees: list, count, branchStats: bStats }) => {
+      setAttendeeCount(count);
+      if (list) setAttendeesList(list);
+      if (bStats) setBranchStats(bStats);
+    });
+
+    socket.on("branch_distribution_updated", ({ branchStats: bStats, attendees: list }) => {
+      if (bStats) setBranchStats(bStats);
+      if (list) setAttendeesList(list);
+    });
+
+    socket.on("presentation_started", ({ isPresentationStarted: started, currentSlideIndex: sIdx, buildStep: bStep }) => {
+      setIsPresentationStarted(true);
+      if (typeof sIdx === "number") setCurrentSlideIndex(sIdx);
+      if (typeof bStep === "number") setBuildStep(bStep);
+      confetti({
+        particleCount: 80,
+        spread: 80,
+        origin: { y: 0.6 },
+      });
+    });
+
+    socket.on("lobby_mode_entered", (data) => {
+      setIsPresentationStarted(false);
+      if (data.branchStats) setBranchStats(data.branchStats);
+      if (data.attendees) setAttendeesList(data.attendees);
     });
 
     socket.on("slide_updated", ({ slideIndex, buildStep: bStep, quizState: qState }) => {
@@ -681,6 +742,248 @@ export default function LiveAudiencePage() {
         <div className="text-center text-[11px] text-zinc-500 z-10 pb-2">
           Powered by Unisole EdTech Engine • unisole.org
         </div>
+      </div>
+    );
+  }
+
+  // Handle student updating their branch in the lobby
+  const handleUpdateBranch = (newBranch: string) => {
+    if (!newBranch || !lead?.id) return;
+    const updatedLead = { ...lead, branch: newBranch };
+    setLead(updatedLead);
+    localStorage.setItem(`unisole_lead_${code}`, JSON.stringify(updatedLead));
+    if (socketRef.current) {
+      socketRef.current.emit("audience:update_branch", {
+        sessionCode: code,
+        leadId: lead.id,
+        branch: newBranch,
+      });
+    }
+    setBranchSelectorOpen(false);
+  };
+
+  // ==================== STAGE 1.5: PRE-START WAITING LOBBY (WAITING FOR PRESENTER) ====================
+  if (!isPresentationStarted) {
+    return (
+      <div className="min-h-screen bg-zinc-950 text-white flex flex-col justify-between p-4 sm:p-6 relative overflow-x-hidden font-sans select-none">
+        {/* Floating Reaction Animation */}
+        <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
+          {reactions.map((r) => (
+            <div
+              key={r.id}
+              className="absolute bottom-20 text-3xl animate-float-reaction"
+              style={{ left: `${20 + Math.random() * 60}%` }}
+            >
+              {r.emoji}
+            </div>
+          ))}
+        </div>
+
+        {/* Background glow lamps */}
+        <div className="absolute -top-32 -left-32 w-80 h-80 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute -bottom-32 -right-32 w-80 h-80 bg-violet-600/20 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Header */}
+        <header className="flex items-center justify-between z-10 pt-2 pb-4 border-b border-white/10">
+          <div className="flex items-center gap-2.5">
+            <img
+              src="https://res.cloudinary.com/hehmsemf/image/upload/f_auto,q_auto,w_64/v1785299421/Unisole_logo_new_mhqbma.png"
+              alt="Unisole"
+              className="w-7 h-7 rounded-lg object-contain"
+            />
+            <div className="flex flex-col">
+              <span className="font-black text-sm tracking-tight text-zinc-100">
+                {session.collegeName || "Unisole Roadshow"}
+              </span>
+              <span className="text-[10px] font-mono text-indigo-400">
+                Session Code: {code}
+              </span>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold">
+              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <Users className="w-3.5 h-3.5" />
+              <span>{attendeesList.length || attendeeCount} Checked In</span>
+            </div>
+          </div>
+        </header>
+
+        {/* Center Audience Waiting Lounge */}
+        <main className="my-auto max-w-4xl w-full mx-auto space-y-6 z-10 py-6">
+          {/* Status Hero Card */}
+          <div className="text-center space-y-3">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs sm:text-sm font-extrabold shadow-lg shadow-indigo-500/10 animate-pulse">
+              <Radio className="w-4 h-4 text-emerald-400" />
+              <span>You're Checked In! Waiting for Presenter to Begin...</span>
+            </div>
+
+            <h1 className="text-2xl sm:text-4xl font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-white via-zinc-100 to-zinc-400">
+              Welcome, {lead.name}!
+            </h1>
+
+            <p className="text-xs sm:text-sm text-zinc-400 max-w-lg mx-auto leading-relaxed">
+              The presentation slides and interactive pulse polls will start automatically on your screen the moment the presenter begins.
+            </p>
+          </div>
+
+          {/* 2-Column Grid: Branch Distribution & Real-Time Candidate Stream */}
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-stretch">
+            {/* Left: Branch Distribution Pie Chart & Branch Selector (Cols 1-7) */}
+            <div className="md:col-span-7 flex flex-col space-y-4">
+              <BranchDistributionPieChart
+                branchStats={branchStats}
+                attendees={attendeesList}
+                title="Branch Distribution"
+                subtitle="Real-time breakdown of candidates in the room"
+                className="h-full"
+              />
+
+              {/* Quick Branch Confirm / Selector */}
+              <div className="p-3.5 rounded-2xl bg-zinc-900/90 border border-white/10 flex items-center justify-between gap-3 text-xs">
+                <div className="flex items-center gap-2 min-w-0">
+                  <GraduationCap className="w-4 h-4 text-indigo-400 shrink-0" />
+                  <span className="text-zinc-400">Your Branch:</span>
+                  <span className="font-bold text-white truncate">
+                    {lead.branch || "Not Specified"}
+                  </span>
+                </div>
+
+                {!branchSelectorOpen ? (
+                  <button
+                    type="button"
+                    onClick={() => setBranchSelectorOpen(true)}
+                    className="px-2.5 py-1 rounded-xl bg-white/10 hover:bg-white/20 text-indigo-300 hover:text-white font-bold text-[11px] transition-colors cursor-pointer"
+                  >
+                    Change Branch
+                  </button>
+                ) : (
+                  <select
+                    value={lead.branch || ""}
+                    onChange={(e) => handleUpdateBranch(e.target.value)}
+                    className="px-2.5 py-1 bg-zinc-950 border border-indigo-500 rounded-xl text-xs text-white focus:outline-none cursor-pointer"
+                  >
+                    <option value="Computer Science & Engineering">CSE</option>
+                    <option value="Information Technology">IT</option>
+                    <option value="Artificial Intelligence & Machine Learning">AIML</option>
+                    <option value="Data Science">Data Science</option>
+                    <option value="Electronics & Communication">ECE</option>
+                    <option value="Electrical & Electronics">EEE</option>
+                    <option value="Mechanical Engineering">MECH</option>
+                    <option value="Civil Engineering">CIVIL</option>
+                    <option value="Cyber Security">Cyber Security</option>
+                    <option value="BCA / MCA">BCA / MCA</option>
+                    <option value="BBA / MBA">BBA / MBA</option>
+                    <option value="Other">Other</option>
+                  </select>
+                )}
+              </div>
+            </div>
+
+            {/* Right: Real-Time Peers Feed (Cols 8-12) */}
+            <div className="md:col-span-5 rounded-3xl bg-zinc-900/90 border border-white/10 p-5 flex flex-col justify-between shadow-2xl backdrop-blur-xl space-y-3">
+              <div className="pb-2 border-b border-white/10 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                  <h3 className="font-extrabold text-xs sm:text-sm text-zinc-100 flex items-center gap-1.5">
+                    <Users className="w-4 h-4 text-emerald-400" />
+                    <span>Peers in the Room ({attendeesList.length || attendeeCount})</span>
+                  </h3>
+                </div>
+              </div>
+
+              {/* Scrollable Joined Members List */}
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[300px] sm:max-h-[340px]">
+                {attendeesList.length === 0 ? (
+                  <div className="py-8 text-center text-zinc-500 space-y-1">
+                    <Users className="w-6 h-6 mx-auto opacity-40 animate-pulse" />
+                    <p className="text-xs">Connecting peers...</p>
+                  </div>
+                ) : (
+                  attendeesList.map((att: any, idx: number) => {
+                    const isMe = att.leadId === lead.id || att.phone === lead.phone;
+                    const color = getBranchColorStyle(att.branch || "", idx);
+                    const initials = att.name
+                      ? att.name
+                          .split(" ")
+                          .map((n: string) => n[0])
+                          .join("")
+                          .substring(0, 2)
+                          .toUpperCase()
+                      : "ST";
+
+                    return (
+                      <div
+                        key={att.leadId || idx}
+                        className={`p-2.5 rounded-2xl border flex items-center justify-between gap-2.5 transition-all ${
+                          isMe
+                            ? "bg-indigo-950/60 border-indigo-500/50 shadow-md scale-[1.01]"
+                            : "bg-white/5 border-white/5"
+                        }`}
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <div
+                            className="w-7 h-7 rounded-xl flex items-center justify-center font-bold text-[11px] text-white shrink-0 shadow-sm"
+                            style={{ backgroundColor: color.hex }}
+                          >
+                            {initials}
+                          </div>
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <h4 className="font-bold text-xs text-zinc-100 truncate">
+                                {att.name}
+                              </h4>
+                              {isMe && (
+                                <span className="px-1.5 py-0.2 rounded-md bg-indigo-500 text-white font-mono text-[9px] font-black shrink-0">
+                                  YOU
+                                </span>
+                              )}
+                            </div>
+                            <span
+                              className="text-[9px] font-mono font-semibold px-1.5 py-0.2 rounded inline-block"
+                              style={{
+                                backgroundColor: `${color.hex}22`,
+                                color: color.hex,
+                              }}
+                            >
+                              {att.branch || "General"}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+
+              {/* Send Cheer Reaction Dock */}
+              <div className="pt-3 border-t border-white/10 space-y-2">
+                <span className="text-[10px] uppercase font-bold text-zinc-400 block text-center">
+                  Send a Cheer to the Stage:
+                </span>
+                <div className="flex items-center justify-center gap-3">
+                  {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
+                    <button
+                      key={emoji}
+                      type="button"
+                      onClick={() => handleSendReaction(emoji)}
+                      className="p-1.5 text-2xl hover:scale-125 active:scale-90 transition-transform cursor-pointer"
+                      title={`Send ${emoji}`}
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            </div>
+          </div>
+        </main>
+
+        {/* Footer */}
+        <footer className="text-center text-[11px] text-zinc-500 z-10 pt-2">
+          Unisole Live Presentation Arena • Synchronizing in real-time
+        </footer>
       </div>
     );
   }

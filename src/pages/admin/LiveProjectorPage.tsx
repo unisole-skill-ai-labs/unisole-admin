@@ -33,6 +33,10 @@ import {
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
 import SlideRenderer from "../../components/presentations/SlideRenderer";
+import BranchDistributionPieChart, {
+  BranchStats,
+  getBranchColorStyle,
+} from "../../components/presentations/BranchDistributionPieChart";
 
 export default function LiveProjectorPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -46,6 +50,8 @@ export default function LiveProjectorPage() {
   const [buildStep, setBuildStep] = useState(0);
   const [attendeeCount, setAttendeeCount] = useState(0);
   const [attendees, setAttendees] = useState<any[]>([]);
+  const [isPresentationStarted, setIsPresentationStarted] = useState(false);
+  const [branchStats, setBranchStats] = useState<BranchStats | null>(null);
   const [attendeesDrawerOpen, setAttendeesDrawerOpen] = useState(false);
   const [attendeeSearch, setAttendeeSearch] = useState("");
   const [joinToast, setJoinToast] = useState<{ name: string; id: string } | null>(null);
@@ -117,11 +123,17 @@ export default function LiveProjectorPage() {
       if (typeof state.currentSlideIndex === "number") {
         setCurrentSlideIndex(state.currentSlideIndex);
       }
+      if (typeof state.isPresentationStarted === "boolean") {
+        setIsPresentationStarted(state.isPresentationStarted);
+      }
       if (typeof state.attendeeCount === "number") {
         setAttendeeCount(state.attendeeCount);
       }
       if (Array.isArray(state.attendees)) {
         setAttendees(state.attendees);
+      }
+      if (state.branchStats) {
+        setBranchStats(state.branchStats);
       }
       if (state.quizState) {
         setQuizState(state.quizState);
@@ -135,9 +147,10 @@ export default function LiveProjectorPage() {
       setAttendeeCount(count);
     });
 
-    socket.on("attendee_joined", ({ attendee, attendees: list, count }) => {
+    socket.on("attendee_joined", ({ attendee, attendees: list, count, branchStats: bStats }) => {
       setAttendeeCount(count);
       if (list) setAttendees(list);
+      if (bStats) setBranchStats(bStats);
       if (attendee?.name) {
         setJoinToast({ name: attendee.name, id: attendee.leadId || Math.random().toString() });
         setTimeout(() => {
@@ -146,14 +159,38 @@ export default function LiveProjectorPage() {
       }
     });
 
-    socket.on("attendee_left", ({ attendees: list, count }) => {
+    socket.on("attendee_left", ({ attendees: list, count, branchStats: bStats }) => {
       setAttendeeCount(count);
+      if (list) setAttendees(list);
+      if (bStats) setBranchStats(bStats);
+    });
+
+    socket.on("attendee_kicked", ({ attendees: list, count, branchStats: bStats }) => {
+      setAttendeeCount(count);
+      if (list) setAttendees(list);
+      if (bStats) setBranchStats(bStats);
+    });
+
+    socket.on("branch_distribution_updated", ({ branchStats: bStats, attendees: list }) => {
+      if (bStats) setBranchStats(bStats);
       if (list) setAttendees(list);
     });
 
-    socket.on("attendee_kicked", ({ attendees: list, count }) => {
-      setAttendeeCount(count);
-      if (list) setAttendees(list);
+    socket.on("presentation_started", ({ isPresentationStarted: started, currentSlideIndex: sIdx, buildStep: bStep }) => {
+      setIsPresentationStarted(true);
+      if (typeof sIdx === "number") setCurrentSlideIndex(sIdx);
+      if (typeof bStep === "number") setBuildStep(bStep);
+      confetti({
+        particleCount: 90,
+        spread: 80,
+        origin: { y: 0.5 },
+      });
+    });
+
+    socket.on("lobby_mode_entered", (data) => {
+      setIsPresentationStarted(false);
+      if (data.branchStats) setBranchStats(data.branchStats);
+      if (data.attendees) setAttendees(data.attendees);
     });
 
     socket.on("slide_updated", ({ slideIndex, buildStep: bStep, quizState }) => {
@@ -311,6 +348,27 @@ export default function LiveProjectorPage() {
     }
   }, [buildStep, maxSteps, handleNextSlide, currentSlideIndex, session?.sessionCode]);
 
+  const handleStartPresentation = useCallback(() => {
+    if (!socketRef.current || !session?.sessionCode) return;
+    socketRef.current.emit("admin:start_presentation", {
+      sessionCode: session.sessionCode,
+    });
+    setIsPresentationStarted(true);
+    confetti({
+      particleCount: 100,
+      spread: 80,
+      origin: { y: 0.5 },
+    });
+  }, [session?.sessionCode]);
+
+  const handleReturnToLobby = useCallback(() => {
+    if (!socketRef.current || !session?.sessionCode) return;
+    socketRef.current.emit("admin:reset_to_lobby", {
+      sessionCode: session.sessionCode,
+    });
+    setIsPresentationStarted(false);
+  }, [session?.sessionCode]);
+
   const handlePrevAction = useCallback(() => {
     if (buildStep > 0) {
       const prevStep = buildStep - 1;
@@ -387,6 +445,14 @@ export default function LiveProjectorPage() {
         return;
       }
 
+      if (!isPresentationStarted) {
+        if (e.key === "Enter" || e.key === " " || e.key === "p" || e.key === "P") {
+          e.preventDefault();
+          handleStartPresentation();
+          return;
+        }
+      }
+
       if (e.key === "ArrowRight" || e.key === "PageDown" || e.key === " ") {
         e.preventDefault();
         handleNextAction();
@@ -420,6 +486,8 @@ export default function LiveProjectorPage() {
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
   }, [
+    isPresentationStarted,
+    handleStartPresentation,
     handleNextAction,
     handlePrevAction,
     handleStartQuestion,
@@ -467,7 +535,7 @@ export default function LiveProjectorPage() {
       </div>
 
       {/* Top Projector Stage Bar */}
-      <header className="px-6 py-4 flex items-center justify-between bg-zinc-950/60 backdrop-blur-md border-b border-white/10 z-30">
+      <header className="px-6 py-3.5 flex items-center justify-between bg-zinc-950/70 backdrop-blur-md border-b border-white/10 z-30">
         <div className="flex items-center gap-4">
           <button
             onClick={() => navigate("/presentations")}
@@ -492,9 +560,24 @@ export default function LiveProjectorPage() {
               </span>
             </div>
           </div>
+
+          {!isPresentationStarted ? (
+            <div className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-bold animate-pulse">
+              <Radio className="w-3.5 h-3.5" />
+              <span>PRE-START CHECK-IN LOBBY</span>
+            </div>
+          ) : (
+            <button
+              onClick={handleReturnToLobby}
+              className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/5 hover:bg-white/15 border border-white/10 text-zinc-300 text-xs font-bold transition-all cursor-pointer"
+              title="Return to Check-in Lobby Stage"
+            >
+              <span>Return to Lobby</span>
+            </button>
+          )}
         </div>
 
-        {/* Center: Live Audience Connection Badge with Drawer Trigger */}
+        {/* Center: Live Audience Connection Badge & QR Modal Button */}
         <div className="flex items-center gap-3">
           <button
             onClick={() => setAttendeesDrawerOpen(true)}
@@ -503,7 +586,7 @@ export default function LiveProjectorPage() {
           >
             <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
             <Users className="w-3.5 h-3.5" />
-            <span>{attendeeCount} Students Live</span>
+            <span>{attendeeCount} Students Checked In</span>
             <span className="text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded font-mono text-emerald-300">
               U
             </span>
@@ -511,7 +594,7 @@ export default function LiveProjectorPage() {
 
           <button
             onClick={() => setQrModalOpen(true)}
-            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-zinc-200 transition-colors"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-xs font-bold text-zinc-200 transition-colors cursor-pointer"
             title="Show Join QR Code (M)"
           >
             <QrCode className="w-3.5 h-3.5" />
@@ -519,32 +602,50 @@ export default function LiveProjectorPage() {
           </button>
         </div>
 
-        {/* Right: Build Step, Slide Counter, Notes & Fullscreen */}
+        {/* Right: Stage Control & Start Presentation Action */}
         <div className="flex items-center gap-3">
-          {maxSteps > 0 && (
-            <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-950/60 border border-indigo-500/40 text-[11px] font-mono font-bold text-indigo-300">
-              <Zap className="w-3 h-3 text-indigo-400" />
-              <span>
-                Step {buildStep}/{maxSteps}
+          {!isPresentationStarted ? (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleStartPresentation}
+              className="bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white font-extrabold shadow-lg shadow-emerald-600/30 flex items-center gap-1.5 px-4"
+              title="Start Live Presentation (Enter / Space)"
+            >
+              <Play className="w-3.5 h-3.5 fill-current" />
+              <span>Start Presentation</span>
+              <span className="text-[10px] bg-emerald-700/40 px-1.5 py-0.5 rounded font-mono ml-1">
+                Enter
               </span>
-            </div>
+            </Button>
+          ) : (
+            <>
+              {maxSteps > 0 && (
+                <div className="hidden sm:inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl bg-indigo-950/60 border border-indigo-500/40 text-[11px] font-mono font-bold text-indigo-300">
+                  <Zap className="w-3 h-3 text-indigo-400" />
+                  <span>
+                    Step {buildStep}/{maxSteps}
+                  </span>
+                </div>
+              )}
+
+              <span className="text-xs font-mono font-bold text-zinc-400">
+                {currentSlideIndex + 1} / {slides.length}
+              </span>
+
+              <button
+                onClick={() => setNotesOpen((prev) => !prev)}
+                className={`p-2 rounded-xl transition-colors ${
+                  notesOpen
+                    ? "bg-indigo-600 text-white"
+                    : "text-zinc-400 hover:text-white hover:bg-white/10"
+                }`}
+                title="Toggle Presenter Script / Notes (N)"
+              >
+                <FileText className="w-4 h-4" />
+              </button>
+            </>
           )}
-
-          <span className="text-xs font-mono font-bold text-zinc-400">
-            {currentSlideIndex + 1} / {slides.length}
-          </span>
-
-          <button
-            onClick={() => setNotesOpen((prev) => !prev)}
-            className={`p-2 rounded-xl transition-colors ${
-              notesOpen
-                ? "bg-indigo-600 text-white"
-                : "text-zinc-400 hover:text-white hover:bg-white/10"
-            }`}
-            title="Toggle Presenter Script / Notes (N)"
-          >
-            <FileText className="w-4 h-4" />
-          </button>
 
           <button
             onClick={handleToggleFullscreen}
@@ -561,13 +662,198 @@ export default function LiveProjectorPage() {
       </header>
 
       {/* Center Stage Presentation Canvas */}
-      <main className="flex-1 relative flex items-center justify-center p-6 sm:p-12 z-20 overflow-y-auto">
+      <main className="flex-1 relative flex items-center justify-center p-4 sm:p-8 z-20 overflow-y-auto w-full">
         {/* Glow ambient lights */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Live Leaderboard Podium Overlay if Active */}
-        {quizState.isLeaderboardActive ? (
+        {/* ==================== 1. PRE-START AUDITORIUM LOBBY STAGE ==================== */}
+        {!isPresentationStarted ? (
+          <div className="w-full max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-12 gap-6 items-stretch animate-fade-in py-2">
+            {/* Left Panel: QR Code Check-in Stage & Host Start Button (Cols 1-4) */}
+            <div className="lg:col-span-4 rounded-3xl bg-zinc-900/90 border border-white/10 p-6 flex flex-col justify-between shadow-2xl backdrop-blur-xl space-y-5 text-center">
+              <div className="space-y-2">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-400 text-xs font-bold">
+                  <QrCode className="w-3.5 h-3.5" />
+                  <span>Scan to Check-In Live</span>
+                </div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-zinc-100">
+                  {session.collegeName || "Auditorium Roadshow"}
+                </h2>
+                <p className="text-xs text-zinc-400">
+                  Open your mobile camera to scan and join the live interactive session.
+                </p>
+              </div>
+
+              {/* QR Code Frame */}
+              <div className="relative group w-fit mx-auto">
+                <div className="absolute -inset-1.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur-md opacity-50 group-hover:opacity-80 transition duration-500" />
+                <div className="relative p-4 rounded-2xl bg-white shadow-2xl">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
+                      joinUrl
+                    )}`}
+                    alt="Scan QR"
+                    className="w-48 h-48 sm:w-56 sm:h-56 rounded-xl object-contain"
+                  />
+                </div>
+              </div>
+
+              {/* Session Code Readout */}
+              <div className="space-y-1 p-3 rounded-2xl bg-white/5 border border-white/10">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-zinc-400 block">
+                  Session Join Code
+                </span>
+                <span className="text-3xl sm:text-4xl font-black font-mono tracking-widest text-transparent bg-clip-text bg-gradient-to-r from-indigo-400 via-purple-300 to-violet-300">
+                  {session.sessionCode}
+                </span>
+                <p className="text-[11px] font-mono text-zinc-400 truncate mt-1">
+                  {joinUrl}
+                </p>
+              </div>
+
+              {/* Primary Presenter Start Button */}
+              <button
+                type="button"
+                onClick={handleStartPresentation}
+                className="w-full py-4 px-6 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-violet-600 hover:from-indigo-500 hover:via-purple-500 hover:to-violet-500 text-white font-black text-sm sm:text-base shadow-2xl shadow-indigo-600/30 transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer"
+              >
+                <Play className="w-5 h-5 fill-current" />
+                <span>Start Live Presentation</span>
+                <span className="text-xs bg-white/20 px-2 py-0.5 rounded-lg font-mono ml-1">
+                  Enter
+                </span>
+              </button>
+            </div>
+
+            {/* Center Panel: Real-Time Branch Distribution Pie Chart (Cols 5-8) */}
+            <div className="lg:col-span-4 flex flex-col">
+              <BranchDistributionPieChart
+                branchStats={branchStats}
+                attendees={attendees}
+                title="Branch Distribution"
+                subtitle="Live percentage breakdown of joined students"
+                className="h-full"
+              />
+            </div>
+
+            {/* Right Panel: Streaming Live Candidates Feed (Cols 9-12) */}
+            <div className="lg:col-span-4 rounded-3xl bg-zinc-900/90 border border-white/10 p-5 flex flex-col justify-between shadow-2xl backdrop-blur-xl h-full space-y-3">
+              {/* Feed Header & Live Filter */}
+              <div className="space-y-2 pb-2 border-b border-white/10">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+                    <h3 className="font-extrabold text-sm text-zinc-100 flex items-center gap-1.5">
+                      <Users className="w-4 h-4 text-emerald-400" />
+                      <span>Live Candidate Stream ({attendees.length})</span>
+                    </h3>
+                  </div>
+                </div>
+
+                <div className="relative">
+                  <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    placeholder="Filter candidates..."
+                    value={attendeeSearch}
+                    onChange={(e) => setAttendeeSearch(e.target.value)}
+                    className="w-full pl-8 pr-3 py-1.5 bg-white/5 border border-white/10 rounded-xl text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-indigo-500 transition-colors"
+                  />
+                </div>
+              </div>
+
+              {/* Candidates Scroll List */}
+              <div className="flex-1 overflow-y-auto space-y-2 pr-1 max-h-[380px]">
+                {attendees.length === 0 ? (
+                  <div className="h-full flex flex-col items-center justify-center text-center p-8 space-y-2 text-zinc-500">
+                    <Users className="w-8 h-8 opacity-40 animate-pulse" />
+                    <p className="text-xs font-bold text-zinc-400">
+                      Lobby Open • Waiting for Check-ins
+                    </p>
+                    <p className="text-[11px] text-zinc-600 max-w-xs">
+                      Candidates will stream here live as they scan the QR code and enter their details.
+                    </p>
+                  </div>
+                ) : (
+                  attendees
+                    .filter(
+                      (att: any) =>
+                        !attendeeSearch ||
+                        att.name?.toLowerCase().includes(attendeeSearch.toLowerCase()) ||
+                        att.branch?.toLowerCase().includes(attendeeSearch.toLowerCase()) ||
+                        att.phone?.includes(attendeeSearch)
+                    )
+                    .map((att: any, idx: number) => {
+                      const color = getBranchColorStyle(att.branch || "", idx);
+                      const initials = att.name
+                        ? att.name
+                            .split(" ")
+                            .map((n: string) => n[0])
+                            .join("")
+                            .substring(0, 2)
+                            .toUpperCase()
+                        : "ST";
+
+                      return (
+                        <div
+                          key={att.leadId || idx}
+                          className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between gap-3 hover:border-indigo-500/40 transition-all shadow-sm animate-fade-in"
+                        >
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            {/* Avatar with branch color ring */}
+                            <div
+                              className="w-8 h-8 rounded-xl flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-sm"
+                              style={{ backgroundColor: color.hex }}
+                            >
+                              {initials}
+                            </div>
+                            <div className="min-w-0">
+                              <div className="flex items-center gap-1.5">
+                                <h4 className="font-bold text-xs text-zinc-100 truncate">
+                                  {att.name || "Student"}
+                                </h4>
+                                {idx === attendees.length - 1 && (
+                                  <span className="px-1.5 py-0.2 rounded-md bg-emerald-500/20 text-emerald-300 font-mono text-[9px] font-bold shrink-0">
+                                    NEW
+                                  </span>
+                                )}
+                              </div>
+                              <span
+                                className="text-[10px] font-mono font-semibold px-1.5 py-0.2 rounded"
+                                style={{
+                                  backgroundColor: `${color.hex}22`,
+                                  color: color.hex,
+                                }}
+                              >
+                                {att.branch || "General"}
+                              </span>
+                            </div>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleKickAttendee(att.leadId)}
+                            className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors"
+                            title="Remove student"
+                          >
+                            <UserX className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      );
+                    })
+                )}
+              </div>
+
+              {/* Stream Footer Info */}
+              <div className="pt-2 border-t border-white/10 flex items-center justify-between text-[11px] text-zinc-400 font-mono">
+                <span>Total Checked In: <strong className="text-white">{attendees.length}</strong></span>
+                <span>Press [Enter] to Start</span>
+              </div>
+            </div>
+          </div>
+        ) : quizState.isLeaderboardActive ? (
+          /* ==================== 2. LEADERBOARD PODIUM ==================== */
           <div className="w-full max-w-5xl mx-auto space-y-6 pt-4 animate-fade-in text-center">
             <div className="flex items-center justify-center gap-3 mb-6">
               <Trophy className="w-8 h-8 text-amber-400" />
@@ -646,7 +932,7 @@ export default function LiveProjectorPage() {
             )}
           </div>
         ) : (
-          /* Render Active Slide with Progressive Build Step */
+          /* ==================== 3. ACTIVE SLIDE CANVAS ==================== */
           <SlideRenderer
             key={`slide-${currentSlideIndex}`}
             slide={currentSlide}
@@ -690,40 +976,55 @@ export default function LiveProjectorPage() {
       {/* Presenter Floating Remote Control Toolbar */}
       <footer className="px-6 py-4 flex items-center justify-between bg-zinc-950/80 backdrop-blur-xl border-t border-white/10 z-30">
         <div className="flex items-center gap-2">
-          <Button
-            variant="ghost"
-            size="sm"
-            disabled={currentSlideIndex === 0 && buildStep === 0}
-            onClick={handlePrevAction}
-            className="text-zinc-300 hover:text-white hover:bg-white/10"
-            title="Previous Step / Slide (← / PageUp)"
-          >
-            <ChevronLeft className="w-4 h-4 mr-1 inline" />
-            <span className="hidden sm:inline">Prev</span>
-          </Button>
+          {!isPresentationStarted ? (
+            <Button
+              variant="primary"
+              size="sm"
+              onClick={handleStartPresentation}
+              className="bg-indigo-600 hover:bg-indigo-500 text-white font-extrabold shadow-lg flex items-center gap-2"
+            >
+              <Play className="w-4 h-4 fill-current" />
+              <span>Start Live Presentation</span>
+            </Button>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                size="sm"
+                disabled={currentSlideIndex === 0 && buildStep === 0}
+                onClick={handlePrevAction}
+                className="text-zinc-300 hover:text-white hover:bg-white/10"
+                title="Previous Step / Slide (← / PageUp)"
+              >
+                <ChevronLeft className="w-4 h-4 mr-1 inline" />
+                <span className="hidden sm:inline">Prev</span>
+              </Button>
 
-          <Button
-            variant="primary"
-            size="sm"
-            disabled={
-              currentSlideIndex === slides.length - 1 && buildStep >= maxSteps
-            }
-            onClick={handleNextAction}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg"
-            title="Next Step / Slide (→ / Space)"
-          >
-            <span>
-              {buildStep < maxSteps
-                ? `Next Step (${buildStep + 1}/${maxSteps})`
-                : "Next Slide"}
-            </span>
-            <ChevronRight className="w-4 h-4 ml-1 inline" />
-          </Button>
+              <Button
+                variant="primary"
+                size="sm"
+                disabled={
+                  currentSlideIndex === slides.length - 1 && buildStep >= maxSteps
+                }
+                onClick={handleNextAction}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold shadow-lg"
+                title="Next Step / Slide (→ / Space)"
+              >
+                <span>
+                  {buildStep < maxSteps
+                    ? `Next Step (${buildStep + 1}/${maxSteps})`
+                    : "Next Slide"}
+                </span>
+                <ChevronRight className="w-4 h-4 ml-1 inline" />
+              </Button>
+            </>
+          )}
         </div>
 
         {/* Center: Slide Interaction Buttons */}
         <div className="flex items-center gap-2">
-          {(currentSlide?.type === "POLL" || currentSlide?.type === "QUIZ") &&
+          {isPresentationStarted &&
+            (currentSlide?.type === "POLL" || currentSlide?.type === "QUIZ") &&
             !quizState.isQuizActive &&
             !quizState.isAnswerRevealed && (
               <Button
@@ -738,7 +1039,8 @@ export default function LiveProjectorPage() {
               </Button>
             )}
 
-          {currentSlide?.type === "QUIZ" &&
+          {isPresentationStarted &&
+            currentSlide?.type === "QUIZ" &&
             (quizState.isQuizActive ||
               (!quizState.isAnswerRevealed && !quizState.isLeaderboardActive)) && (
               <Button
@@ -753,7 +1055,7 @@ export default function LiveProjectorPage() {
               </Button>
             )}
 
-          {currentSlide?.type === "QUIZ" && (
+          {isPresentationStarted && currentSlide?.type === "QUIZ" && (
             <Button
               variant="secondary"
               size="sm"
@@ -769,13 +1071,24 @@ export default function LiveProjectorPage() {
 
         {/* Right: Shortcuts Guide Tooltip */}
         <div className="hidden md:flex items-center gap-3 text-[11px] font-mono text-zinc-400">
-          <span>[Space/→] Step</span>
-          <span>[U] Attendees</span>
-          <span>[N] Notes</span>
-          <span>[Q] Start</span>
-          <span>[R] Reveal</span>
-          <span>[L] Podium</span>
-          <span>[F] Fullscreen</span>
+          {!isPresentationStarted ? (
+            <>
+              <span>[Enter / Space] Start Presentation</span>
+              <span>[U] Attendees</span>
+              <span>[M] QR Code</span>
+              <span>[F] Fullscreen</span>
+            </>
+          ) : (
+            <>
+              <span>[Space/→] Step</span>
+              <span>[U] Attendees</span>
+              <span>[N] Notes</span>
+              <span>[Q] Start</span>
+              <span>[R] Reveal</span>
+              <span>[L] Podium</span>
+              <span>[F] Fullscreen</span>
+            </>
+          )}
         </div>
       </footer>
 

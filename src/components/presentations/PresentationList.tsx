@@ -36,6 +36,9 @@ import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import Badge from "../ui/Badge";
 import Input from "../ui/Input";
+import BranchDistributionPieChart, {
+  BranchStats,
+} from "./BranchDistributionPieChart";
 
 interface PresentationListProps {
   baseUrl: string;
@@ -73,6 +76,7 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
   const [copied, setCopied] = useState(false);
   const [attendees, setAttendees] = useState<any[]>([]);
   const [attendeeCount, setAttendeeCount] = useState(0);
+  const [branchStats, setBranchStats] = useState<BranchStats | null>(null);
   const [attendeeSearch, setAttendeeSearch] = useState("");
   const socketRef = useRef<Socket | null>(null);
 
@@ -92,6 +96,7 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
       }
       setAttendees([]);
       setAttendeeCount(0);
+      setBranchStats(null);
       return;
     }
 
@@ -110,6 +115,9 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
       if (Array.isArray(state.attendees)) {
         setAttendees(state.attendees);
       }
+      if (state.branchStats) {
+        setBranchStats(state.branchStats);
+      }
       if (typeof state.attendeeCount === "number") {
         setAttendeeCount(state.attendeeCount);
       }
@@ -119,18 +127,26 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
       setAttendeeCount(count);
     });
 
-    socket.on("attendee_joined", ({ attendees: list, count }) => {
+    socket.on("attendee_joined", ({ attendees: list, count, branchStats: bStats }) => {
       setAttendeeCount(count);
       if (list) setAttendees(list);
+      if (bStats) setBranchStats(bStats);
     });
 
-    socket.on("attendee_left", ({ attendees: list, count }) => {
+    socket.on("attendee_left", ({ attendees: list, count, branchStats: bStats }) => {
       setAttendeeCount(count);
       if (list) setAttendees(list);
+      if (bStats) setBranchStats(bStats);
     });
 
-    socket.on("attendee_kicked", ({ attendees: list, count }) => {
+    socket.on("attendee_kicked", ({ attendees: list, count, branchStats: bStats }) => {
       setAttendeeCount(count);
+      if (list) setAttendees(list);
+      if (bStats) setBranchStats(bStats);
+    });
+
+    socket.on("branch_distribution_updated", ({ branchStats: bStats, attendees: list }) => {
+      if (bStats) setBranchStats(bStats);
       if (list) setAttendees(list);
     });
 
@@ -687,12 +703,24 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
               {/* Live Attendee Counter & Fast-Pass Monitor */}
               <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-100 dark:border-zinc-800 text-xs flex items-center justify-between">
                 <div className="flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
                   <Users className="w-4 h-4 text-emerald-500" />
                   <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                    {attendeeCount} Students Checked In
+                    {attendees.length || attendeeCount} Students Checked In
                   </span>
                 </div>
                 <span className="text-[10px] text-zinc-400 font-mono">Live fast-pass stream</span>
+              </div>
+
+              {/* Dynamic Branch Distribution Pie Chart */}
+              <div className="text-left">
+                <BranchDistributionPieChart
+                  branchStats={branchStats}
+                  attendees={attendees}
+                  compact={true}
+                  title="Live Branch Breakdown"
+                  subtitle="Percentage of students checked in by branch"
+                />
               </div>
 
               <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800 flex justify-center gap-3">
