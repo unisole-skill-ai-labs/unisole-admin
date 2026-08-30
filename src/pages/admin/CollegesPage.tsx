@@ -121,9 +121,9 @@ export default function CollegesPage() {
           id: editingCollege.id,
           body: {
             name: name.trim(),
-            shortName: shortName.trim() || undefined,
+            shortName: shortName.trim() || null,
             slug: slug.trim(),
-            description: description.trim() || undefined,
+            description: description.trim() || null,
           },
         }).unwrap();
         setEditingCollege(null);
@@ -132,9 +132,9 @@ export default function CollegesPage() {
           baseUrl,
           body: {
             name: name.trim(),
-            shortName: shortName.trim() || undefined,
+            shortName: shortName.trim() || null,
             slug: slug.trim(),
-            description: description.trim() || undefined,
+            description: description.trim() || null,
           },
         }).unwrap();
         setIsCreateOpen(false);

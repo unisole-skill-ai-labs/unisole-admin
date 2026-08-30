@@ -198,8 +198,8 @@ export default function CollegeDetailPage() {
           body: {
             collegeId: currentCollege?.id || id,
             name: branchName.trim(),
-            code: branchCode.trim() || undefined,
-            description: branchDesc.trim() || undefined,
+            code: branchCode.trim() || null,
+            description: branchDesc.trim() || null,
           },
         }).unwrap();
         // Update selected branch reference if we are currently viewing it
@@ -207,8 +207,8 @@ export default function CollegeDetailPage() {
           setSelectedBranch({
             ...selectedBranch,
             name: branchName.trim(),
-            code: branchCode.trim() || undefined,
-            description: branchDesc.trim() || undefined,
+            code: branchCode.trim() || null,
+            description: branchDesc.trim() || null,
           });
         }
         setEditingBranch(null);
@@ -222,8 +222,8 @@ export default function CollegeDetailPage() {
           body: {
             collegeId: currentCollege.id,
             name: branchName.trim(),
-            code: branchCode.trim() || undefined,
-            description: branchDesc.trim() || undefined,
+            code: branchCode.trim() || null,
+            description: branchDesc.trim() || null,
           },
         }).unwrap();
         setIsCreateBranchOpen(false);
@@ -288,11 +288,11 @@ export default function CollegeDetailPage() {
           baseUrl,
           id: editingStudent.id,
           body: {
-            name: studentName.trim() || undefined,
+            name: studentName.trim() || null,
             phone: studentPhone.trim(),
             collegeId: currentCollege.id,
             collegeName: currentCollege.name,
-            branch: studentBranch.trim() || undefined,
+            branch: studentBranch.trim() || null,
           },
         }).unwrap();
         setEditingStudent(null);
@@ -300,11 +300,11 @@ export default function CollegeDetailPage() {
         await createStudent({
           baseUrl,
           body: {
-            name: studentName.trim() || undefined,
+            name: studentName.trim() || null,
             phone: studentPhone.trim(),
             collegeId: currentCollege.id,
             collegeName: currentCollege.name,
-            branch: studentBranch.trim() || undefined,
+            branch: studentBranch.trim() || null,
             role: "STUDENT",
           },
         }).unwrap();
@@ -357,9 +357,9 @@ export default function CollegeDetailPage() {
         id: currentCollege.id,
         body: {
           name: colName.trim(),
-          shortName: colShortName.trim() || undefined,
+          shortName: colShortName.trim() || null,
           slug: colSlug.trim(),
-          description: colDesc.trim() || undefined,
+          description: colDesc.trim() || null,
         },
       }).unwrap();
       setIsEditCollegeOpen(false);
