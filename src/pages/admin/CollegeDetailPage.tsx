@@ -371,6 +371,23 @@ export default function CollegeDetailPage() {
     }
   };
 
+  if (colleges.length > 0 && !currentCollege) {
+    return (
+      <div className="text-center py-20 bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-8 max-w-lg mx-auto my-12 shadow-sm">
+        <div className="w-14 h-14 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center mx-auto mb-4 border border-amber-200/50">
+          <AlertTriangle className="w-7 h-7" />
+        </div>
+        <h2 className="text-xl font-bold text-zinc-900 dark:text-zinc-100">Partner University Not Found</h2>
+        <p className="text-sm text-zinc-500 dark:text-zinc-400 mt-2 mb-6">
+          The institution you are looking for does not exist or may have been deleted.
+        </p>
+        <Button onClick={() => navigate("/colleges")} className="bg-indigo-600 hover:bg-indigo-700 text-white">
+          <ArrowLeft className="w-4 h-4 mr-2" /> Back to Partner Universities
+        </Button>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in max-w-7xl mx-auto pb-16">
       {/* Top Breadcrumb & Actions Bar */}
