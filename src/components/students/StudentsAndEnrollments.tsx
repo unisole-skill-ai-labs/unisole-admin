@@ -90,15 +90,27 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
   const [deactivateStudent, { isLoading: isDeactivating }] = useDeactivateStudentMutation();
 
   const [search, setSearch] = useState("");
+  const [sourceFilter, setSourceFilter] = useState<string>("ALL");
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
 
-  const filtered = students.filter(
-    (s: any) =>
+  const filtered = students.filter((s: any) => {
+    const matchesSearch =
       s.name?.toLowerCase().includes(search.toLowerCase()) ||
       s.phone?.includes(search) ||
-      s.id?.toLowerCase().includes(search.toLowerCase())
-  );
+      s.id?.toLowerCase().includes(search.toLowerCase()) ||
+      s.collegeName?.toLowerCase().includes(search.toLowerCase()) ||
+      s.branch?.toLowerCase().includes(search.toLowerCase()) ||
+      s.signupSessionCode?.toLowerCase().includes(search.toLowerCase());
+
+    const matchesSource =
+      sourceFilter === "ALL" ||
+      (sourceFilter === "PAMPHLET_QR" && (s.signupSource === "PAMPHLET_QR" || s.signupSource === "PAMPHLET")) ||
+      (sourceFilter === "SESSION_QR" && (s.signupSource === "SESSION_QR" || !!s.signupSessionCode)) ||
+      (sourceFilter === "NON_PAMPHLET" && (s.signupSource === "NON_PAMPHLET" || !s.signupSource));
+
+    return matchesSearch && matchesSource;
+  });
 
   const handleCreate = async (formData: any) => {
     try {
@@ -129,18 +141,43 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
 
   return (
     <div className="space-y-4">
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
-        <div className="relative w-full sm:max-w-md">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
-          <input
-            type="text"
-            placeholder="Search learners by name, phone, or ID..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden"
-          />
+      <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-3 p-3 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+        <div className="flex flex-col sm:flex-row items-center gap-2 flex-1">
+          <div className="relative w-full sm:max-w-md">
+            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+            <input
+              type="text"
+              placeholder="Search by name, phone, session, college..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden"
+            />
+          </div>
+
+          {/* Source filter tabs */}
+          <div className="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-xl border border-zinc-200/60 dark:border-zinc-700/60 text-xs w-full sm:w-auto overflow-x-auto">
+            {[
+              { id: "ALL", label: "All Sources" },
+              { id: "PAMPHLET_QR", label: "📰 Pamphlet QR" },
+              { id: "SESSION_QR", label: "🏛️ Session QR" },
+              { id: "NON_PAMPHLET", label: "🌐 Organic Web" },
+            ].map((tab) => (
+              <button
+                key={tab.id}
+                onClick={() => setSourceFilter(tab.id)}
+                className={`px-2.5 py-1 rounded-lg font-bold transition-colors whitespace-nowrap cursor-pointer text-[11px] ${
+                  sourceFilter === tab.id
+                    ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200"
+                }`}
+              >
+                {tab.label}
+              </button>
+            ))}
+          </div>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+
+        <div className="flex items-center gap-2 w-full md:w-auto justify-end">
           <Button variant="secondary" size="sm" onClick={refetch} icon={RefreshCw}>
             Refresh
           </Button>
@@ -157,6 +194,8 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
               <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 text-zinc-400 font-mono">
                 <th className="py-3 px-4 font-semibold">Learner Info</th>
                 <th className="py-3 px-4 font-semibold">Mobile Number</th>
+                <th className="py-3 px-4 font-semibold">Acquisition Source</th>
+                <th className="py-3 px-4 font-semibold">Campus & Branch</th>
                 <th className="py-3 px-4 font-semibold">Role</th>
                 <th className="py-3 px-4 font-semibold">Status</th>
                 <th className="py-3 px-4 font-semibold text-right">Actions</th>
@@ -164,9 +203,9 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
               {isLoading ? (
-                <tr><td colSpan={5} className="py-8 text-center text-zinc-400">Loading student accounts...</td></tr>
+                <tr><td colSpan={7} className="py-8 text-center text-zinc-400">Loading student accounts...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={5} className="py-8 text-center text-zinc-400">No learners found.</td></tr>
+                <tr><td colSpan={7} className="py-8 text-center text-zinc-400">No learners found.</td></tr>
               ) : (
                 filtered.map((s: any) => (
                   <tr key={s.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
@@ -181,6 +220,36 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
                     </td>
                     <td className="py-3.5 px-4 font-mono font-semibold text-zinc-700 dark:text-zinc-300">
                       {s.phone ? `+91 ${s.phone}` : "—"}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      {s.signupSource === "PAMPHLET_QR" || s.signupSource === "PAMPHLET" ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20 font-mono">
+                          📰 Pamphlet QR
+                        </span>
+                      ) : s.signupSource === "SESSION_QR" || s.signupSessionCode ? (
+                        <div className="space-y-0.5">
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-mono">
+                            🏛️ Session QR
+                          </span>
+                          {s.signupSessionCode && (
+                            <div className="text-[10px] font-mono text-zinc-400">
+                              Code: <strong className="text-zinc-700 dark:text-zinc-300">{s.signupSessionCode}</strong>
+                            </div>
+                          )}
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700 font-mono">
+                          🌐 Organic Web
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4">
+                      <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">
+                        {s.collegeName || s.signupCollegeName || "—"}
+                      </div>
+                      <div className="text-[11px] text-zinc-400 font-mono truncate max-w-[180px]">
+                        {s.branch || "General"}
+                      </div>
                     </td>
                     <td className="py-3.5 px-4">
                       <Badge variant={s.role === "ADMIN" ? "rose" : "brand"} size="sm">
