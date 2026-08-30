@@ -1244,15 +1244,15 @@ export default function LiveAudiencePage() {
         </div>
       </header>
 
-      {/* Main Interactive Stage Canvas (Auto-Fit Without Scroll in Portrait) */}
-      <main className="flex-1 min-h-0 relative flex items-center justify-center p-2 sm:p-4 z-20 overflow-hidden w-full">
+      {/* Main Interactive Stage Canvas (Responsive & Readable on Mobile Portrait) */}
+      <main className="flex-1 min-h-0 relative flex flex-col items-center justify-start p-3 sm:p-5 z-20 overflow-y-auto w-full overscroll-contain">
         {/* Glow ambient lights */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
 
-        <AutoFitSlideStage className="w-full h-full">
+        <div className="w-full max-w-xl mx-auto my-auto py-2 z-10 animate-fade-in">
           {quizState.isLeaderboardActive ? (
-            <div className="w-full max-w-4xl mx-auto space-y-4 pt-1 animate-fade-in text-center z-10">
+            <div className="w-full space-y-4 pt-1 animate-fade-in text-center">
               <div className="flex items-center justify-center gap-2 mb-1">
                 <Trophy className="w-6 h-6 text-amber-400" />
                 <h2 className="text-xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-yellow-400">
@@ -1324,25 +1324,23 @@ export default function LiveAudiencePage() {
               </div>
             </div>
           ) : (
-            /* Render Active Slide with Progressive Step Animations */
-            <div className="w-full max-w-5xl mx-auto z-10">
-              <SlideRenderer
-                key={`slide-${currentSlideIndex}`}
-                slide={currentSlide}
-                buildStep={buildStep}
-                presentationTitle={presentation?.title}
-                isProjector={false}
-                isLandscape={false}
-                quizState={quizState}
-                remainingTime={remainingTime}
-                leaderboard={leaderboard}
-                onSelectOption={handleSelectOption}
-                selectedOption={selectedOption}
-                isSubmitted={isSubmitted}
-              />
-            </div>
+            /* Render Active Slide with Responsive Typography and Step Animations */
+            <SlideRenderer
+              key={`slide-${currentSlideIndex}`}
+              slide={currentSlide}
+              buildStep={buildStep}
+              presentationTitle={presentation?.title}
+              isProjector={false}
+              isLandscape={false}
+              quizState={quizState}
+              remainingTime={remainingTime}
+              leaderboard={leaderboard}
+              onSelectOption={handleSelectOption}
+              selectedOption={selectedOption}
+              isSubmitted={isSubmitted}
+            />
           )}
-        </AutoFitSlideStage>
+        </div>
       </main>
 
       {/* Floating Bottom Emoji Reaction Bar */}
