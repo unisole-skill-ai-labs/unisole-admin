@@ -35,25 +35,25 @@ export default function Modal({
 
   return (
     <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in"
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-6 bg-black/60 backdrop-blur-sm animate-fade-in overflow-y-auto"
       onClick={(e) => e.target === e.currentTarget && onClose()}
     >
       <div
         className={cn(
-          "bg-white dark:bg-zinc-900 w-full rounded-2xl shadow-2xl border border-zinc-200/80 dark:border-zinc-800 overflow-hidden transform transition-all text-zinc-900 dark:text-zinc-100",
+          "bg-white dark:bg-zinc-900 w-full rounded-3xl shadow-2xl border border-zinc-200/80 dark:border-zinc-800 overflow-hidden transform transition-all text-zinc-900 dark:text-zinc-100 max-h-[90vh] flex flex-col my-auto",
           maxWidth
         )}
       >
-        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80">
+        <div className="flex items-center justify-between px-6 py-4 border-b border-zinc-100 dark:border-zinc-800/80 shrink-0">
           <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">{title}</h3>
           <button
             onClick={onClose}
-            className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
           >
             <X className="w-5 h-5" />
           </button>
         </div>
-        <div className="p-6">{children}</div>
+        <div className="p-6 overflow-y-auto flex-1">{children}</div>
       </div>
     </div>
   );
