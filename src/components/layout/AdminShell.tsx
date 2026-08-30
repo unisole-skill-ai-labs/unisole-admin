@@ -319,41 +319,46 @@ export default function AdminShell() {
               <BookOpen className="w-4 h-4" />
               <span>Curriculum & Content</span>
             </NavLink>
-
-            <NavLink
-              to="/presentations"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive || location.pathname.startsWith("/presentations/analytics")
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <span>Roadshows & Pitch Decks</span>
-            </NavLink>
           </div>
 
-          {/* Entities & Governance (Hidden for simple Member view) */}
+          {/* Campus Ecosystem & Entities */}
           {!isMember && (
             <div className="space-y-1">
               <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
-                Entities & Governance
+                Campus Ecosystem
               </div>
 
               <NavLink
-                to="/metadata"
+                to="/colleges"
                 className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                     isActive || location.pathname.startsWith("/colleges")
                       ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
                       : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
                   }`
                 }
               >
-                <GraduationCap className="w-4 h-4" />
-                <span>Universities & Metadata</span>
+                <div className="flex items-center gap-3">
+                  <GraduationCap className="w-4 h-4 text-indigo-500" />
+                  <span>Colleges & Campuses</span>
+                </div>
+                <span className="text-[10px] font-mono text-zinc-400 font-semibold">
+                  HUB
+                </span>
+              </NavLink>
+
+              <NavLink
+                to="/presentations"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    isActive || location.pathname.startsWith("/presentations/analytics")
+                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                  }`
+                }
+              >
+                <Sparkles className="w-4 h-4 text-amber-500" />
+                <span>Roadshow Decks</span>
               </NavLink>
 
               <NavLink
