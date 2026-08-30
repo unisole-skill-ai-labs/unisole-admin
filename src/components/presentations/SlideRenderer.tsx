@@ -5,6 +5,7 @@ import {
   Trophy,
   Flame,
   CheckCircle2,
+  XCircle,
   Clock,
   BarChart3,
   Award,
@@ -21,6 +22,18 @@ import {
   Check,
   AlertTriangle,
   Lightbulb,
+  Building2,
+  Target,
+  Code,
+  Terminal,
+  Database,
+  Cpu,
+  Search,
+  BookOpen,
+  ChevronRight,
+  ExternalLink,
+  Crown,
+  Medal,
 } from "lucide-react";
 
 interface SlideRendererProps {
@@ -1896,7 +1909,1305 @@ export default function SlideRenderer({
     }
 
     // ==========================================
-    // 27. CONTENT (BULLETS) & OTHER DEFAULT
+    // 27. TEXT TRANSITION SLIDE
+    // ==========================================
+    case "TEXT_TRANSITION":
+    case "TRANSITION": {
+      return (
+        <div className="w-full max-w-4xl mx-auto text-center space-y-6 sm:space-y-8 py-8 animate-fade-in">
+          {slide.badge && (
+            <div
+              className={`inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 transition-all duration-300 ease-out ${
+                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400" />
+              <span>{slide.badge}</span>
+            </div>
+          )}
+
+          <div
+            className={`transition-all duration-500 ease-out ${
+              currentStep >= 0 ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            }`}
+          >
+            <h1 className="text-3xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-indigo-300 drop-shadow-lg leading-tight">
+              {slide.title}
+            </h1>
+          </div>
+
+          {slide.subtitle && (
+            <div
+              className={`transition-all duration-300 ease-out ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              <p className="text-base sm:text-2xl text-zinc-300 font-medium max-w-2xl mx-auto leading-relaxed">
+                {slide.subtitle}
+              </p>
+            </div>
+          )}
+
+          {Array.isArray(slide.cards) && (
+            <div
+              className={`grid grid-cols-2 sm:grid-cols-4 gap-3 pt-4 transition-all duration-300 ease-out ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              {slide.cards.map((c: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="p-3.5 rounded-2xl bg-white/5 border border-white/10 text-xs font-bold text-indigo-200 text-center shadow-md hover:border-indigo-500/40 transition-all"
+                >
+                  {c}
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 28. ECOSYSTEM HUB
+    // ==========================================
+    case "ECOSYSTEM_HUB": {
+      const items = slide.items || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in text-center">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "THE LANDSCAPE"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div className="p-6 rounded-3xl bg-gradient-to-b from-indigo-950/40 to-zinc-900/60 border border-indigo-500/30 backdrop-blur-xl shadow-2xl relative">
+            <div
+              className={`mb-6 inline-flex items-center gap-2 px-6 py-2.5 rounded-2xl bg-gradient-to-r from-indigo-600 to-violet-600 text-white font-black text-base sm:text-lg shadow-xl shadow-indigo-600/30 transition-all duration-300 ${
+                currentStep >= 0 ? "opacity-100 scale-100" : "opacity-0 scale-90"
+              }`}
+            >
+              <Target className="w-5 h-5 text-amber-300" />
+              <span>{slide.centerLabel || "JOB MARKET"}</span>
+            </div>
+
+            <div
+              className={`grid grid-cols-2 sm:grid-cols-5 gap-2.5 transition-all duration-300 ease-out ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              {items.map((it: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:border-indigo-400/50 hover:bg-indigo-900/20 transition-all text-xs font-bold text-zinc-200 flex items-center justify-center gap-1.5 shadow-sm"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                  <span className="truncate">{it}</span>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div
+            className={`p-3.5 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 font-bold text-xs sm:text-sm text-indigo-200 transition-all duration-300 ${
+              currentStep >= 2 ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            }`}
+          >
+            {slide.punchline || "Your degree is a starting point — not the entire career map."}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 29. THREE CARDS
+    // ==========================================
+    case "THREE_CARDS": {
+      const cards = slide.cards || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "INFORMATION GAP"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+            {cards.map((c: any, idx: number) => {
+              const isRevealed = currentStep >= idx;
+              return (
+                <div
+                  key={idx}
+                  className={`p-5 rounded-3xl border transition-all duration-300 ease-out shadow-xl flex flex-col justify-between space-y-3 ${
+                    isRevealed
+                      ? "bg-gradient-to-b from-indigo-950/60 to-zinc-900 border-indigo-500/40 opacity-100 translate-y-0"
+                      : "bg-white/2 border-white/5 opacity-25 translate-y-3"
+                  }`}
+                >
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-mono font-black text-indigo-400">
+                        {c.num || `0${idx + 1}`}
+                      </span>
+                      <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                    </div>
+                    <h3 className="font-extrabold text-base text-white">{c.title}</h3>
+                    <div className="space-y-1.5 pt-2 border-t border-white/10">
+                      {(c.items || []).map((it: string, iIdx: number) => (
+                        <div
+                          key={iIdx}
+                          className="p-2 rounded-xl bg-black/30 border border-white/5 text-xs text-zinc-200 font-medium flex items-center gap-2"
+                        >
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
+                          <span>{it}</span>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {slide.punchline && (
+            <div
+              className={`p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center font-bold text-xs sm:text-sm text-amber-300 transition-all duration-300 ${
+                currentStep >= 2 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {slide.punchline}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 30. EDUCATION SHIFT
+    // ==========================================
+    case "EDUCATION_SHIFT": {
+      const s1 = slide.stat1 || { year: "1990–91", count: "~49 LAKH", label: "Higher Education Enrolment", ratio: "GER ≈ 6%" };
+      const s2 = slide.stat2 || { year: "2023–24", count: "~4.5 CRORE", label: "Higher Education Enrolment", ratio: "GER ≈ 30%" };
+
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in text-center">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "EDUCATION SHIFT"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-5 pt-2">
+            {/* 1990-91 */}
+            <div
+              className={`p-6 sm:p-8 rounded-3xl bg-white/5 border border-white/10 text-center space-y-3 transition-all duration-300 ease-out shadow-lg ${
+                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              <span className="text-xs font-mono font-bold text-zinc-400">{s1.year}</span>
+              <div className="text-3xl sm:text-5xl font-black text-indigo-300">{s1.count}</div>
+              <p className="text-xs sm:text-sm font-bold text-zinc-200">{s1.label}</p>
+              <div className="inline-block px-3 py-1 rounded-xl bg-white/5 border border-white/10 text-xs font-mono text-zinc-400">
+                {s1.ratio}
+              </div>
+            </div>
+
+            {/* 2023-24 */}
+            <div
+              className={`p-6 sm:p-8 rounded-3xl bg-gradient-to-b from-indigo-950/70 to-zinc-900 border border-indigo-500/40 text-center space-y-3 transition-all duration-300 ease-out shadow-2xl ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              <span className="text-xs font-mono font-bold text-indigo-400">{s2.year}</span>
+              <div className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-violet-300">
+                {s2.count}
+              </div>
+              <p className="text-xs sm:text-sm font-bold text-white">{s2.label}</p>
+              <div className="inline-block px-3 py-1 rounded-xl bg-emerald-500/20 border border-emerald-500/40 text-xs font-mono font-bold text-emerald-400">
+                {s2.ratio}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`p-4 rounded-2xl bg-amber-500/10 border border-amber-500/30 font-bold text-xs sm:text-base text-amber-300 transition-all duration-300 ${
+              currentStep >= 2 ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            }`}
+          >
+            {slide.punchline || "More Graduates → More Competition. Degree alone is no longer enough to differentiate yourself."}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 31. GOV VS PRIVATE
+    // ==========================================
+    case "GOV_VS_PRIVATE": {
+      const govFlow = slide.govFlow || ["Eligibility (Degree)", "Selection (Exam)", "Job (Defined Post)"];
+      const privFlow = slide.privFlow || ["Role", "Skills", "Projects / Experience", "Interview", "Job"];
+
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "HIRING COMPARISON"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            {/* Government */}
+            <div
+              className={`p-5 rounded-3xl bg-white/5 border border-white/10 space-y-3 transition-all duration-300 ease-out shadow-lg ${
+                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Building2 className="w-4 h-4 text-blue-400" />
+                <h3 className="font-black text-sm uppercase tracking-wider text-blue-300">
+                  Government Hiring
+                </h3>
+              </div>
+              <div className="space-y-2">
+                {govFlow.map((g: string, idx: number) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className="flex-1 p-2.5 rounded-xl bg-black/40 border border-white/5 text-xs font-medium text-zinc-200 text-center">
+                      {g}
+                    </div>
+                    {idx < govFlow.length - 1 && <span className="text-blue-400 font-bold">↓</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Private */}
+            <div
+              className={`p-5 rounded-3xl bg-gradient-to-b from-indigo-950/70 to-zinc-900 border border-indigo-500/40 space-y-3 transition-all duration-300 ease-out shadow-2xl ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              <div className="flex items-center gap-2">
+                <Briefcase className="w-4 h-4 text-emerald-400" />
+                <h3 className="font-black text-sm uppercase tracking-wider text-emerald-300">
+                  Private Hiring
+                </h3>
+              </div>
+              <div className="space-y-2">
+                {privFlow.map((p: string, idx: number) => (
+                  <div key={idx} className="flex items-center gap-2">
+                    <div className="flex-1 p-2.5 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-xs font-bold text-white text-center shadow-sm">
+                      {p}
+                    </div>
+                    {idx < privFlow.length - 1 && <span className="text-emerald-400 font-bold">↓</span>}
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`p-3.5 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 text-center space-y-1 transition-all duration-300 ${
+              currentStep >= 2 ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <p className="font-bold text-xs sm:text-sm text-indigo-200">
+              {slide.punchline || "Private hiring can be more role- and skill-oriented."}
+            </p>
+            {slide.disclaimer && (
+              <p className="text-[11px] text-zinc-400 italic">{slide.disclaimer}</p>
+            )}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 32. MYTH REALITY PAIRS
+    // ==========================================
+    case "MYTH_REALITY_PAIRS": {
+      const pairs = slide.pairs || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "MYTH VS REALITY"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div className="space-y-3 pt-1">
+            {pairs.map((pr: any, idx: number) => {
+              const isRevealed = currentStep >= idx;
+              return (
+                <div
+                  key={idx}
+                  className={`p-4 sm:p-5 rounded-3xl border grid grid-cols-1 md:grid-cols-12 gap-3 items-center transition-all duration-300 ease-out shadow-lg ${
+                    isRevealed
+                      ? "bg-zinc-900/90 border-white/10 opacity-100 translate-x-0"
+                      : "bg-white/2 border-white/5 opacity-25 -translate-x-3"
+                  }`}
+                >
+                  {/* Myth */}
+                  <div className="md:col-span-5 p-3 rounded-2xl bg-rose-950/30 border border-rose-500/30 space-y-1">
+                    <span className="text-[10px] font-mono font-bold text-rose-400 uppercase tracking-wider block">
+                      MYTH 0{idx + 1}
+                    </span>
+                    <p className="text-xs sm:text-sm font-bold text-rose-200">{pr.myth}</p>
+                  </div>
+
+                  <div className="hidden md:flex md:col-span-1 items-center justify-center text-zinc-400">
+                    <ArrowRight className="w-5 h-5" />
+                  </div>
+
+                  {/* Reality */}
+                  <div className="md:col-span-6 p-3 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 space-y-1">
+                    <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider block">
+                      INDUSTRY REALITY
+                    </span>
+                    <p className="text-xs sm:text-sm text-zinc-200 font-medium leading-relaxed">{pr.reality}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 33. CAREER OPTIONS HUB
+    // ==========================================
+    case "CAREER_OPTIONS_HUB": {
+      const branches = slide.branches || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in text-center">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "CAREER HORIZONS"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div className="p-6 rounded-3xl bg-gradient-to-b from-indigo-950/50 to-zinc-900 border border-indigo-500/30 shadow-2xl relative space-y-5">
+            <div
+              className={`inline-flex items-center gap-2 px-6 py-3 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 text-white font-black text-lg shadow-xl shadow-amber-500/25 transition-all duration-300 ${
+                currentStep >= 0 ? "opacity-100 scale-100" : "opacity-0 scale-90"
+              }`}
+            >
+              <GraduationCap className="w-6 h-6 text-white" />
+              <span>{slide.hubLabel || "YOUR DEGREE"}</span>
+            </div>
+
+            <div
+              className={`grid grid-cols-2 sm:grid-cols-5 gap-2.5 transition-all duration-300 ease-out ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              {branches.map((b: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="p-3 rounded-2xl bg-white/5 border border-white/10 hover:border-indigo-400/50 text-xs font-bold text-zinc-200 shadow-sm"
+                >
+                  {b}
+                </div>
+              ))}
+            </div>
+          </div>
+
+          <div
+            className={`p-3.5 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 font-bold text-xs sm:text-sm text-indigo-200 transition-all duration-300 ${
+              currentStep >= 2 ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {slide.punchline || "One degree can lead to multiple career paths."}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 34. STREAM ROLES
+    // ==========================================
+    case "STREAM_ROLES": {
+      const roles = slide.roles || [];
+      const primaryRoles = slide.primaryRoles || [];
+      const rolesList = slide.rolesList || [];
+      const secondaryRoles = slide.secondaryRoles || [];
+
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <div>
+              <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                {slide.badge || slide.stream || "STREAM SPECIALIZATION"}
+              </span>
+              <h2 className="text-xl sm:text-3xl font-black text-white mt-2">
+                {slide.title}
+              </h2>
+            </div>
+            {slide.subtitle && (
+              <p className="text-xs sm:text-sm text-zinc-400 max-w-md">
+                {slide.subtitle}
+              </p>
+            )}
+          </div>
+
+          {roles.length > 0 && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-1">
+              {roles.map((r: any, idx: number) => {
+                const isRevealed = currentStep >= idx;
+                return (
+                  <div
+                    key={idx}
+                    className={`p-4 rounded-3xl border transition-all duration-300 ease-out shadow-lg space-y-1.5 ${
+                      isRevealed
+                        ? "bg-gradient-to-b from-indigo-950/60 to-zinc-900 border-indigo-500/40 opacity-100 translate-y-0"
+                        : "bg-white/2 border-white/5 opacity-25 translate-y-2"
+                    }`}
+                  >
+                    <div className="flex items-center gap-2">
+                      <span className="w-6 h-6 rounded-lg bg-indigo-600/30 text-indigo-300 font-mono font-bold text-xs flex items-center justify-center border border-indigo-500/30">
+                        {r.num || `0${idx + 1}`}
+                      </span>
+                      <h4 className="font-extrabold text-sm text-white">{r.title}</h4>
+                    </div>
+                    {r.desc && (
+                      <p className="text-xs text-zinc-300 font-medium leading-relaxed pl-8">
+                        {r.desc}
+                      </p>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          )}
+
+          {primaryRoles.length > 0 && (
+            <div className="space-y-4 pt-1">
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                {primaryRoles.map((pr: any, idx: number) => {
+                  const isRevealed = currentStep >= idx;
+                  return (
+                    <div
+                      key={idx}
+                      className={`p-4 rounded-3xl border transition-all duration-300 ease-out shadow-lg space-y-1.5 ${
+                        isRevealed
+                          ? "bg-gradient-to-b from-indigo-950/70 to-zinc-900 border-indigo-500/40 opacity-100 translate-y-0"
+                          : "bg-white/2 border-white/5 opacity-25 translate-y-2"
+                      }`}
+                    >
+                      <span className="text-[10px] font-mono font-bold text-indigo-400 uppercase">
+                        {pr.category}
+                      </span>
+                      <h4 className="font-extrabold text-sm text-white">{pr.role}</h4>
+                      <p className="text-[11px] text-zinc-300 font-medium leading-tight">{pr.desc}</p>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {secondaryRoles.length > 0 && (
+                <div
+                  className={`p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1.5 transition-all duration-300 ${
+                    currentStep >= 3 ? "opacity-100" : "opacity-0"
+                  }`}
+                >
+                  <span className="text-[10px] font-mono text-zinc-400 uppercase font-bold">
+                    Additional High-Growth Adjacent Domains:
+                  </span>
+                  <div className="flex flex-wrap gap-2">
+                    {secondaryRoles.map((sr: string, sIdx: number) => (
+                      <span
+                        key={sIdx}
+                        className="px-3 py-1 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-xs font-bold text-indigo-200"
+                      >
+                        {sr}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
+
+          {rolesList.length > 0 && (
+            <div className="space-y-2 pt-1">
+              {rolesList.map((rl: string, idx: number) => {
+                const isRevealed = currentStep >= idx;
+                return (
+                  <div
+                    key={idx}
+                    className={`p-3.5 rounded-2xl border flex items-center gap-3 transition-all duration-300 ease-out shadow-md ${
+                      isRevealed
+                        ? "bg-white/5 border-white/10 opacity-100 translate-x-0"
+                        : "bg-white/2 border-white/5 opacity-25 -translate-x-3"
+                    }`}
+                  >
+                    <span className="w-6 h-6 rounded-lg bg-indigo-600/30 text-indigo-300 font-mono font-bold text-xs flex items-center justify-center shrink-0 border border-indigo-500/30">
+                      0{idx + 1}
+                    </span>
+                    <span className="text-xs sm:text-sm font-bold text-zinc-100">{rl}</span>
+                  </div>
+                );
+              })}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 35. CAREER CAPITAL GRID
+    // ==========================================
+    case "CAREER_CAPITAL_GRID": {
+      const blocks = slide.blocks || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "CAREER CAPITAL"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-1">
+            {blocks.map((b: any, idx: number) => {
+              const isRevealed = currentStep >= idx;
+              return (
+                <div
+                  key={idx}
+                  className={`p-4 sm:p-5 rounded-3xl border transition-all duration-300 ease-out shadow-lg space-y-2 ${
+                    isRevealed
+                      ? "bg-gradient-to-b from-indigo-950/60 to-zinc-900 border-indigo-500/40 opacity-100 translate-y-0"
+                      : "bg-white/2 border-white/5 opacity-25 translate-y-2"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-indigo-400">
+                      {b.num || `0${idx + 1}`}
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                  </div>
+                  <h3 className="font-extrabold text-base text-white">{b.label}</h3>
+                  <p className="text-xs text-zinc-300 font-medium leading-relaxed">{b.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+
+          {slide.punchline && (
+            <div
+              className={`p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center font-bold text-xs sm:text-sm text-amber-300 transition-all duration-300 ${
+                currentStep >= 3 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {slide.punchline}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 36. STAIRCASE FLOW
+    // ==========================================
+    case "STAIRCASE_FLOW": {
+      const steps = slide.steps || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "THE STAIRCASE"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 pt-1">
+            {steps.map((st: string, idx: number) => {
+              const isRevealed = currentStep >= idx;
+              return (
+                <div
+                  key={idx}
+                  className={`p-3.5 rounded-2xl border flex items-center gap-2.5 transition-all duration-300 ease-out shadow-md ${
+                    isRevealed
+                      ? "bg-gradient-to-b from-indigo-900/50 to-zinc-900 border-indigo-500/40 opacity-100 translate-y-0"
+                      : "bg-white/2 border-white/5 opacity-25 translate-y-2"
+                  }`}
+                >
+                  <span className="w-6 h-6 rounded-lg bg-indigo-500/20 text-indigo-300 font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                    {idx + 1}
+                  </span>
+                  <span className="text-xs font-bold text-white leading-tight">{st.replace(/^\d+\.\s*/, '')}</span>
+                </div>
+              );
+            })}
+          </div>
+
+          <div
+            className={`p-3.5 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 text-center font-bold text-xs sm:text-sm text-indigo-200 transition-all duration-300 ${
+              currentStep >= 3 ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {slide.punchline || "Learn → Build → Prove → Apply"}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 37. DEDICATED ROADMAP
+    // ==========================================
+    case "DEDICATED_ROADMAP": {
+      const foundation = slide.foundation || [];
+      const industrySkills = slide.industrySkills || [];
+
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-4 animate-fade-in">
+          <div className="flex items-center justify-between">
+            <div>
+              <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                {slide.badge || slide.stream || "DEDICATED ROADMAP"}
+              </span>
+              <h2 className="text-xl sm:text-3xl font-black text-white mt-1.5">
+                {slide.title}
+              </h2>
+            </div>
+          </div>
+
+          <div className="space-y-2.5 pt-1">
+            {/* Step 1: Foundation */}
+            <div
+              className={`p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1.5 transition-all duration-300 ease-out shadow-sm ${
+                currentStep >= 0 ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-3"
+              }`}
+            >
+              <span className="text-[10px] font-mono font-bold text-indigo-400 uppercase">
+                01 • FOUNDATION
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {foundation.map((f: string, idx: number) => (
+                  <span key={idx} className="px-2.5 py-0.5 rounded-lg bg-white/5 border border-white/10 text-xs font-bold text-zinc-200">
+                    {f}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Step 2: Industry Skills */}
+            <div
+              className={`p-3.5 rounded-2xl bg-indigo-950/40 border border-indigo-500/30 space-y-1.5 transition-all duration-300 ease-out shadow-sm ${
+                currentStep >= 1 ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-3"
+              }`}
+            >
+              <span className="text-[10px] font-mono font-bold text-indigo-300 uppercase">
+                02 • INDUSTRY SKILLS & TOOLS
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {industrySkills.map((s: string, idx: number) => (
+                  <span key={idx} className="px-2.5 py-0.5 rounded-lg bg-indigo-500/20 border border-indigo-500/30 text-xs font-bold text-white">
+                    {s}
+                  </span>
+                ))}
+              </div>
+            </div>
+
+            {/* Step 3: Projects & Proof */}
+            <div
+              className={`grid grid-cols-1 sm:grid-cols-2 gap-2.5 transition-all duration-300 ease-out ${
+                currentStep >= 2 ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-3"
+              }`}
+            >
+              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <span className="text-[10px] font-mono font-bold text-amber-400 uppercase">03 • REAL PROJECTS</span>
+                <p className="text-xs text-zinc-200 font-medium">{slide.projects}</p>
+              </div>
+              <div className="p-3.5 rounded-2xl bg-white/5 border border-white/10 space-y-1">
+                <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase">04 • PROOF OF WORK</span>
+                <p className="text-xs text-zinc-200 font-medium">{slide.proof}</p>
+              </div>
+            </div>
+
+            {/* Step 4: Opportunity */}
+            <div
+              className={`p-3 rounded-2xl bg-gradient-to-r from-emerald-950/60 to-indigo-950/60 border border-emerald-500/30 flex items-center justify-between text-xs font-bold transition-all duration-300 ${
+                currentStep >= 3 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <span className="text-zinc-300">TARGET OPPORTUNITY:</span>
+              <span className="text-emerald-300 font-mono font-black">{slide.opportunity}</span>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 38. COURSE VS CAREER
+    // ==========================================
+    case "COURSE_VS_CAREER": {
+      const normalCourse = slide.normalCourse || [];
+      const careerProgram = slide.careerProgram || [];
+
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "PARADIGM SHIFT"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            {/* Normal Course */}
+            <div
+              className={`p-5 rounded-3xl bg-rose-950/20 border border-rose-500/30 space-y-3 transition-all duration-300 ease-out shadow-lg ${
+                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              <span className="text-xs font-mono font-bold text-rose-400 uppercase tracking-wider block">
+                NORMAL ONLINE COURSE
+              </span>
+              <div className="space-y-1.5">
+                {normalCourse.map((c: string, idx: number) => (
+                  <div key={idx} className="p-2 rounded-xl bg-black/40 border border-rose-500/20 text-xs text-rose-200 flex items-center gap-2">
+                    <span className="text-rose-400 font-bold">✕</span>
+                    <span>{c}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Career Oriented Program */}
+            <div
+              className={`p-5 rounded-3xl bg-gradient-to-b from-indigo-950/70 to-zinc-900 border border-indigo-500/40 space-y-3 transition-all duration-300 ease-out shadow-2xl ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              <span className="text-xs font-mono font-bold text-emerald-400 uppercase tracking-wider block">
+                CAREER-ORIENTED PROGRAM
+              </span>
+              <div className="space-y-1.5">
+                {careerProgram.map((c: string, idx: number) => (
+                  <div key={idx} className="p-2 rounded-xl bg-indigo-500/20 border border-indigo-500/30 text-xs text-white font-bold flex items-center gap-2 shadow-sm">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-emerald-400 shrink-0" />
+                    <span>{c}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center font-bold text-xs sm:text-sm text-amber-300 transition-all duration-300 ${
+              currentStep >= 2 ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {slide.punchline || "Certificate proves completion. Portfolio proves capability."}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 39. PROGRAM OVERVIEW
+    // ==========================================
+    case "PROGRAM_OVERVIEW": {
+      const pillars = slide.pillars || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in text-center sm:text-left">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "FLAGSHIP PROGRAM"}
+            </span>
+            <h2 className="text-xl sm:text-3xl lg:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <div className="mt-2 inline-block px-4 py-1 rounded-xl bg-amber-500/20 border border-amber-500/40 text-amber-300 font-mono font-black text-xs sm:text-sm">
+              {slide.subtitle || "3-MONTH LIVE PROGRAM"}
+            </div>
+          </div>
+
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2 transition-all duration-300 ease-out ${
+              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+            }`}
+          >
+            {pillars.map((p: string, idx: number) => (
+              <div
+                key={idx}
+                className="p-3.5 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3 shadow-md hover:border-indigo-500/40 transition-all"
+              >
+                <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                <span className="text-xs sm:text-sm font-bold text-zinc-100">{p}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 40. WHAT YOU GET
+    // ==========================================
+    case "WHAT_YOU_GET": {
+      const cards = slide.cards || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "DELIVERABLES"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title || "What You Get"}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5 pt-1">
+            {cards.map((c: any, idx: number) => {
+              const isRevealed = currentStep >= idx;
+              return (
+                <div
+                  key={idx}
+                  className={`p-4 sm:p-5 rounded-3xl border transition-all duration-300 ease-out shadow-lg space-y-2 ${
+                    isRevealed
+                      ? "bg-gradient-to-b from-indigo-950/60 to-zinc-900 border-indigo-500/40 opacity-100 translate-y-0"
+                      : "bg-white/2 border-white/5 opacity-25 translate-y-2"
+                  }`}
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="w-7 h-7 rounded-xl bg-indigo-600/30 text-indigo-300 font-mono font-black text-xs flex items-center justify-center border border-indigo-500/30">
+                      {c.num || `0${idx + 1}`}
+                    </span>
+                    <span className="w-2 h-2 rounded-full bg-indigo-400" />
+                  </div>
+                  <h3 className="font-extrabold text-sm sm:text-base text-white">{c.title}</h3>
+                  <p className="text-xs text-zinc-300 font-medium leading-relaxed">{c.desc}</p>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 41. PIPELINE FLOW
+    // ==========================================
+    case "PIPELINE_FLOW": {
+      const stages = slide.stages || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in text-center">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "METHODOLOGY"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div
+            className={`grid grid-cols-2 sm:grid-cols-6 gap-2.5 pt-2 transition-all duration-300 ease-out ${
+              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+            }`}
+          >
+            {stages.map((st: string, idx: number) => (
+              <div
+                key={idx}
+                className="p-3.5 rounded-2xl bg-gradient-to-b from-indigo-950/60 to-zinc-900 border border-indigo-500/30 text-center space-y-1.5 shadow-md"
+              >
+                <span className="w-6 h-6 rounded-lg bg-indigo-600/30 text-indigo-300 font-mono font-bold text-xs mx-auto flex items-center justify-center border border-indigo-500/30">
+                  {idx + 1}
+                </span>
+                <p className="text-xs font-bold text-white leading-tight">{st}</p>
+              </div>
+            ))}
+          </div>
+
+          {slide.punchline && (
+            <div
+              className={`p-3.5 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 font-bold text-xs sm:text-base text-indigo-200 transition-all duration-300 ${
+                currentStep >= 2 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {slide.punchline}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 42. PROOF HIERARCHY
+    // ==========================================
+    case "PROOF_HIERARCHY": {
+      const layers = slide.layers || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "EVIDENCE ARCHITECTURE"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            {layers.map((ly: any, idx: number) => {
+              const isRevealed = currentStep >= idx;
+              return (
+                <div
+                  key={idx}
+                  className={`p-3.5 sm:p-4 rounded-2xl border flex items-center justify-between gap-3 transition-all duration-300 ease-out shadow-md ${
+                    isRevealed
+                      ? "bg-white/5 border-white/10 opacity-100 translate-x-0"
+                      : "bg-white/2 border-white/5 opacity-25 -translate-x-3"
+                  }`}
+                >
+                  <div className="flex items-center gap-3">
+                    <span className="px-3 py-1 rounded-xl bg-indigo-500/20 text-indigo-300 font-mono font-black text-xs">
+                      {ly.label}
+                    </span>
+                    <span className="text-xs sm:text-sm font-medium text-zinc-200">{ly.desc}</span>
+                  </div>
+                  {idx < layers.length - 1 && <span className="text-zinc-500 text-xs">↓</span>}
+                </div>
+              );
+            })}
+          </div>
+
+          {slide.punchline && (
+            <div
+              className={`p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center font-bold text-xs sm:text-sm text-amber-300 transition-all duration-300 ${
+                currentStep >= 2 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {slide.punchline}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 43. CERTIFICATE SHOWCASE
+    // ==========================================
+    case "CERTIFICATE_SHOWCASE": {
+      return (
+        <div className="w-full max-w-4xl mx-auto space-y-6 animate-fade-in text-center py-6">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-xs font-bold text-amber-300 uppercase tracking-wider">
+              {slide.badge || "OFFICIAL RECOGNITION"}
+            </span>
+          </div>
+
+          <div className="p-8 sm:p-12 rounded-3xl bg-gradient-to-b from-amber-950/30 via-zinc-900 to-zinc-950 border-2 border-amber-500/40 shadow-2xl space-y-6 relative overflow-hidden">
+            <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none">
+              <Award className="w-48 h-48 text-amber-400" />
+            </div>
+
+            <div className="w-16 h-16 rounded-2xl bg-amber-500/20 border border-amber-500/40 mx-auto flex items-center justify-center shadow-lg">
+              <Award className="w-8 h-8 text-amber-300" />
+            </div>
+
+            <div className="space-y-2">
+              <h1 className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-200 via-amber-400 to-yellow-500 tracking-tight">
+                {slide.title || "JOINT CERTIFICATE"}
+              </h1>
+              <h3 className="text-base sm:text-xl font-bold font-mono tracking-widest text-indigo-300">
+                {slide.subtitle || "NIT HAMIRPUR × IAPT × UNISOLE"}
+              </h3>
+            </div>
+
+            <p className="text-xs sm:text-sm text-zinc-300 max-w-md mx-auto italic">
+              {slide.note || "Awarded upon successful completion of the industrial training & project milestones."}
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 44. TALENT POOL PIPELINE
+    // ==========================================
+    case "TALENT_POOL_PIPELINE": {
+      const steps = slide.steps || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in text-center">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "TALENT NETWORK"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle}
+            </p>
+          </div>
+
+          <div
+            className={`grid grid-cols-1 sm:grid-cols-4 gap-3 pt-2 transition-all duration-300 ease-out ${
+              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+            }`}
+          >
+            {steps.map((st: string, idx: number) => (
+              <div
+                key={idx}
+                className="p-4 rounded-3xl bg-gradient-to-b from-indigo-950/60 to-zinc-900 border border-indigo-500/30 text-center space-y-2 shadow-lg"
+              >
+                <span className="w-7 h-7 rounded-xl bg-indigo-600/30 text-indigo-300 font-mono font-bold text-xs mx-auto flex items-center justify-center border border-indigo-500/30">
+                  {idx + 1}
+                </span>
+                <h4 className="font-extrabold text-xs sm:text-sm text-white">{st}</h4>
+              </div>
+            ))}
+          </div>
+
+          {slide.disclaimer && (
+            <p className="text-xs text-zinc-500 italic pt-2">
+              {slide.disclaimer}
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 45. BEFORE AFTER POLL
+    // ==========================================
+    case "BEFORE_AFTER_POLL": {
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in text-center">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "IMPACT ANALYSIS"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title || "Did Your Thinking Change?"}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle || "Awareness → Better Decisions"}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+            {/* Before Today */}
+            <div
+              className={`p-6 rounded-3xl bg-white/5 border border-white/10 space-y-3 transition-all duration-300 ease-out shadow-lg ${
+                currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              <span className="text-xs font-mono font-bold text-zinc-400 uppercase">
+                {slide.beforePollTitle || "BEFORE TODAY (POLL 01)"}
+              </span>
+              <p className="text-xs text-zinc-300">
+                Baseline student preference before market breakdown.
+              </p>
+              <div className="p-3 rounded-2xl bg-black/40 border border-white/5 text-xs font-mono text-indigo-300">
+                Live Data Captured in Session
+              </div>
+            </div>
+
+            {/* After Today */}
+            <div
+              className={`p-6 rounded-3xl bg-gradient-to-b from-indigo-950/70 to-zinc-900 border border-indigo-500/40 space-y-3 transition-all duration-300 ease-out shadow-2xl ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              <span className="text-xs font-mono font-bold text-emerald-400 uppercase">
+                {slide.afterPollTitle || "AFTER TODAY (POLL 08)"}
+              </span>
+              <p className="text-xs text-zinc-200 font-medium">
+                Informed decision-making based on skills & roadmap clarity.
+              </p>
+              <div className="p-3 rounded-2xl bg-emerald-500/20 border border-emerald-500/40 text-xs font-mono font-bold text-emerald-300">
+                Live Outcome Comparison
+              </div>
+            </div>
+          </div>
+
+          <div
+            className={`p-3.5 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 font-bold text-xs sm:text-base text-indigo-200 transition-all duration-300 ${
+              currentStep >= 1 ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            {slide.punchline || "Awareness → Better Decisions"}
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 46. ENROLLMENT CTA
+    // ==========================================
+    case "ENROLLMENT_CTA": {
+      const actions = slide.actions || ["Choose Your Stream", "Explore the Roadmap", "Register / Enquire"];
+      const targetUrl = slide.qrUrl || "https://unisole.org/programs";
+
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in text-center">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-emerald-500/20 border border-emerald-500/40 text-xs font-bold text-emerald-300 uppercase tracking-wider">
+              {slide.badge || "ENROLLMENT"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title || "Your Next Step Starts Here"}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-300 font-medium mt-1">
+              {slide.subtitle || "3-Month Live Industrial Training cum Internship Opportunity Program"}
+            </p>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center pt-2">
+            {/* Left: Action steps */}
+            <div
+              className={`md:col-span-6 space-y-3 text-left transition-all duration-300 ease-out ${
+                currentStep >= 0 ? "opacity-100 translate-x-0" : "opacity-0 -translate-x-3"
+              }`}
+            >
+              <h3 className="font-extrabold text-base text-zinc-100">Explore & Get Started</h3>
+              <div className="space-y-2">
+                {actions.map((act: string, idx: number) => (
+                  <div key={idx} className="p-3 rounded-2xl bg-white/5 border border-white/10 flex items-center gap-3">
+                    <span className="w-6 h-6 rounded-lg bg-emerald-500/20 text-emerald-400 font-mono font-bold text-xs flex items-center justify-center shrink-0">
+                      0{idx + 1}
+                    </span>
+                    <span className="text-xs sm:text-sm font-bold text-zinc-200">{act}</span>
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Right: QR Code Frame */}
+            <div
+              className={`md:col-span-6 p-6 rounded-3xl bg-gradient-to-b from-indigo-950/80 to-zinc-900 border border-indigo-500/40 text-center space-y-3 shadow-2xl transition-all duration-300 ease-out ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              <div className="p-3 bg-white rounded-2xl inline-block shadow-xl">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=${encodeURIComponent(targetUrl)}`}
+                  alt="Scan QR"
+                  className="w-36 h-36 sm:w-44 sm:h-44 object-contain"
+                />
+              </div>
+              <p className="text-xs font-bold text-emerald-300">
+                {slide.qrPrompt || "Scan QR Code to Explore Program & Register"}
+              </p>
+            </div>
+          </div>
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 47. FINAL MESSAGE
+    // ==========================================
+    case "FINAL_MESSAGE": {
+      return (
+        <div className="w-full max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fade-in text-center py-8">
+          <div
+            className={`transition-all duration-500 ease-out ${
+              currentStep >= 0 ? "opacity-100 scale-100" : "opacity-0 scale-95"
+            }`}
+          >
+            <h1 className="text-3xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-indigo-300 tracking-tight leading-tight">
+              {slide.title || "Your degree is not your destination."}
+            </h1>
+          </div>
+
+          <div
+            className={`transition-all duration-300 ease-out ${
+              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+            }`}
+          >
+            <p className="text-base sm:text-2xl text-amber-300 font-bold max-w-2xl mx-auto leading-relaxed">
+              {slide.subtitle || "Your skills + projects + proof + decisions build your career."}
+            </p>
+          </div>
+
+          <div
+            className={`pt-4 transition-all duration-300 ${
+              currentStep >= 1 ? "opacity-100" : "opacity-0"
+            }`}
+          >
+            <div className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-white/5 border border-white/10 text-xs font-mono text-zinc-300">
+              <span className="w-2 h-2 rounded-full bg-indigo-400" />
+              <span>{slide.org || "UNISOLE Skill AI Labs"}</span>
+            </div>
+          </div>
+
+          {slide.closingQuote && (
+            <p className="text-xs sm:text-sm text-zinc-400 italic max-w-xl mx-auto pt-2">
+              {slide.closingQuote}
+            </p>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 48. CONTENT (BULLETS) & OTHER DEFAULT
     // ==========================================
     case "CONTENT":
     default: {
