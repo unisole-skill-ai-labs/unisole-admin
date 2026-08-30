@@ -201,11 +201,16 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
   const handleLaunchSession = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!activeDeck) return;
+    const deckId = activeDeck.id || activeDeck._id || activeDeck.presentationId;
+    if (!deckId) {
+      alert("Error: Unable to find presentation ID for this deck.");
+      return;
+    }
     try {
       const res: any = await launchSession({
         baseUrl,
-        id: activeDeck.id,
-        presentationId: activeDeck.id,
+        id: deckId,
+        presentationId: deckId,
         body: {
           collegeId: activeDeck.collegeId || selectedCollegeId || undefined,
           customCode: customSessionCode.trim() || undefined,
