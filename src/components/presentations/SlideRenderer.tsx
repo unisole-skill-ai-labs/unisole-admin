@@ -28,6 +28,7 @@ interface SlideRendererProps {
   buildStep?: number;
   presentationTitle?: string;
   isProjector?: boolean;
+  isLandscape?: boolean;
   quizState?: any;
   remainingTime?: number | null;
   leaderboard?: any[];
@@ -41,6 +42,7 @@ export default function SlideRenderer({
   buildStep = 999, // default to all revealed in static preview
   presentationTitle = "UNISOLE AI CAMPUS PROGRAM",
   isProjector = false,
+  isLandscape = false,
   quizState = {},
   remainingTime = null,
   leaderboard = [],
@@ -238,7 +240,7 @@ export default function SlideRenderer({
 
           {/* Mentors Grid */}
           <div
-            className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3 pt-1 transition-all duration-300 ease-out ${
+            className={`grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 pt-1 transition-all duration-300 ease-out ${
               currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4"
             }`}
           >
@@ -1693,7 +1695,7 @@ export default function SlideRenderer({
             {slide.question || slide.title || "Live Audience Poll"}
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+          <div className={`grid ${isLandscape ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"} gap-3 pt-2`}>
             {(slide.options || []).map((opt: string, optIdx: number) => {
               const count = quizState?.pollCounts?.[optIdx] || 0;
               const totalVotes = Object.values(quizState?.pollCounts || {}).reduce(
@@ -1709,7 +1711,7 @@ export default function SlideRenderer({
                   type="button"
                   disabled={isProjector || (!quizState?.isQuizActive && !isSubmitted)}
                   onClick={() => onSelectOption && onSelectOption(optIdx)}
-                  className={`relative p-4 sm:p-5 rounded-2xl border transition-all duration-300 ease-out overflow-hidden shadow-lg text-left ${
+                  className={`relative p-3.5 sm:p-5 rounded-2xl border transition-all duration-300 ease-out overflow-hidden shadow-lg text-left ${
                     isSelected
                       ? "ring-4 ring-cyan-400 bg-cyan-950/60 border-cyan-400"
                       : "bg-white/5 border-cyan-500/30 hover:border-cyan-400/60"
@@ -1722,13 +1724,13 @@ export default function SlideRenderer({
                   />
 
                   <div className="relative flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold text-xs sm:text-sm">
+                    <div className="flex items-center gap-2.5 sm:gap-3">
+                      <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-cyan-500/20 text-cyan-300 flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">
                         {String.fromCharCode(65 + optIdx)}
                       </span>
-                      <span className="text-xs sm:text-base font-bold text-white">{opt}</span>
+                      <span className="text-xs sm:text-base font-bold text-white leading-snug">{opt}</span>
                     </div>
-                    <span className="text-sm sm:text-lg font-mono font-black text-cyan-400">
+                    <span className="text-sm sm:text-lg font-mono font-black text-cyan-400 shrink-0">
                       {percent}%
                     </span>
                   </div>
@@ -1764,7 +1766,7 @@ export default function SlideRenderer({
             {slide.question || slide.title}
           </h2>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-2">
+          <div className={`grid ${isLandscape ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"} gap-3 pt-2`}>
             {(slide.options || []).map((opt: any, optIdx: number) => {
               const colors = [
                 "bg-rose-500/20 border-rose-500/40 text-rose-100",
@@ -1783,7 +1785,7 @@ export default function SlideRenderer({
                   type="button"
                   disabled={isProjector || (!quizState?.isQuizActive && !isSubmitted)}
                   onClick={() => onSelectOption && onSelectOption(optIdx)}
-                  className={`p-4 sm:p-5 rounded-2xl border transition-all duration-300 ease-out flex items-center justify-between gap-3 shadow-lg text-left ${
+                  className={`p-3.5 sm:p-5 rounded-2xl border transition-all duration-300 ease-out flex items-center justify-between gap-3 shadow-lg text-left ${
                     colors[optIdx % 4]
                   } ${
                     isSelected ? "ring-4 ring-amber-400 scale-102" : ""
@@ -1795,15 +1797,15 @@ export default function SlideRenderer({
                       : ""
                   } ${!isProjector ? "cursor-pointer active:scale-98" : ""}`}
                 >
-                  <div className="flex items-center gap-3">
-                    <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/20 flex items-center justify-center font-bold text-xs sm:text-sm">
+                  <div className="flex items-center gap-2.5 sm:gap-3">
+                    <span className="w-7 h-7 sm:w-8 sm:h-8 rounded-xl bg-white/20 flex items-center justify-center font-bold text-xs sm:text-sm shrink-0">
                       {String.fromCharCode(65 + optIdx)}
                     </span>
-                    <span className="text-xs sm:text-base font-bold">{text}</span>
+                    <span className="text-xs sm:text-base font-bold leading-snug">{text}</span>
                   </div>
 
                   {isRevealed && isCorrect && (
-                    <span className="px-2.5 py-1 rounded-full bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-md">
+                    <span className="px-2.5 py-1 rounded-full bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 shadow-md shrink-0">
                       <CheckCircle2 className="w-3.5 h-3.5" /> Correct
                     </span>
                   )}

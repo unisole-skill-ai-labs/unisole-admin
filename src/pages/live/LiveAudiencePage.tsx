@@ -24,8 +24,13 @@ import {
   Crown,
   Medal,
   UserX,
+  Maximize2,
+  Minimize2,
+  RotateCcw,
+  Smartphone,
 } from "lucide-react";
 import SlideRenderer from "../../components/presentations/SlideRenderer";
+import AutoFitSlideStage from "../../components/presentations/AutoFitSlideStage";
 
 export default function LiveAudiencePage() {
   const { sessionCode } = useParams<{ sessionCode: string }>();
@@ -75,8 +80,94 @@ export default function LiveAudiencePage() {
   const [isKicked, setIsKicked] = useState(false);
   const [kickedMessage, setKickedMessage] = useState("");
 
+  // Mode switching & Fullscreen state
+  const [isFullscreenLandscape, setIsFullscreenLandscape] = useState(false);
+  const [isNativeLandscape, setIsNativeLandscape] = useState(false);
+
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<any>(null);
+  const arenaRef = useRef<HTMLDivElement>(null);
+
+  // Monitor physical orientation and fullscreen changes
+  useEffect(() => {
+    const handleOrientation = () => {
+      const isLand =
+        window.innerWidth > window.innerHeight ||
+        (window.screen.orientation &&
+          window.screen.orientation.type.startsWith("landscape"));
+      setIsNativeLandscape(!!isLand);
+    };
+
+    handleOrientation();
+    window.addEventListener("resize", handleOrientation);
+    window.addEventListener("orientationchange", handleOrientation);
+
+    const handleFsChange = () => {
+      const isFs = !!(
+        document.fullscreenElement || (document as any).webkitFullscreenElement
+      );
+      if (!isFs && isFullscreenLandscape && !window.matchMedia("(orientation: landscape)").matches) {
+        setIsFullscreenLandscape(false);
+      }
+    };
+
+    document.addEventListener("fullscreenchange", handleFsChange);
+    document.addEventListener("webkitfullscreenchange", handleFsChange);
+
+    return () => {
+      window.removeEventListener("resize", handleOrientation);
+      window.removeEventListener("orientationchange", handleOrientation);
+      document.removeEventListener("fullscreenchange", handleFsChange);
+      document.removeEventListener("webkitfullscreenchange", handleFsChange);
+    };
+  }, [isFullscreenLandscape]);
+
+  // Toggle Fullscreen Landscape Mode
+  const toggleFullscreenLandscape = async () => {
+    if (!isFullscreenLandscape) {
+      const elem = arenaRef.current || document.documentElement;
+      try {
+        if (elem.requestFullscreen) {
+          await elem.requestFullscreen();
+        } else if ((elem as any).webkitRequestFullscreen) {
+          await (elem as any).webkitRequestFullscreen();
+        }
+      } catch (err) {
+        // Fallback to simulated CSS landscape
+      }
+
+      try {
+        if (screen.orientation && (screen.orientation as any).lock) {
+          await (screen.orientation as any).lock("landscape");
+        }
+      } catch (err) {
+        // Orientation lock not supported
+      }
+
+      setIsFullscreenLandscape(true);
+    } else {
+      try {
+        if (
+          document.fullscreenElement ||
+          (document as any).webkitFullscreenElement
+        ) {
+          if (document.exitFullscreen) {
+            await document.exitFullscreen();
+          } else if ((document as any).webkitExitFullscreen) {
+            await (document as any).webkitExitFullscreen();
+          }
+        }
+      } catch (err) {}
+
+      try {
+        if (screen.orientation && (screen.orientation as any).unlock) {
+          (screen.orientation as any).unlock();
+        }
+      } catch (err) {}
+
+      setIsFullscreenLandscape(false);
+    }
+  };
 
   // Fetch session details on mount
   useEffect(() => {
@@ -595,8 +686,200 @@ export default function LiveAudiencePage() {
   }
 
   // ==================== STAGE 2: LIVE AUDIENCE PRESENTATION ARENA ====================
+  // Render Mode A: Landscape Fullscreen Presentation Mode
+  if (isFullscreenLandscape) {
+    const isSimulatedRotated = !isNativeLandscape;
+
+    return (
+      <div
+        ref={arenaRef}
+        className={`bg-zinc-950 text-white flex flex-col justify-between relative overflow-hidden font-sans select-none z-50 ${
+          isSimulatedRotated
+            ? "fixed inset-0 w-[100vh] h-[100vw] origin-top-left translate-x-[100vw] rotate-90"
+            : "fixed inset-0 w-full h-full"
+        }`}
+      >
+        {/* Floating Reaction Animation */}
+        <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
+          {reactions.map((r) => (
+            <div
+              key={r.id}
+              className="absolute bottom-16 text-3xl animate-float-reaction"
+              style={{ left: `${20 + Math.random() * 60}%` }}
+            >
+              {r.emoji}
+            </div>
+          ))}
+        </div>
+
+        {/* Ambient Glow Lights */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
+
+        {/* Landscape Top Minimalist HUD */}
+        <header className="px-4 py-2 bg-zinc-900/70 backdrop-blur-md border-b border-white/10 flex items-center justify-between z-30 shrink-0">
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={toggleFullscreenLandscape}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white/10 hover:bg-white/20 border border-white/15 text-zinc-200 text-xs font-bold transition-all active:scale-95 cursor-pointer"
+              title="Exit Landscape Mode"
+            >
+              <Minimize2 className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Exit Fullscreen</span>
+            </button>
+
+            <span className="text-zinc-600">|</span>
+
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
+              <span className="text-xs font-bold text-zinc-200 truncate max-w-[200px]">
+                {lead.name}
+              </span>
+            </div>
+
+            <span className="hidden sm:inline-block text-[11px] font-mono text-zinc-400 truncate max-w-[240px]">
+              {session.collegeName || "Unisole Presentation Arena"}
+            </span>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-xs font-mono font-bold">
+              Slide {currentSlideIndex + 1}/{slides.length}
+            </div>
+
+            <div className="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center gap-1">
+              <Flame className="w-3.5 h-3.5 text-amber-400" />
+              <span>{myScore} pts</span>
+            </div>
+
+            {myRank && (
+              <div className="px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-mono font-bold flex items-center gap-1">
+                <Trophy className="w-3.5 h-3.5 text-indigo-400" />
+                <span>#{myRank.rank}</span>
+              </div>
+            )}
+          </div>
+        </header>
+
+        {/* Landscape Main Content Canvas (Auto-Fit 16:9 Widescreen) */}
+        <main className="flex-1 min-h-0 relative flex items-center justify-center p-3 sm:p-6 z-20 overflow-hidden w-full">
+          <AutoFitSlideStage className="w-full h-full">
+            {quizState.isLeaderboardActive ? (
+              <div className="w-full max-w-4xl mx-auto space-y-4 text-center">
+                <div className="flex items-center justify-center gap-2">
+                  <Trophy className="w-7 h-7 text-amber-400" />
+                  <h2 className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-yellow-400">
+                    Live Leaderboard Podium
+                  </h2>
+                </div>
+
+                {myRank && (
+                  <div className="p-3 rounded-2xl bg-gradient-to-r from-indigo-900/70 to-violet-900/70 border border-indigo-500/40 text-center max-w-md mx-auto space-y-0.5 shadow-xl">
+                    <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">
+                      Your Live Standing
+                    </span>
+                    <div className="text-2xl font-black text-amber-300">
+                      Rank #{myRank.rank}{" "}
+                      <span className="text-xs text-zinc-400 font-normal">
+                        of {myRank.totalPlayers}
+                      </span>
+                    </div>
+                  </div>
+                )}
+
+                {/* Top 3 Podium Cards */}
+                <div className="grid grid-cols-3 gap-3 max-w-xl mx-auto items-end pt-2">
+                  <div className="p-3 rounded-2xl bg-white/10 border border-slate-400/40 text-center space-y-1 order-1 shadow-xl">
+                    <Medal className="w-5 h-5 text-slate-300 mx-auto" />
+                    <div className="font-extrabold text-xs text-zinc-100 truncate">
+                      {leaderboard[1]?.name || "—"}
+                    </div>
+                    <div className="text-[10px] font-mono font-bold text-indigo-300">
+                      {leaderboard[1]?.score || 0} pts
+                    </div>
+                    <div className="h-10 bg-slate-400/20 rounded-xl flex items-center justify-center font-black text-sm text-slate-300">
+                      #2
+                    </div>
+                  </div>
+
+                  <div className="p-3.5 rounded-3xl bg-gradient-to-b from-amber-500/30 to-amber-500/10 border border-amber-400/60 text-center space-y-1.5 order-2 shadow-2xl scale-105">
+                    <Crown className="w-7 h-7 text-amber-300 mx-auto animate-bounce" />
+                    <div className="font-black text-sm text-amber-200 truncate">
+                      {leaderboard[0]?.name || "—"}
+                    </div>
+                    <div className="text-xs font-mono font-black text-amber-400">
+                      {leaderboard[0]?.score || 0} pts
+                    </div>
+                    <div className="h-14 bg-amber-500/30 rounded-xl flex items-center justify-center font-black text-base text-amber-300">
+                      #1
+                    </div>
+                  </div>
+
+                  <div className="p-3 rounded-2xl bg-white/10 border border-amber-700/40 text-center space-y-1 order-3 shadow-xl">
+                    <Award className="w-5 h-5 text-amber-600 mx-auto" />
+                    <div className="font-extrabold text-xs text-zinc-100 truncate">
+                      {leaderboard[2]?.name || "—"}
+                    </div>
+                    <div className="text-[10px] font-mono font-bold text-indigo-300">
+                      {leaderboard[2]?.score || 0} pts
+                    </div>
+                    <div className="h-8 bg-amber-700/20 rounded-xl flex items-center justify-center font-black text-xs text-amber-600">
+                      #3
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div className="w-full max-w-5xl mx-auto">
+                <SlideRenderer
+                  key={`slide-${currentSlideIndex}`}
+                  slide={currentSlide}
+                  buildStep={buildStep}
+                  presentationTitle={presentation?.title}
+                  isProjector={false}
+                  isLandscape={true}
+                  quizState={quizState}
+                  remainingTime={remainingTime}
+                  leaderboard={leaderboard}
+                  onSelectOption={handleSelectOption}
+                  selectedOption={selectedOption}
+                  isSubmitted={isSubmitted}
+                />
+              </div>
+            )}
+          </AutoFitSlideStage>
+        </main>
+
+        {/* Landscape Floating Bottom Reactions Dock */}
+        <footer className="px-4 py-1.5 bg-zinc-900/60 backdrop-blur-md border-t border-white/10 z-30 shrink-0 flex items-center justify-between">
+          <div className="text-[11px] font-mono text-zinc-400">
+            Unisole Live Presentation Arena
+          </div>
+          <div className="flex items-center gap-4">
+            {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                onClick={() => handleSendReaction(emoji)}
+                className="p-1 text-xl hover:scale-125 active:scale-90 transition-transform cursor-pointer"
+                title={`React ${emoji}`}
+              >
+                {emoji}
+              </button>
+            ))}
+          </div>
+        </footer>
+      </div>
+    );
+  }
+
+  // Render Mode B: Zero-Scroll Portrait Presentation Mode
   return (
-    <div className="min-h-screen bg-zinc-950 text-white flex flex-col justify-between relative overflow-hidden font-sans select-none">
+    <div
+      ref={arenaRef}
+      className="h-[100dvh] max-h-[100dvh] w-full bg-zinc-950 text-white flex flex-col justify-between relative overflow-hidden font-sans select-none"
+    >
       {/* Floating Reaction Animation on Mobile */}
       <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
         {reactions.map((r) => (
@@ -610,151 +893,164 @@ export default function LiveAudiencePage() {
         ))}
       </div>
 
-      {/* Top Mobile Status Header */}
-      <header className="px-4 py-3 bg-zinc-900/80 backdrop-blur-xl border-b border-white/10 flex items-center justify-between z-30 sticky top-0">
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2">
-            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-            <span className="text-xs font-black tracking-tight text-zinc-100">
+      {/* Top Mobile/Desktop Status Header */}
+      <header className="px-3 py-2.5 sm:px-4 sm:py-3 bg-zinc-900/80 backdrop-blur-xl border-b border-white/10 flex items-center justify-between z-30 shrink-0">
+        <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-1.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
+            <span className="text-xs font-black tracking-tight text-zinc-100 truncate max-w-[110px] sm:max-w-[200px]">
               {lead.name}
             </span>
           </div>
 
           <span className="hidden sm:inline-block text-zinc-600">|</span>
 
-          <span className="hidden sm:inline-block text-[11px] font-mono text-zinc-400">
-            {session.collegeName || "Unisole Campus Presentation"}
+          <span className="hidden sm:inline-block text-[11px] font-mono text-zinc-400 truncate max-w-[180px]">
+            {session.collegeName || "Live Presentation"}
           </span>
         </div>
 
-        {/* Live Score, Rank Badges & Slide Progress */}
-        <div className="flex items-center gap-2">
-          <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-[11px] font-mono font-bold">
-            Slide {currentSlideIndex + 1}/{slides.length}
+        {/* Right HUD Controls: Score, Slide Indicator & Fullscreen Button */}
+        <div className="flex items-center gap-1.5 sm:gap-2">
+          <div className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-[10px] sm:text-[11px] font-mono font-bold shrink-0">
+            {currentSlideIndex + 1}/{slides.length}
           </div>
 
-          <div className="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[11px] font-mono font-bold flex items-center gap-1">
+          <div className="px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] sm:text-[11px] font-mono font-bold flex items-center gap-1 shrink-0">
             <Flame className="w-3 h-3 text-amber-400" />
             <span>{myScore} pts</span>
           </div>
 
           {myRank && (
-            <div className="px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-[11px] font-mono font-bold flex items-center gap-1">
+            <div className="px-2 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-[10px] sm:text-[11px] font-mono font-bold flex items-center gap-1 shrink-0">
               <Trophy className="w-3 h-3 text-indigo-400" />
               <span>#{myRank.rank}</span>
             </div>
           )}
+
+          {/* Fullscreen Landscape Trigger Button */}
+          <button
+            type="button"
+            onClick={toggleFullscreenLandscape}
+            className="flex items-center gap-1.5 px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-full bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white text-[10px] sm:text-[11px] font-extrabold shadow-md shadow-indigo-600/25 active:scale-95 transition-all cursor-pointer shrink-0"
+            title="Open Presentation in Fullscreen Landscape Mode"
+          >
+            <Maximize2 className="w-3.5 h-3.5" />
+            <span className="hidden xs:inline">Landscape</span>
+          </button>
         </div>
       </header>
 
-      {/* Main Interactive Stage Canvas */}
-      <main className="flex-1 relative flex items-center justify-center p-4 sm:p-8 lg:p-12 z-20 overflow-y-auto w-full">
+      {/* Main Interactive Stage Canvas (Auto-Fit Without Scroll in Portrait) */}
+      <main className="flex-1 min-h-0 relative flex items-center justify-center p-2 sm:p-4 z-20 overflow-hidden w-full">
         {/* Glow ambient lights */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
         <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
 
-        {/* Live Leaderboard Podium Overlay if Active */}
-        {quizState.isLeaderboardActive ? (
-          <div className="w-full max-w-4xl mx-auto space-y-6 pt-2 animate-fade-in text-center z-10">
-            <div className="flex items-center justify-center gap-2 mb-2">
-              <Trophy className="w-7 h-7 text-amber-400" />
-              <h2 className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-yellow-400">
-                Live Leaderboard Podium
-              </h2>
-            </div>
+        <AutoFitSlideStage className="w-full h-full">
+          {quizState.isLeaderboardActive ? (
+            <div className="w-full max-w-4xl mx-auto space-y-4 pt-1 animate-fade-in text-center z-10">
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <Trophy className="w-6 h-6 text-amber-400" />
+                <h2 className="text-xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-yellow-400">
+                  Live Leaderboard Podium
+                </h2>
+              </div>
 
-            {/* Personal Student Rank Banner */}
-            {myRank && (
-              <div className="p-4 rounded-3xl bg-gradient-to-r from-indigo-900/70 to-violet-900/70 border border-indigo-500/40 text-center max-w-md mx-auto space-y-1 shadow-xl">
-                <span className="text-xs text-indigo-300 font-bold uppercase tracking-wider">
-                  Your Live Standing
-                </span>
-                <div className="text-3xl font-black text-amber-300">
-                  Rank #{myRank.rank}{" "}
-                  <span className="text-sm text-zinc-400 font-normal">
-                    of {myRank.totalPlayers}
+              {/* Personal Student Rank Banner */}
+              {myRank && (
+                <div className="p-3 rounded-2xl bg-gradient-to-r from-indigo-900/70 to-violet-900/70 border border-indigo-500/40 text-center max-w-md mx-auto space-y-0.5 shadow-xl">
+                  <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">
+                    Your Live Standing
                   </span>
+                  <div className="text-2xl font-black text-amber-300">
+                    Rank #{myRank.rank}{" "}
+                    <span className="text-xs text-zinc-400 font-normal">
+                      of {myRank.totalPlayers}
+                    </span>
+                  </div>
+                  <div className="text-[11px] font-mono font-bold text-indigo-200">
+                    Total Score: {myScore} pts
+                  </div>
                 </div>
-                <div className="text-xs font-mono font-bold text-indigo-200">
-                  Total Score: {myScore} pts
-                </div>
-              </div>
-            )}
+              )}
 
-            {/* Top 3 Podium Cards */}
-            <div className="grid grid-cols-3 gap-3 max-w-xl mx-auto items-end pt-4">
-              {/* Rank 2 */}
-              <div className="p-3.5 rounded-3xl bg-white/10 border border-slate-400/40 text-center space-y-1.5 order-1 shadow-xl">
-                <Medal className="w-6 h-6 text-slate-300 mx-auto" />
-                <div className="font-extrabold text-xs sm:text-sm text-zinc-100 truncate">
-                  {leaderboard[1]?.name || "—"}
+              {/* Top 3 Podium Cards */}
+              <div className="grid grid-cols-3 gap-2.5 max-w-xl mx-auto items-end pt-2">
+                {/* Rank 2 */}
+                <div className="p-2.5 rounded-2xl bg-white/10 border border-slate-400/40 text-center space-y-1 order-1 shadow-xl">
+                  <Medal className="w-5 h-5 text-slate-300 mx-auto" />
+                  <div className="font-extrabold text-xs text-zinc-100 truncate">
+                    {leaderboard[1]?.name || "—"}
+                  </div>
+                  <div className="text-[9px] font-mono font-bold text-indigo-300">
+                    {leaderboard[1]?.score || 0} pts
+                  </div>
+                  <div className="h-10 bg-slate-400/20 rounded-xl flex items-center justify-center font-black text-base text-slate-300">
+                    #2
+                  </div>
                 </div>
-                <div className="text-[10px] font-mono font-bold text-indigo-300">
-                  {leaderboard[1]?.score || 0} pts
-                </div>
-                <div className="h-12 bg-slate-400/20 rounded-xl flex items-center justify-center font-black text-lg text-slate-300">
-                  #2
-                </div>
-              </div>
 
-              {/* Rank 1 */}
-              <div className="p-4 rounded-3xl bg-gradient-to-b from-amber-500/30 to-amber-500/10 border border-amber-400/60 text-center space-y-2 order-2 shadow-2xl scale-105">
-                <Crown className="w-8 h-8 text-amber-300 mx-auto animate-bounce" />
-                <div className="font-black text-sm sm:text-base text-amber-200 truncate">
-                  {leaderboard[0]?.name || "—"}
+                {/* Rank 1 */}
+                <div className="p-3 rounded-3xl bg-gradient-to-b from-amber-500/30 to-amber-500/10 border border-amber-400/60 text-center space-y-1 order-2 shadow-2xl scale-105">
+                  <Crown className="w-7 h-7 text-amber-300 mx-auto animate-bounce" />
+                  <div className="font-black text-xs sm:text-sm text-amber-200 truncate">
+                    {leaderboard[0]?.name || "—"}
+                  </div>
+                  <div className="text-[10px] font-mono font-black text-amber-400">
+                    {leaderboard[0]?.score || 0} pts
+                  </div>
+                  <div className="h-14 bg-amber-500/30 rounded-xl flex items-center justify-center font-black text-lg text-amber-300">
+                    #1
+                  </div>
                 </div>
-                <div className="text-xs font-mono font-black text-amber-400">
-                  {leaderboard[0]?.score || 0} pts
-                </div>
-                <div className="h-16 bg-amber-500/30 rounded-xl flex items-center justify-center font-black text-xl text-amber-300">
-                  #1
-                </div>
-              </div>
 
-              {/* Rank 3 */}
-              <div className="p-3.5 rounded-3xl bg-white/10 border border-amber-700/40 text-center space-y-1.5 order-3 shadow-xl">
-                <Award className="w-6 h-6 text-amber-600 mx-auto" />
-                <div className="font-extrabold text-xs sm:text-sm text-zinc-100 truncate">
-                  {leaderboard[2]?.name || "—"}
-                </div>
-                <div className="text-[10px] font-mono font-bold text-indigo-300">
-                  {leaderboard[2]?.score || 0} pts
-                </div>
-                <div className="h-10 bg-amber-700/20 rounded-xl flex items-center justify-center font-black text-sm text-amber-600">
-                  #3
+                {/* Rank 3 */}
+                <div className="p-2.5 rounded-2xl bg-white/10 border border-amber-700/40 text-center space-y-1 order-3 shadow-xl">
+                  <Award className="w-5 h-5 text-amber-600 mx-auto" />
+                  <div className="font-extrabold text-xs text-zinc-100 truncate">
+                    {leaderboard[2]?.name || "—"}
+                  </div>
+                  <div className="text-[9px] font-mono font-bold text-indigo-300">
+                    {leaderboard[2]?.score || 0} pts
+                  </div>
+                  <div className="h-8 bg-amber-700/20 rounded-xl flex items-center justify-center font-black text-xs text-amber-600">
+                    #3
+                  </div>
                 </div>
               </div>
             </div>
-          </div>
-        ) : (
-          /* Render Active Slide with Progressive Step Animations */
-          <div className="w-full max-w-5xl mx-auto z-10">
-            <SlideRenderer
-              key={`slide-${currentSlideIndex}`}
-              slide={currentSlide}
-              buildStep={buildStep}
-              presentationTitle={presentation?.title}
-              isProjector={false}
-              quizState={quizState}
-              remainingTime={remainingTime}
-              leaderboard={leaderboard}
-              onSelectOption={handleSelectOption}
-              selectedOption={selectedOption}
-              isSubmitted={isSubmitted}
-            />
-          </div>
-        )}
+          ) : (
+            /* Render Active Slide with Progressive Step Animations */
+            <div className="w-full max-w-5xl mx-auto z-10">
+              <SlideRenderer
+                key={`slide-${currentSlideIndex}`}
+                slide={currentSlide}
+                buildStep={buildStep}
+                presentationTitle={presentation?.title}
+                isProjector={false}
+                isLandscape={false}
+                quizState={quizState}
+                remainingTime={remainingTime}
+                leaderboard={leaderboard}
+                onSelectOption={handleSelectOption}
+                selectedOption={selectedOption}
+                isSubmitted={isSubmitted}
+              />
+            </div>
+          )}
+        </AutoFitSlideStage>
       </main>
 
       {/* Floating Bottom Emoji Reaction Bar */}
-      <footer className="p-3 bg-zinc-900/80 backdrop-blur-xl border-t border-white/10 z-30 sticky bottom-0">
+      <footer className="px-3 py-2 bg-zinc-900/80 backdrop-blur-xl border-t border-white/10 z-30 shrink-0">
         <div className="flex items-center justify-around max-w-md mx-auto">
           {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
             <button
               key={emoji}
               type="button"
               onClick={() => handleSendReaction(emoji)}
-              className="p-2 text-2xl hover:scale-125 active:scale-90 transition-transform cursor-pointer"
+              className="p-1.5 text-2xl hover:scale-125 active:scale-90 transition-transform cursor-pointer"
               title={`React ${emoji}`}
             >
               {emoji}
