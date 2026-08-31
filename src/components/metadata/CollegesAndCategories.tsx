@@ -813,17 +813,17 @@ function BranchesSection({ baseUrl }: { baseUrl: string }) {
               >
                 <div className="space-y-3">
                   <div className="flex items-start justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center font-black text-xs font-mono shadow-xs">
-                        {branch.code || branch.name.slice(0, 3).toUpperCase()}
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div className="w-10 h-10 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shadow-xs shrink-0 border border-emerald-100 dark:border-emerald-900/40">
+                        <GraduationCap className="w-5 h-5" />
                       </div>
-                      <div>
-                        <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 line-clamp-1 group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
+                      <div className="min-w-0">
+                        <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 truncate group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors">
                           {branch.name}
                         </h3>
                         <div className="flex items-center gap-2 mt-0.5">
                           {branch.code && (
-                            <span className="text-[10px] text-zinc-400 font-mono uppercase">
+                            <span className="text-[10px] text-zinc-400 font-mono uppercase truncate">
                               Code: {branch.code}
                             </span>
                           )}

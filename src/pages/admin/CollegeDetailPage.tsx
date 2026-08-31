@@ -751,17 +751,17 @@ export default function CollegeDetailPage() {
                     >
                       <div>
                         <div className="flex items-start justify-between gap-3 mb-2">
-                          <div className="flex items-center gap-2.5">
-                            <div className="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-black text-xs flex items-center justify-center border border-indigo-100 dark:border-indigo-900/40">
-                              {branch.code || (branch.name || "B").substring(0, 2).toUpperCase()}
+                          <div className="flex items-center gap-3 min-w-0">
+                            <div className="w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center border border-indigo-100 dark:border-indigo-900/40 shadow-xs shrink-0">
+                              <GraduationCap className="w-5 h-5" />
                             </div>
-                            <div>
-                              <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors line-clamp-1">
+                            <div className="min-w-0">
+                              <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors truncate">
                                 {branch.name}
                               </h4>
                               {branch.code && (
-                                <span className="text-[10px] font-mono font-bold text-zinc-400">
-                                  {branch.code}
+                                <span className="text-[10px] font-mono font-bold text-zinc-400 truncate block">
+                                  Code: {branch.code}
                                 </span>
                               )}
                             </div>
