@@ -741,7 +741,6 @@ export default function LiveAudiencePage() {
                   <option value="BBA">BBA</option>
                   <option value="BCOM">BCOM</option>
                   <option value="BCA">BCA</option>
-                  <option value="MCA">MCA</option>
                   <option value="BSC Non-Med">BSC Non-Med</option>
                   <option value="BSC Med">BSC Med</option>
                   <option value="Others">Others</option>
@@ -968,7 +967,6 @@ export default function LiveAudiencePage() {
                     <option value="BBA">BBA</option>
                     <option value="BCOM">BCOM</option>
                     <option value="BCA">BCA</option>
-                    <option value="MCA">MCA</option>
                     <option value="BSC Non-Med">BSC Non-Med</option>
                     <option value="BSC Med">BSC Med</option>
                     <option value="Others">Others</option>
