@@ -239,7 +239,7 @@ export default function AdminShell() {
               }
             >
               <UsersRound className="w-4 h-4" />
-              <span>Team & Workload</span>
+              <span>Team Management</span>
             </NavLink>
 
             <NavLink
