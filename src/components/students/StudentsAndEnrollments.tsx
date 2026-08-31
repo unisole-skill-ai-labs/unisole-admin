@@ -23,6 +23,7 @@ import {
   RefreshCw,
   Phone,
   Calendar,
+  Download,
 } from "lucide-react";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
@@ -32,6 +33,145 @@ import Input from "../ui/Input";
 interface StudentsAndEnrollmentsProps {
   baseUrl: string;
 }
+
+// ─── CSV EXPORT HELPERS ───────────────────────────────────────────────────────
+const escapeCsv = (val: any): string => {
+  if (val === null || val === undefined) return '""';
+  const str = String(val).replace(/"/g, '""');
+  return `"${str}"`;
+};
+
+const exportLearnersCsv = (data: any[], filterLabel: string) => {
+  const headers = [
+    "User ID",
+    "Full Name",
+    "Mobile Number",
+    "Role",
+    "Campus / College",
+    "College ID",
+    "Branch / Stream",
+    "Designation / Title",
+    "Acquisition Source",
+    "Signup Session Code",
+    "Signup College Name",
+    "Account Status",
+    "Joined Date",
+    "Updated Date",
+  ];
+
+  const rows = data.map((s: any) => {
+    const sourceLabel =
+      s.role !== "STUDENT"
+        ? "Staff / Admin"
+        : s.signupSource === "IAPT"
+        ? "IAPT Portal"
+        : s.signupSource === "PAMPHLET_QR" || s.signupSource === "PAMPHLET"
+        ? "Pamphlet QR"
+        : s.signupSource === "SESSION_QR" || s.signupSessionCode
+        ? "Session QR"
+        : "Organic Web";
+
+    const formattedPhone = s.phone ? `+91 ${s.phone}` : "";
+    const joinedDate = s.createdAt
+      ? new Date(s.createdAt).toISOString().replace("T", " ").substring(0, 19)
+      : "";
+    const updatedDate = s.updatedAt
+      ? new Date(s.updatedAt).toISOString().replace("T", " ").substring(0, 19)
+      : "";
+
+    return [
+      s.id || "",
+      s.name || "Student",
+      formattedPhone,
+      s.role || "STUDENT",
+      s.collegeName || s.signupCollegeName || "",
+      s.collegeId || s.signupCollegeId || "",
+      s.branch || "",
+      s.designation || "",
+      sourceLabel,
+      s.signupSessionCode || "",
+      s.signupCollegeName || "",
+      s.isActive !== false ? "Active" : "Deactivated",
+      joinedDate,
+      updatedDate,
+    ];
+  });
+
+  const csvContent =
+    "\uFEFF" +
+    [headers.map(escapeCsv).join(","), ...rows.map((row) => row.map(escapeCsv).join(","))].join(
+      "\r\n"
+    );
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const now = new Date().toISOString().split("T")[0];
+  const filterTag = filterLabel && filterLabel !== "ALL" ? `_${filterLabel.toLowerCase()}` : "";
+  link.setAttribute("href", url);
+  link.setAttribute("download", `unisole_learners_accounts${filterTag}_${now}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
+
+const exportEnrollmentsCsv = (data: any[], allStudents: any[], allPathways: any[]) => {
+  const headers = [
+    "Enrollment ID",
+    "Learner ID",
+    "Learner Name",
+    "Learner Phone",
+    "Learner College",
+    "Pathway ID",
+    "Pathway Title",
+    "Status",
+    "Enrolled Date",
+    "Created Date",
+  ];
+
+  const rows = data.map((e: any) => {
+    const student = allStudents.find((s: any) => s.id === e.userId);
+    const pathway = allPathways.find((p: any) => p.id === e.pathwayId);
+    const formattedPhone = student?.phone ? `+91 ${student.phone}` : "";
+    const enrolledDate = e.enrolledAt
+      ? new Date(e.enrolledAt).toISOString().replace("T", " ").substring(0, 19)
+      : "";
+    const createdDate = e.createdAt
+      ? new Date(e.createdAt).toISOString().replace("T", " ").substring(0, 19)
+      : "";
+
+    return [
+      e.id || "",
+      e.userId || "",
+      student?.name || "",
+      formattedPhone,
+      student?.collegeName || "",
+      e.pathwayId || "",
+      pathway?.title || e.pathwayId || "",
+      e.status || "",
+      enrolledDate,
+      createdDate,
+    ];
+  });
+
+  const csvContent =
+    "\uFEFF" +
+    [headers.map(escapeCsv).join(","), ...rows.map((row) => row.map(escapeCsv).join(","))].join(
+      "\r\n"
+    );
+
+  const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+  const url = URL.createObjectURL(blob);
+  const link = document.createElement("a");
+  const now = new Date().toISOString().split("T")[0];
+  link.setAttribute("href", url);
+  link.setAttribute("download", `unisole_pathway_enrollments_${now}.csv`);
+  document.body.appendChild(link);
+  link.click();
+  document.body.removeChild(link);
+  URL.revokeObjectURL(url);
+};
 
 export default function StudentsAndEnrollments({ baseUrl }: StudentsAndEnrollmentsProps) {
   const [activeTab, setActiveTab] = useState<"students" | "enrollments">("students");
@@ -180,6 +320,17 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
         </div>
 
         <div className="flex items-center gap-2 w-full md:w-auto justify-end">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => exportLearnersCsv(filtered, sourceFilter)}
+            icon={Download}
+            disabled={filtered.length === 0}
+            className="border-indigo-200 dark:border-indigo-900/50 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 font-semibold"
+            title="Download CSV for currently filtered learners and accounts"
+          >
+            Export CSV ({filtered.length})
+          </Button>
           <Button variant="secondary" size="sm" onClick={refetch} icon={RefreshCw}>
             Refresh
           </Button>
@@ -361,6 +512,17 @@ function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
           />
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => exportEnrollmentsCsv(filtered, students, pathways)}
+            icon={Download}
+            disabled={filtered.length === 0}
+            className="border-indigo-200 dark:border-indigo-900/50 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 text-indigo-600 dark:text-indigo-400 font-semibold"
+            title="Download CSV for pathway enrollments"
+          >
+            Export CSV ({filtered.length})
+          </Button>
           <Button variant="secondary" size="sm" onClick={refetch} icon={RefreshCw}>
             Refresh
           </Button>
