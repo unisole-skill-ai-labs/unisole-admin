@@ -13,7 +13,6 @@ import {
   Lock,
   Eye,
   EyeOff,
-  Sparkles,
 } from "lucide-react";
 import Button from "../components/ui/Button";
 
@@ -24,8 +23,8 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
-  const [username, setUsername] = useState("girish");
-  const [password, setPassword] = useState("1234");
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
@@ -65,11 +64,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickSelect = (u: string, p: string) => {
-    setUsername(u);
-    setPassword(p);
-  };
-
   return (
     <div className="min-h-screen flex items-center justify-center p-4 sm:p-6 bg-gradient-to-br from-zinc-50 via-zinc-100 to-indigo-50/30 dark:from-zinc-950 dark:via-black dark:to-zinc-950 relative overflow-hidden">
       {/* Theme Toggle in Corner */}
@@ -99,41 +93,6 @@ export default function LoginPage() {
           </p>
         </div>
 
-        {/* Quick Demo Profile Chips */}
-        <div className="mb-5 p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800">
-          <span className="text-[10px] font-mono uppercase font-bold text-zinc-400 flex items-center gap-1 mb-2">
-            <Sparkles className="w-3 h-3 text-amber-500" />
-            1-Click Staff Profiles:
-          </span>
-          <div className="grid grid-cols-2 gap-1.5 text-left">
-            <button
-              type="button"
-              onClick={() => handleQuickSelect("girish", "1234")}
-              className={`p-2 rounded-xl border text-[11px] flex items-center gap-1.5 transition-all cursor-pointer ${
-                username === "girish"
-                  ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold"
-                  : "bg-white dark:bg-zinc-900 hover:border-amber-500 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200"
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
-              <span className="truncate font-bold">Girish (Super)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickSelect("admin", "1234")}
-              className={`p-2 rounded-xl border text-[11px] flex items-center gap-1.5 transition-all cursor-pointer ${
-                username === "admin"
-                  ? "bg-indigo-500/10 border-indigo-500/40 text-indigo-600 dark:text-indigo-400 font-bold"
-                  : "bg-white dark:bg-zinc-900 hover:border-indigo-500 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200"
-              }`}
-            >
-              <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
-              <span className="truncate font-bold">Admin (Staff)</span>
-            </button>
-          </div>
-        </div>
-
         {/* Error Message */}
         {error && (
           <div className="mb-4 p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
@@ -145,7 +104,7 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-              Staff Username
+              Username
             </label>
             <div className="relative">
               <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400">
@@ -155,7 +114,7 @@ export default function LoginPage() {
                 type="text"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
-                placeholder="e.g. girish"
+                placeholder="Enter username"
                 required
                 autoFocus
                 className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
@@ -165,7 +124,7 @@ export default function LoginPage() {
 
           <div>
             <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-              Staff Password
+              Password
             </label>
             <div className="relative">
               <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400">
@@ -175,7 +134,7 @@ export default function LoginPage() {
                 type={showPassword ? "text" : "password"}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
+                placeholder="Enter password"
                 required
                 className="w-full pl-10 pr-10 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
               />
