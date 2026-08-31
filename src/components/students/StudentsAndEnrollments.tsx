@@ -3,6 +3,7 @@ import {
   useGetStudentsQuery,
   useCreateStudentMutation,
   useUpdateStudentMutation,
+  useDeleteStudentMutation,
   useDeactivateStudentMutation,
   useGetEnrollmentsQuery,
   useCreateEnrollmentMutation,
@@ -14,6 +15,7 @@ import {
   GraduationCap,
   Plus,
   Edit2,
+  Trash2,
   UserX,
   Search,
   CheckCircle,
@@ -227,6 +229,7 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
   const { data: students = [], isLoading, refetch } = useGetStudentsQuery(baseUrl);
   const [createStudent, { isLoading: isCreating }] = useCreateStudentMutation();
   const [updateStudent, { isLoading: isUpdating }] = useUpdateStudentMutation();
+  const [deleteStudent, { isLoading: isDeleting }] = useDeleteStudentMutation();
   const [deactivateStudent, { isLoading: isDeactivating }] = useDeactivateStudentMutation();
 
   const [search, setSearch] = useState("");
@@ -268,6 +271,22 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
       await deactivateStudent({ baseUrl, id: student.id }).unwrap();
     } catch (err: any) {
       alert("Failed to deactivate: " + (err?.data?.error || err.message));
+    }
+  };
+
+  const handleDelete = async (student: any) => {
+    const studentName = student.name || student.phone || student.id;
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently DELETE learner "${studentName}"?\n\n⚠️ Cascading Deletion Notice:\nThis will permanently remove:\n- The learner user account\n- All pathway enrollments\n- All payment records\n- All presentation quiz attendance & leads\n\nThis action is irreversible. Proceed?`
+      )
+    ) {
+      return;
+    }
+    try {
+      await deleteStudent({ baseUrl, id: student.id }).unwrap();
+    } catch (err: any) {
+      alert("Failed to delete learner: " + (err?.data?.error || err.message));
     }
   };
 
@@ -437,8 +456,9 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
-                        <Button variant="ghost" size="sm" onClick={() => setEditingStudent(s)} icon={Edit2} />
-                        <Button variant="ghost" size="sm" onClick={() => handleDeactivate(s)} icon={UserX} className="text-rose-500 hover:text-rose-700" />
+                        <Button variant="ghost" size="sm" onClick={() => setEditingStudent(s)} icon={Edit2} title="Edit Learner" />
+                        <Button variant="ghost" size="sm" onClick={() => handleDeactivate(s)} icon={UserX} className="text-amber-500 hover:text-amber-700" title={s.isActive !== false ? "Deactivate Account" : "Activate Account"} />
+                        <Button variant="ghost" size="sm" onClick={() => handleDelete(s)} icon={Trash2} className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30" title="Delete Learner (Permanent Cascade)" />
                       </div>
                     </td>
                   </tr>

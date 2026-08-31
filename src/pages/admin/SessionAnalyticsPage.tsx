@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useSelector } from "react-redux";
-import { useGetSessionAnalyticsQuery } from "../../store";
+import { useGetSessionAnalyticsQuery, useDeleteSessionMutation } from "../../store";
 import {
   ArrowLeft,
   Users,
@@ -16,6 +16,7 @@ import {
   Flame,
   Clock,
   Download,
+  Trash2,
   BarChart3,
   HelpCircle,
   Vote,
@@ -39,6 +40,7 @@ export default function SessionAnalyticsPage() {
       { baseUrl, sessionId: sessionId! },
       { skip: !sessionId, pollingInterval: 10000 }
     );
+  const [deleteSession, { isLoading: isDeletingSession }] = useDeleteSessionMutation();
 
   const [activeTab, setActiveTab] = useState<
     "overview" | "leads" | "quizzes" | "surveys"
@@ -136,6 +138,24 @@ export default function SessionAnalyticsPage() {
     document.body.removeChild(link);
   };
 
+  const handleDeleteSession = async () => {
+    const code = session?.sessionCode || sessionId;
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently DELETE Live Session #${code}?\n\n⚠️ Cascading Deletion Warning:\nThis will permanently remove:\n- The session record\n- All ${leads.length} student leads, quiz attempts & survey responses\n\nThis cannot be undone. Proceed?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await deleteSession({ baseUrl, id: sessionId! }).unwrap();
+      navigate("/presentations");
+    } catch (err: any) {
+      alert("Failed to delete session: " + (err?.data?.error || err.message));
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="h-[60vh] flex flex-col items-center justify-center gap-3 text-zinc-400">
@@ -214,6 +234,18 @@ export default function SessionAnalyticsPage() {
             className="flex items-center gap-1.5 font-bold shadow-xs text-xs"
           >
             Export CSV ({leads.length})
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={handleDeleteSession}
+            icon={Trash2}
+            disabled={isDeletingSession}
+            className="flex items-center gap-1.5 font-bold shadow-xs text-xs text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 border-rose-200 dark:border-rose-900/50 cursor-pointer"
+            title="Delete Session (Cascading)"
+          >
+            {isDeletingSession ? "Deleting..." : "Delete Session"}
           </Button>
 
           {session?.status === "LIVE" && (

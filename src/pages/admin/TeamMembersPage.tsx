@@ -91,11 +91,14 @@ export default function TeamMembersPage() {
   const [isAddMemberModalOpen, setIsAddMemberModalOpen] = useState(false);
 
   // Member Form State
-  const [memberPhone, setMemberPhone] = useState("");
   const [memberName, setMemberName] = useState("");
+  const [memberUsername, setMemberUsername] = useState("");
+  const [memberPassword, setMemberPassword] = useState("1234");
+  const [memberPhone, setMemberPhone] = useState("0000000000");
   const [memberRole, setMemberRole] = useState<string>("MEMBER");
   const [memberDeptId, setMemberDeptId] = useState<string>("");
   const [memberDesignation, setMemberDesignation] = useState<string>("");
+  const [memberIsActive, setMemberIsActive] = useState<boolean>(true);
 
   // Department Modals
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
@@ -161,10 +164,10 @@ export default function TeamMembersPage() {
         badgeBg: "bg-rose-100 dark:bg-rose-950/80 text-rose-700 dark:text-rose-400 border-rose-200 dark:border-rose-900",
       };
     }
-    if (activeCount >= 1) {
+    if (activeCount >= 3) {
       return {
-        label: "⚡ Active",
-        badgeBg: "bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-400 border-indigo-200 dark:border-indigo-900",
+        label: "⚡ Busy",
+        badgeBg: "bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-400 border-amber-200 dark:border-amber-900",
       };
     }
     return {
@@ -175,41 +178,51 @@ export default function TeamMembersPage() {
 
   // --- Member Handlers ---
   const handleOpenAddMember = () => {
-    setMemberPhone("");
     setMemberName("");
+    setMemberUsername("");
+    setMemberPassword("1234");
+    setMemberPhone("0000000000");
     setMemberRole("MEMBER");
     setMemberDeptId("");
     setMemberDesignation("");
+    setMemberIsActive(true);
     setIsAddMemberModalOpen(true);
   };
 
   const handleOpenEditMember = (member: any) => {
     setSelectedMemberForEdit(member);
     setMemberName(member.name || "");
+    setMemberUsername(member.username || "");
+    setMemberPassword("");
+    setMemberPhone(member.phone || "0000000000");
     setMemberRole(member.role || "MEMBER");
     setMemberDeptId(member.departmentId || "");
     setMemberDesignation(member.designation || "");
+    setMemberIsActive(member.isActive !== false);
     setIsEditMemberModalOpen(true);
   };
 
   const handleSaveAddMember = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!memberPhone.trim() || !memberName.trim()) return;
+    if (!memberName.trim() || !memberUsername.trim()) return;
 
     try {
       await createMember({
         baseUrl,
         body: {
-          phone: memberPhone.trim(),
           name: memberName.trim(),
+          username: memberUsername.trim(),
+          password: memberPassword.trim() || "1234",
+          phone: memberPhone.trim() || "0000000000",
           role: memberRole,
           departmentId: memberDeptId || null,
           designation: memberDesignation.trim() || null,
+          isActive: memberIsActive,
         },
       }).unwrap();
       setIsAddMemberModalOpen(false);
     } catch (err: any) {
-      alert(err?.data?.error || "Failed to add team member");
+      alert(err?.data?.error || err?.data?.message || "Failed to add team member");
     }
   };
 
@@ -223,25 +236,35 @@ export default function TeamMembersPage() {
         id: selectedMemberForEdit.id,
         body: {
           name: memberName.trim(),
+          username: memberUsername.trim() || undefined,
+          password: memberPassword.trim() ? memberPassword.trim() : undefined,
+          phone: memberPhone.trim() || undefined,
           role: memberRole,
           departmentId: memberDeptId || null,
           designation: memberDesignation || null,
+          isActive: memberIsActive,
         },
       }).unwrap();
       setIsEditMemberModalOpen(false);
       setSelectedMemberForEdit(null);
     } catch (err: any) {
-      alert(err?.data?.error || "Failed to update member");
+      alert(err?.data?.error || err?.data?.message || "Failed to update member");
     }
   };
 
   const handleDeleteMember = async (memberId: string, name: string) => {
-    if (!confirm(`Are you sure you want to deactivate ${name}?`)) return;
+    if (
+      !confirm(
+        `Are you sure you want to permanently DELETE internal staff member "${name}"?\n\n⚠️ This will permanently remove their credentials, tasks, and system access. Proceed?`
+      )
+    ) {
+      return;
+    }
     try {
       await deleteMember({ baseUrl, id: memberId }).unwrap();
       if (inspectingMemberId === memberId) setInspectingMemberId(null);
     } catch (err: any) {
-      alert(err?.data?.error || "Failed to deactivate member");
+      alert(err?.data?.error || err?.data?.message || "Failed to delete member");
     }
   };
 
@@ -839,11 +862,21 @@ export default function TeamMembersPage() {
                             {(m.name || m.phone || "U").charAt(0).toUpperCase()}
                           </div>
                           <div>
-                            <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                              {m.name || "Unnamed Staff"}
+                            <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors flex items-center gap-1.5">
+                              <span>{m.name || "Unnamed Staff"}</span>
+                              {m.isActive === false && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded-sm bg-rose-100 dark:bg-rose-950 text-rose-600 font-bold">
+                                  INACTIVE
+                                </span>
+                              )}
                             </h3>
-                            <p className="text-[11px] text-zinc-500 font-mono">
-                              +91 {m.phone}
+                            <p className="text-[11px] text-zinc-500 font-mono flex items-center gap-2">
+                              {m.username && (
+                                <span className="text-indigo-600 dark:text-indigo-400 font-bold">
+                                  @{m.username}
+                                </span>
+                              )}
+                              <span>+91 {m.phone}</span>
                             </p>
                           </div>
                         </div>
@@ -1019,11 +1052,11 @@ export default function TeamMembersPage() {
       {/* Add New Member Modal */}
       {isAddMemberModalOpen && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl">
+          <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                 <UserPlus className="w-4 h-4 text-indigo-600" />
-                <span>Add Team Member</span>
+                <span>Add Internal Team Member</span>
               </h3>
               <button
                 onClick={() => setIsAddMemberModalOpen(false)}
@@ -1034,38 +1067,69 @@ export default function TeamMembersPage() {
             </div>
 
             <form onSubmit={handleSaveAddMember} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Staff Full Name <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="e.g. Ramesh Kumar"
-                  value={memberName}
-                  onChange={(e) => setMemberName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-bold"
-                />
-              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Staff Full Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Ramesh Kumar"
+                    value={memberName}
+                    onChange={(e) => setMemberName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-bold"
+                  />
+                </div>
 
-              <div>
-                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Mobile Number (10 digits) <span className="text-rose-500">*</span>
-                </label>
-                <input
-                  type="tel"
-                  required
-                  placeholder="9876543210"
-                  value={memberPhone}
-                  onChange={(e) => setMemberPhone(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-mono font-bold"
-                />
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Login Username <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. ramesh"
+                    value={memberUsername}
+                    onChange={(e) => setMemberUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ""))}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-mono font-bold"
+                  />
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Role
+                    Login Password <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="1234"
+                    value={memberPassword}
+                    onChange={(e) => setMemberPassword(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-mono font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Internal Phone
+                  </label>
+                  <input
+                    type="tel"
+                    placeholder="0000000000"
+                    value={memberPhone}
+                    onChange={(e) => setMemberPhone(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-mono"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Access Role
                   </label>
                   <select
                     value={memberRole}
@@ -1103,7 +1167,7 @@ export default function TeamMembersPage() {
                 </label>
                 <input
                   type="text"
-                  placeholder="e.g. Lead Video Editor or Operations Intern"
+                  placeholder="e.g. Lead Video Editor or Operations Lead"
                   value={memberDesignation}
                   onChange={(e) => setMemberDesignation(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
@@ -1130,7 +1194,7 @@ export default function TeamMembersPage() {
       {/* Edit Member Profile Modal */}
       {isEditMemberModalOpen && selectedMemberForEdit && (
         <div className="fixed inset-0 z-50 bg-black/50 backdrop-blur-xs flex items-center justify-center p-4">
-          <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl">
+          <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100">
                 Edit Member: {selectedMemberForEdit.name || selectedMemberForEdit.phone}
@@ -1143,51 +1207,94 @@ export default function TeamMembersPage() {
               </button>
             </div>
 
-            <form onSubmit={handleSaveEditMember} className="space-y-4 text-xs">
-              <div>
-                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Full Name
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={memberName}
-                  onChange={(e) => setMemberName(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-bold"
-                />
+            <form onSubmit={handleSaveEditMember} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Full Name <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={memberName}
+                    onChange={(e) => setMemberName(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-bold"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Username
+                  </label>
+                  <input
+                    type="text"
+                    value={memberUsername}
+                    onChange={(e) => setMemberUsername(e.target.value.toLowerCase().replace(/[^a-z0-9_.-]/g, ""))}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-mono font-bold"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Access Role
-                </label>
-                <select
-                  value={memberRole}
-                  onChange={(e) => setMemberRole(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-bold"
-                >
-                  <option value="MEMBER">MEMBER (Staff / Intern / Learner)</option>
-                  <option value="ADMIN">ADMIN (Department Lead / Manager)</option>
-                  <option value="SUPER_ADMIN">SUPER ADMIN (Founders / Core Platform)</option>
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    New Password
+                  </label>
+                  <input
+                    type="text"
+                    placeholder="Leave blank to keep"
+                    value={memberPassword}
+                    onChange={(e) => setMemberPassword(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-mono"
+                  />
+                </div>
+
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Internal Phone
+                  </label>
+                  <input
+                    type="tel"
+                    value={memberPhone}
+                    onChange={(e) => setMemberPhone(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-mono"
+                  />
+                </div>
               </div>
 
-              <div>
-                <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                  Department
-                </label>
-                <select
-                  value={memberDeptId}
-                  onChange={(e) => setMemberDeptId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-bold"
-                >
-                  <option value="">No Department Assigned</option>
-                  {departments.map((d: any) => (
-                    <option key={d.id} value={d.id}>
-                      {d.name}
-                    </option>
-                  ))}
-                </select>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Access Role
+                  </label>
+                  <select
+                    value={memberRole}
+                    onChange={(e) => setMemberRole(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-bold"
+                  >
+                    <option value="MEMBER">MEMBER (Staff / Intern / Learner)</option>
+                    <option value="ADMIN">ADMIN (Department Lead / Manager)</option>
+                    <option value="SUPER_ADMIN">SUPER ADMIN (Founders / Core Platform)</option>
+                  </select>
+                </div>
+
+                <div>
+                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                    Department
+                  </label>
+                  <select
+                    value={memberDeptId}
+                    onChange={(e) => setMemberDeptId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 font-bold"
+                  >
+                    <option value="">No Department Assigned</option>
+                    {departments.map((d: any) => (
+                      <option key={d.id} value={d.id}>
+                        {d.name}
+                      </option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div>
@@ -1201,6 +1308,19 @@ export default function TeamMembersPage() {
                   onChange={(e) => setMemberDesignation(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
                 />
+              </div>
+
+              <div className="flex items-center gap-2 pt-1">
+                <input
+                  type="checkbox"
+                  id="memberIsActiveCheck"
+                  checked={memberIsActive}
+                  onChange={(e) => setMemberIsActive(e.target.checked)}
+                  className="w-4 h-4 rounded-sm text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                />
+                <label htmlFor="memberIsActiveCheck" className="font-bold text-zinc-700 dark:text-zinc-300 cursor-pointer select-none">
+                  Active Account (allows login to Admin Console)
+                </label>
               </div>
 
               <div className="flex justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">

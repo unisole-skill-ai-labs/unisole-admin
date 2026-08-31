@@ -9,6 +9,11 @@ import {
   AlertCircle,
   Sun,
   Moon,
+  User,
+  Lock,
+  Eye,
+  EyeOff,
+  Sparkles,
 } from "lucide-react";
 import Button from "../components/ui/Button";
 
@@ -19,7 +24,9 @@ export default function LoginPage() {
   const navigate = useNavigate();
   const { theme, toggleTheme } = useTheme();
 
-  const [phone, setPhone] = useState("+919876543210");
+  const [username, setUsername] = useState("girish");
+  const [password, setPassword] = useState("1234");
+  const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
@@ -35,10 +42,10 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch(`${baseUrl}/api/auth/login`, {
+      const res = await fetch(`${baseUrl}/api/auth/admin-login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ phone }),
+        body: JSON.stringify({ username: username.trim(), password }),
       });
 
       const data = await res.json();
@@ -58,8 +65,9 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickSelect = (phoneNumber: string) => {
-    setPhone(`+91${phoneNumber}`);
+  const handleQuickSelect = (u: string, p: string) => {
+    setUsername(u);
+    setPassword(p);
   };
 
   return (
@@ -92,45 +100,36 @@ export default function LoginPage() {
         </div>
 
         {/* Quick Demo Profile Chips */}
-        <div className="mb-5 p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800">
-          <span className="text-[10px] font-mono uppercase font-bold text-zinc-400 block mb-2">
-            ⚡ 1-Click Demo Profiles:
+        <div className="mb-5 p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800">
+          <span className="text-[10px] font-mono uppercase font-bold text-zinc-400 flex items-center gap-1 mb-2">
+            <Sparkles className="w-3 h-3 text-amber-500" />
+            1-Click Staff Profiles:
           </span>
           <div className="grid grid-cols-2 gap-1.5 text-left">
             <button
               type="button"
-              onClick={() => handleQuickSelect("9876543210")}
-              className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-amber-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+              onClick={() => handleQuickSelect("girish", "1234")}
+              className={`p-2 rounded-xl border text-[11px] flex items-center gap-1.5 transition-all cursor-pointer ${
+                username === "girish"
+                  ? "bg-amber-500/10 border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold"
+                  : "bg-white dark:bg-zinc-900 hover:border-amber-500 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200"
+              }`}
             >
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-              <span className="font-bold truncate">Girish (Super)</span>
+              <span className="w-2 h-2 rounded-full bg-amber-500 shrink-0" />
+              <span className="truncate font-bold">Girish (Super)</span>
             </button>
 
             <button
               type="button"
-              onClick={() => handleQuickSelect("9816012345")}
-              className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-amber-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+              onClick={() => handleQuickSelect("admin", "1234")}
+              className={`p-2 rounded-xl border text-[11px] flex items-center gap-1.5 transition-all cursor-pointer ${
+                username === "admin"
+                  ? "bg-indigo-500/10 border-indigo-500/40 text-indigo-600 dark:text-indigo-400 font-bold"
+                  : "bg-white dark:bg-zinc-900 hover:border-indigo-500 border-zinc-200 dark:border-zinc-800 text-zinc-800 dark:text-zinc-200"
+              }`}
             >
-              <span className="w-2 h-2 rounded-full bg-amber-500" />
-              <span className="font-bold truncate">Ajay Mokta (Super)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickSelect("9811122233")}
-              className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-indigo-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <span className="w-2 h-2 rounded-full bg-indigo-500" />
-              <span className="font-bold truncate">Priya (Admin)</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => handleQuickSelect("9844455566")}
-              className="p-1.5 rounded-lg bg-white dark:bg-zinc-900 hover:border-emerald-500 border border-zinc-200 dark:border-zinc-800 text-[11px] text-zinc-800 dark:text-zinc-200 flex items-center gap-1.5 transition-colors cursor-pointer"
-            >
-              <span className="w-2 h-2 rounded-full bg-emerald-500" />
-              <span className="font-bold truncate">Sneha (Member)</span>
+              <span className="w-2 h-2 rounded-full bg-indigo-500 shrink-0" />
+              <span className="truncate font-bold">Admin (Staff)</span>
             </button>
           </div>
         </div>
@@ -146,21 +145,48 @@ export default function LoginPage() {
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
             <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-              Staff Mobile Number
+              Staff Username
             </label>
             <div className="relative">
-              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-xs font-bold text-zinc-500 dark:text-zinc-400 flex items-center gap-1 border-r border-zinc-200 dark:border-zinc-800 pr-2 font-mono">
-                🇮🇳 +91
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400">
+                <User className="w-4 h-4" />
               </div>
               <input
-                type="tel"
-                value={phone.replace(/^\+91/, "")}
-                onChange={(e) => setPhone(`+91${e.target.value.replace(/\D/g, "")}`)}
-                placeholder="9876543210"
+                type="text"
+                value={username}
+                onChange={(e) => setUsername(e.target.value)}
+                placeholder="e.g. girish"
                 required
                 autoFocus
-                className="w-full pl-20 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-mono font-bold"
+                className="w-full pl-10 pr-4 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
               />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+              Staff Password
+            </label>
+            <div className="relative">
+              <div className="absolute left-3.5 top-1/2 -translate-y-1/2 text-zinc-400">
+                <Lock className="w-4 h-4" />
+              </div>
+              <input
+                type={showPassword ? "text" : "password"}
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                placeholder="••••••••"
+                required
+                className="w-full pl-10 pr-10 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden focus:bg-white dark:focus:bg-zinc-900 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 font-medium"
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-0.5 cursor-pointer"
+                title={showPassword ? "Hide password" : "Show password"}
+              >
+                {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+              </button>
             </div>
           </div>
 
@@ -168,11 +194,11 @@ export default function LoginPage() {
             type="submit"
             variant="primary"
             size="lg"
-            className="w-full shadow-lg shadow-indigo-500/20"
+            className="w-full shadow-lg shadow-indigo-500/20 cursor-pointer font-bold mt-2"
             loading={loading}
             icon={ArrowRight}
           >
-            Sign In to Admin
+            Sign In to Admin Console
           </Button>
         </form>
       </div>

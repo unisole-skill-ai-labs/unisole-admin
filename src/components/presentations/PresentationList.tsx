@@ -7,6 +7,7 @@ import {
   useGetSessionsQuery,
   useLaunchSessionMutation,
   useUpdateSessionStatusMutation,
+  useDeleteSessionMutation,
   useGetCollegesQuery,
 } from "../../store";
 import {
@@ -49,6 +50,7 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
   const [deletePresentation, { isLoading: isDeleting }] = useDeletePresentationMutation();
   const [launchSession, { isLoading: isLaunching }] = useLaunchSessionMutation();
   const [updateSessionStatus] = useUpdateSessionStatusMutation();
+  const [deleteSession, { isLoading: isDeletingSession }] = useDeleteSessionMutation();
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [launchModalOpen, setLaunchModalOpen] = useState(false);
@@ -204,6 +206,22 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
       alert("Failed to end session: " + (err?.data?.message || err.message));
     } finally {
       setEndingSessionId(null);
+    }
+  };
+
+  const handleDeleteSession = async (sessionId: string, sessionCode: string) => {
+    if (
+      !window.confirm(
+        `Are you sure you want to permanently DELETE Live Session #${sessionCode}?\n\n⚠️ Cascading Deletion Notice:\nThis will permanently remove the session, all attendee leads, and quiz responses.\n\nProceed?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await deleteSession({ baseUrl, id: sessionId }).unwrap();
+    } catch (err: any) {
+      alert("Failed to delete session: " + (err?.data?.message || err.message));
     }
   };
 
@@ -525,6 +543,14 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
                                 View Analytics
                               </Button>
                             </Link>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              icon={Trash2}
+                              onClick={() => handleDeleteSession(sess.id, sess.sessionCode)}
+                              className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30 p-2 rounded-xl"
+                              title="Delete Session (Cascading)"
+                            />
                           </div>
                         </td>
                       </tr>

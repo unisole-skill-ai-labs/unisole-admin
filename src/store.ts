@@ -101,7 +101,7 @@ export const adminApi = createApi({
         url: `${baseUrl}/api/admin/students/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Students", "Colleges", "Branches"],
+      invalidatesTags: ["Students", "Enrollments", "Payments", "Colleges", "Branches"],
     }),
     deactivateStudent: build.mutation({
       query: ({ baseUrl, id }) => ({
@@ -509,6 +509,13 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Sessions"],
     }),
+    deleteSession: build.mutation({
+      query: ({ baseUrl, id, sessionId }: any) => ({
+        url: `${baseUrl}/api/admin/presentations/sessions/${id || sessionId}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Sessions", "Leads", "Colleges", "Presentations"],
+    }),
     getSessionLeads: build.query({
       query: ({ baseUrl, sessionId, id }: any) => ({
         url: `${baseUrl}/api/admin/presentations/sessions/${sessionId || id}/leads`,
@@ -826,6 +833,7 @@ export const {
   useGetSessionQuery,
   useLaunchSessionMutation,
   useUpdateSessionStatusMutation,
+  useDeleteSessionMutation,
   useGetSessionLeadsQuery,
   useGetSessionAnalyticsQuery,
   useGetLeadDiversificationQuery,
