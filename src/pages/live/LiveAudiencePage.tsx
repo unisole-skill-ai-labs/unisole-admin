@@ -133,8 +133,9 @@ export default function LiveAudiencePage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [reactions, setReactions] = useState<{ id: string; emoji: string }[]>([]);
-  const [isReactionCoolingDown, setIsReactionCoolingDown] = useState(false);
-  const lastReactionTimeRef = useRef<number>(0);
+  const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
+  const [isSpamPenalized, setIsSpamPenalized] = useState(false);
+  const penaltyUntilRef = useRef<number>(0);
   const [copied, setCopied] = useState(false);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const [isKicked, setIsKicked] = useState(false);
@@ -892,15 +893,37 @@ export default function LiveAudiencePage() {
     });
   };
 
-  // Send Floating Reaction (1.5s client-side cooldown rate limit)
+  // Progressive Anti-Spam Reaction Cooldown (5s base, 10s penalty)
+  useEffect(() => {
+    const interval = setInterval(() => {
+      const now = Date.now();
+      const remainingMs = Math.max(0, penaltyUntilRef.current - now);
+      const remainingSec = Math.ceil(remainingMs / 1000);
+      setCooldownRemaining(remainingSec);
+      if (remainingMs === 0) {
+        setIsSpamPenalized(false);
+      }
+    }, 200);
+
+    return () => clearInterval(interval);
+  }, []);
+
+  // Send Floating Reaction with 5s standard cooldown and 10s spam escalation
   const handleSendReaction = (emoji: string) => {
     const now = Date.now();
-    if (now - lastReactionTimeRef.current < 1500) {
+
+    // If student clicks while locked in cooldown -> PENALIZE TO 10 SECONDS!
+    if (now < penaltyUntilRef.current) {
+      penaltyUntilRef.current = now + 10000;
+      setIsSpamPenalized(true);
+      setCooldownRemaining(10);
       return;
     }
-    lastReactionTimeRef.current = now;
-    setIsReactionCoolingDown(true);
-    setTimeout(() => setIsReactionCoolingDown(false), 1500);
+
+    // Normal reaction: lock for standard 5s
+    penaltyUntilRef.current = now + 5000;
+    setCooldownRemaining(5);
+    setIsSpamPenalized(false);
 
     socketRef.current?.emit("audience:reaction", {
       sessionCode: code,
@@ -1469,24 +1492,45 @@ export default function LiveAudiencePage() {
                 )}
               </div>
 
-              {/* Send Cheer Reaction Dock */}
+              {/* Send Cheer Reaction Dock with Progressive 5s / 10s Cooldown Badge */}
               <div className="pt-3 border-t border-white/10 space-y-1.5">
-                <span className="text-[10px] uppercase font-bold text-zinc-400 block text-center">
-                  Send a Cheer to the Stage:
-                </span>
+                <div className="flex items-center justify-between px-1">
+                  <span className="text-[10px] uppercase font-bold text-zinc-400">
+                    Send a Cheer to Stage:
+                  </span>
+                  {cooldownRemaining > 0 && (
+                    <span
+                      className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-full border transition-all animate-pulse ${
+                        isSpamPenalized
+                          ? "bg-rose-500/20 text-rose-400 border-rose-500/40"
+                          : "bg-amber-500/20 text-amber-300 border-amber-500/40"
+                      }`}
+                    >
+                      {isSpamPenalized
+                        ? `⚠️ Penalty: ${cooldownRemaining}s`
+                        : `⏳ Cooldown: ${cooldownRemaining}s`}
+                    </span>
+                  )}
+                </div>
+
                 <div className="flex items-center justify-center gap-3">
                   {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
                     <button
                       key={emoji}
                       type="button"
-                      disabled={isReactionCoolingDown}
                       onClick={() => handleSendReaction(emoji)}
-                      className={`p-1 text-xl transition-all cursor-pointer ${
-                        isReactionCoolingDown
-                          ? "opacity-40 cursor-not-allowed scale-90"
+                      className={`p-1 text-xl transition-all cursor-pointer select-none ${
+                        cooldownRemaining > 0
+                          ? "opacity-40 hover:opacity-70 active:scale-95"
                           : "hover:scale-125 active:scale-90"
                       }`}
-                      title={`Send ${emoji}`}
+                      title={
+                        cooldownRemaining > 0
+                          ? isSpamPenalized
+                            ? "10s Penalty (Spam limit)"
+                            : `Cooldown active (${cooldownRemaining}s)`
+                          : `Send ${emoji}`
+                      }
                     >
                       {emoji}
                     </button>
@@ -1860,28 +1904,38 @@ export default function LiveAudiencePage() {
         {renderInstantPollOverlay()}
 
         {/* Landscape Floating Bottom Reactions Dock */}
-        <footer className="px-4 py-1.5 bg-zinc-900/60 backdrop-blur-md border-t border-white/10 z-30 shrink-0 flex items-center justify-between">
+        <footer className="px-4 py-1.5 bg-zinc-900/70 backdrop-blur-md border-t border-white/10 z-30 shrink-0 flex items-center justify-between">
           <div className="text-[11px] font-mono text-zinc-400">
-            Unisole Live Presentation Arena
+            Unisole Live Arena
           </div>
-          <div className="flex items-center gap-3">
-            {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                disabled={isReactionCoolingDown}
-                onClick={() => handleSendReaction(emoji)}
-                className={`p-1 text-lg transition-all cursor-pointer ${
-                  isReactionCoolingDown
-                    ? "opacity-40 cursor-not-allowed scale-90"
-                    : "hover:scale-125 active:scale-90"
+          {cooldownRemaining > 0 ? (
+            <div className="flex items-center gap-1.5">
+              <span
+                className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1 animate-pulse ${
+                  isSpamPenalized
+                    ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                    : "bg-amber-500/15 text-amber-300 border-amber-500/30"
                 }`}
-                title={`React ${emoji}`}
               >
-                {emoji}
-              </button>
-            ))}
-          </div>
+                <span>{isSpamPenalized ? "⚠️ Slow down!" : "⏳ Cooldown"}</span>
+                <strong>{cooldownRemaining}s</strong>
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center gap-3">
+              {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => handleSendReaction(emoji)}
+                  className="p-1 text-lg hover:scale-125 active:scale-90 transition-transform cursor-pointer select-none"
+                  title={`React ${emoji}`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
         </footer>
 
         {/* Mid-Session Peer QR Modal */}
@@ -2123,23 +2177,35 @@ export default function LiveAudiencePage() {
 
       {/* Floating Bottom Emoji Reaction Bar */}
       <footer className="px-3 py-1.5 bg-zinc-900/90 backdrop-blur-xl border-t border-white/10 z-30 shrink-0">
-        <div className="flex items-center justify-center gap-4 max-w-xs mx-auto">
-          {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              disabled={isReactionCoolingDown}
-              onClick={() => handleSendReaction(emoji)}
-              className={`p-1 text-lg sm:text-xl transition-all cursor-pointer ${
-                isReactionCoolingDown
-                  ? "opacity-40 cursor-not-allowed scale-90"
-                  : "hover:scale-125 active:scale-90"
-              }`}
-              title={`React ${emoji}`}
-            >
-              {emoji}
-            </button>
-          ))}
+        <div className="flex items-center justify-between max-w-sm mx-auto">
+          {cooldownRemaining > 0 ? (
+            <div className="flex items-center gap-1.5 mx-auto">
+              <span
+                className={`text-[11px] font-mono font-bold px-3 py-0.5 rounded-full border flex items-center gap-1.5 animate-pulse ${
+                  isSpamPenalized
+                    ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
+                    : "bg-amber-500/15 text-amber-300 border-amber-500/30"
+                }`}
+              >
+                <span>{isSpamPenalized ? "⚠️ Slow down!" : "⏳ Cooldown"}</span>
+                <strong>{cooldownRemaining}s</strong>
+              </span>
+            </div>
+          ) : (
+            <div className="flex items-center justify-center gap-4 w-full">
+              {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => handleSendReaction(emoji)}
+                  className="p-1 text-lg sm:text-xl hover:scale-125 active:scale-90 transition-all cursor-pointer select-none"
+                  title={`React ${emoji}`}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
       </footer>
 

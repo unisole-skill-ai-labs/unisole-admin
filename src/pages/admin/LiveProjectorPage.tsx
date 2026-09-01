@@ -706,14 +706,20 @@ export default function LiveProjectorPage() {
       ref={stageRef}
       className="fixed inset-0 z-50 bg-zinc-950 text-white flex flex-col justify-between overflow-hidden select-none font-sans"
     >
-      {/* Compact Corner Floating Reactions Stream (Unobtrusive 56px column on bottom-right) */}
-      <div className="fixed bottom-20 right-6 z-40 pointer-events-none w-14 h-48 flex flex-col items-center justify-end overflow-hidden">
+      {/* Micro-Sized Bottom-Right Reactions Gutter (40px width, 15px emoji) */}
+      <div
+        className="fixed bottom-24 right-6 z-50 pointer-events-none flex flex-col items-center justify-end overflow-hidden"
+        style={{ width: "40px", height: "160px" }}
+      >
         {reactions.map((r, i) => (
           <div
             key={r.id}
-            className="absolute bottom-0 text-lg opacity-85 animate-float-reaction drop-shadow-sm select-none"
+            className="absolute bottom-0 animate-float-reaction select-none drop-shadow-sm"
             style={{
-              left: `${(i % 3) * 10 + 4}px`,
+              left: `${(i % 3) * 8 + 4}px`,
+              fontSize: "15px",
+              lineHeight: "15px",
+              opacity: 0.85,
             }}
           >
             {r.emoji}
