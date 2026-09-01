@@ -451,7 +451,7 @@ export default function LiveAudiencePage() {
       if (data.attendees) setAttendeesList(data.attendees);
     });
 
-    socket.on("slide_updated", ({ slideIndex, buildStep: bStep, quizState: qState, instantPoll: ip }) => {
+    socket.on("slide_updated", ({ slideIndex, buildStep: bStep, quizState: qState }) => {
       setCurrentSlideIndex(slideIndex);
       if (typeof bStep === "number") {
         setBuildStep(bStep);
@@ -461,9 +461,21 @@ export default function LiveAudiencePage() {
       setSelectedOption(null);
       setIsSubmitted(false);
       if (qState) setQuizState(qState);
-      if (ip === null) {
-        setInstantPollState((prev) => ({ ...prev, isActive: false }));
-      }
+
+      // Immediately clear and close instant poll on slide change
+      setInstantPollState({
+        isActive: false,
+        pollId: null,
+        question: "YES or NO?",
+        options: ["YES", "NO"],
+        startedAt: null,
+        timeLimit: 20,
+        counts: { 0: 0, 1: 0 },
+        totalVotes: 0,
+        myVote: null,
+        isSubmitted: false,
+        remainingTime: null,
+      });
     });
 
     socket.on("slides_reloaded", ({ slides: updatedSlides, currentSlideIndex: sIdx, buildStep: bStep }) => {
@@ -550,7 +562,7 @@ export default function LiveAudiencePage() {
       setInstantPollState({
         isActive: true,
         pollId: data.pollId,
-        question: data.question || "Quick Pulse Check: Yes or No?",
+        question: data.question || "YES or NO?",
         options: data.options || ["YES", "NO"],
         startedAt: data.startedAt,
         timeLimit: data.timeLimit || 20,
@@ -598,9 +610,22 @@ export default function LiveAudiencePage() {
         totalVotes: typeof totalVotes === "number" ? totalVotes : prev.totalVotes,
         remainingTime: 0,
       }));
+      // Auto-remove poll popup from screen after 2.5s
       setTimeout(() => {
-        setInstantPollState((prev) => ({ ...prev, isActive: false }));
-      }, 4000);
+        setInstantPollState({
+          isActive: false,
+          pollId: null,
+          question: "YES or NO?",
+          options: ["YES", "NO"],
+          startedAt: null,
+          timeLimit: 20,
+          counts: { 0: 0, 1: 0 },
+          totalVotes: 0,
+          myVote: null,
+          isSubmitted: false,
+          remainingTime: null,
+        });
+      }, 2500);
     });
 
     socket.on("audience:kicked", ({ message }: { message: string }) => {
@@ -644,6 +669,22 @@ export default function LiveAudiencePage() {
 
         if (remaining <= 0) {
           clearInterval(instantPollTimerRef.current);
+          // Auto remove after 2.5s
+          setTimeout(() => {
+            setInstantPollState({
+              isActive: false,
+              pollId: null,
+              question: "YES or NO?",
+              options: ["YES", "NO"],
+              startedAt: null,
+              timeLimit: 20,
+              counts: { 0: 0, 1: 0 },
+              totalVotes: 0,
+              myVote: null,
+              isSubmitted: false,
+              remainingTime: null,
+            });
+          }, 2500);
         }
       };
 
@@ -1508,8 +1549,7 @@ export default function LiveAudiencePage() {
 
   // ==================== SHARED: INSTANT PULSE POLL OVERLAY ====================
   const renderInstantPollOverlay = () => {
-    if (!instantPollState.isActive && !instantPollState.pollId) return null;
-    if (!instantPollState.isActive && !instantPollState.isSubmitted && instantPollState.remainingTime === 0) return null;
+    if (!instantPollState.isActive || !instantPollState.pollId) return null;
 
     const yes = instantPollState.counts[0] || 0;
     const no = instantPollState.counts[1] || 0;

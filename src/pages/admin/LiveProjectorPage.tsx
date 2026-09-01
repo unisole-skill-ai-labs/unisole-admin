@@ -260,6 +260,19 @@ export default function LiveProjectorPage() {
         setBuildStep(bStep);
       }
       if (quizState) setQuizState(quizState);
+
+      // Immediately clear instant poll on slide change
+      setInstantPollState({
+        isActive: false,
+        pollId: null,
+        question: "YES or NO?",
+        options: ["YES", "NO"],
+        startedAt: null,
+        timeLimit: 20,
+        counts: { 0: 0, 1: 0 },
+        totalVotes: 0,
+        remainingTime: null,
+      });
     });
 
     socket.on("slides_reloaded", ({ slides: updatedSlides, currentSlideIndex: sIdx, buildStep: bStep }) => {
@@ -328,7 +341,7 @@ export default function LiveProjectorPage() {
       setInstantPollState({
         isActive: true,
         pollId: data.pollId,
-        question: data.question || "Quick Pulse Check",
+        question: data.question || "YES or NO?",
         options: data.options || ["YES", "NO"],
         startedAt: data.startedAt,
         timeLimit: data.timeLimit || 20,
@@ -352,11 +365,24 @@ export default function LiveProjectorPage() {
     socket.on("instant_poll_ended", ({ counts, totalVotes }) => {
       setInstantPollState((prev) => ({
         ...prev,
-        isActive: false,
         counts: counts || prev.counts,
         totalVotes: typeof totalVotes === "number" ? totalVotes : prev.totalVotes,
         remainingTime: 0,
       }));
+      // Auto-remove projector HUD after 2.5s
+      setTimeout(() => {
+        setInstantPollState({
+          isActive: false,
+          pollId: null,
+          question: "YES or NO?",
+          options: ["YES", "NO"],
+          startedAt: null,
+          timeLimit: 20,
+          counts: { 0: 0, 1: 0 },
+          totalVotes: 0,
+          remainingTime: null,
+        });
+      }, 2500);
     });
 
     socket.on("reaction_pulse", ({ emoji, id }) => {
@@ -385,6 +411,20 @@ export default function LiveProjectorPage() {
 
         if (remaining <= 0) {
           clearInterval(instantPollTimerRef.current);
+          // Auto remove after 2.5s
+          setTimeout(() => {
+            setInstantPollState({
+              isActive: false,
+              pollId: null,
+              question: "YES or NO?",
+              options: ["YES", "NO"],
+              startedAt: null,
+              timeLimit: 20,
+              counts: { 0: 0, 1: 0 },
+              totalVotes: 0,
+              remainingTime: null,
+            });
+          }, 2500);
         }
       };
 
