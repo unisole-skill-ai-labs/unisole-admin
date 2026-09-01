@@ -82,7 +82,7 @@ export default function LiveProjectorPage() {
   }>({
     isActive: false,
     pollId: null,
-    question: "Quick Pulse Check: Yes or No?",
+    question: "YES or NO?",
     options: ["YES", "NO"],
     startedAt: null,
     timeLimit: 20,
@@ -90,8 +90,6 @@ export default function LiveProjectorPage() {
     totalVotes: 0,
     remainingTime: null,
   });
-  const [customPollModalOpen, setCustomPollModalOpen] = useState(false);
-  const [customPollQuestion, setCustomPollQuestion] = useState("");
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -546,22 +544,15 @@ export default function LiveProjectorPage() {
     });
   }, [session?.sessionCode]);
 
-  const handleStartInstantPoll = useCallback(
-    (customQuestion?: string) => {
-      if (!socketRef.current || !session?.sessionCode) return;
-      const question =
-        customQuestion?.trim() || "Quick Pulse Check: Do you understand / agree?";
-      socketRef.current.emit("admin:start_instant_poll", {
-        sessionCode: session.sessionCode,
-        question,
-        timeLimit: 20,
-        options: ["YES", "NO"],
-      });
-      setCustomPollModalOpen(false);
-      setCustomPollQuestion("");
-    },
-    [session?.sessionCode]
-  );
+  const handleStartInstantPoll = useCallback(() => {
+    if (!socketRef.current || !session?.sessionCode) return;
+    socketRef.current.emit("admin:start_instant_poll", {
+      sessionCode: session.sessionCode,
+      question: "YES or NO?",
+      timeLimit: 20,
+      options: ["YES", "NO"],
+    });
+  }, [session?.sessionCode]);
 
   const handleCloseInstantPoll = useCallback(() => {
     if (!socketRef.current || !session?.sessionCode) return;
@@ -1331,7 +1322,7 @@ export default function LiveProjectorPage() {
                 if (instantPollState.isActive) {
                   handleCloseInstantPoll();
                 } else {
-                  setCustomPollModalOpen(true);
+                  handleStartInstantPoll();
                 }
               }}
               className={
@@ -1345,7 +1336,7 @@ export default function LiveProjectorPage() {
               <span>
                 {instantPollState.isActive
                   ? `Stop Poll (${instantPollState.remainingTime}s)`
-                  : "Instant Poll (P)"}
+                  : "Poll (P)"}
               </span>
             </Button>
           )}
@@ -1766,94 +1757,6 @@ export default function LiveProjectorPage() {
         </div>
       </Modal>
 
-      {/* Quick Launch Instant Poll Modal */}
-      {customPollModalOpen && (
-        <div
-          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
-          onClick={() => setCustomPollModalOpen(false)}
-        >
-          <div
-            className="max-w-md w-full p-6 rounded-3xl bg-zinc-900 border border-amber-500/40 shadow-2xl text-white space-y-4 animate-scale-in"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-white/10 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
-                  <Zap className="w-5 h-5 fill-current" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-base text-white">
-                    Launch Instant 20s Poll
-                  </h3>
-                  <p className="text-xs text-zinc-400">
-                    Broadcasts a 20-second YES/NO pulse poll to all students
-                  </p>
-                </div>
-              </div>
-              <button
-                type="button"
-                onClick={() => setCustomPollModalOpen(false)}
-                className="p-1 rounded-full bg-white/10 hover:bg-white/20 text-zinc-400 hover:text-white transition-colors cursor-pointer"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Quick 1-Click Preset Buttons */}
-            <div className="space-y-1.5">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                Quick 1-Click Questions:
-              </label>
-              <div className="space-y-1.5">
-                {[
-                  "Are you ready for the next challenge?",
-                  "Did you understand this concept clearly?",
-                  "Should we do a live coding demo right now?",
-                  "Are you finding this session valuable?",
-                ].map((preset) => (
-                  <button
-                    key={preset}
-                    type="button"
-                    onClick={() => handleStartInstantPoll(preset)}
-                    className="w-full p-2.5 rounded-xl bg-white/5 hover:bg-amber-500/15 border border-white/10 hover:border-amber-500/40 text-left text-xs font-semibold text-zinc-200 hover:text-amber-200 transition-all flex items-center justify-between cursor-pointer"
-                  >
-                    <span>{preset}</span>
-                    <Play className="w-3.5 h-3.5 opacity-60 text-amber-400 shrink-0" />
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            {/* Or Custom Question Input */}
-            <div className="pt-2 space-y-2 border-t border-white/10">
-              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-400">
-                Or Type a Custom Question:
-              </label>
-              <input
-                type="text"
-                value={customPollQuestion}
-                onChange={(e) => setCustomPollQuestion(e.target.value)}
-                placeholder="e.g. Do you have Python installed on your laptop?"
-                className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500 font-medium"
-              />
-
-              <button
-                type="button"
-                onClick={() =>
-                  handleStartInstantPoll(
-                    customPollQuestion.trim() ||
-                      "Quick Pulse Check: Yes or No?"
-                  )
-                }
-                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold text-sm shadow-xl shadow-amber-500/20 transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer mt-1"
-              >
-                <Zap className="w-4 h-4 fill-current" />
-                <span>Launch 20s Pulse Poll Now (YES / NO)</span>
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
