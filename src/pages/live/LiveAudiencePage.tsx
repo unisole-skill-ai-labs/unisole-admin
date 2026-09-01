@@ -1492,45 +1492,24 @@ export default function LiveAudiencePage() {
                 )}
               </div>
 
-              {/* Send Cheer Reaction Dock with Progressive 5s / 10s Cooldown Badge */}
+              {/* Send Cheer Reaction Dock */}
               <div className="pt-3 border-t border-white/10 space-y-1.5">
-                <div className="flex items-center justify-between px-1">
-                  <span className="text-[10px] uppercase font-bold text-zinc-400">
-                    Send a Cheer to Stage:
-                  </span>
-                  {cooldownRemaining > 0 && (
-                    <span
-                      className={`text-[10px] font-mono font-black px-2 py-0.5 rounded-full border transition-all animate-pulse ${
-                        isSpamPenalized
-                          ? "bg-rose-500/20 text-rose-400 border-rose-500/40"
-                          : "bg-amber-500/20 text-amber-300 border-amber-500/40"
-                      }`}
-                    >
-                      {isSpamPenalized
-                        ? `⚠️ Penalty: ${cooldownRemaining}s`
-                        : `⏳ Cooldown: ${cooldownRemaining}s`}
-                    </span>
-                  )}
-                </div>
-
+                <span className="text-[10px] uppercase font-bold text-zinc-400 block text-center">
+                  Send a Cheer to the Stage:
+                </span>
                 <div className="flex items-center justify-center gap-3">
                   {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
                     <button
                       key={emoji}
                       type="button"
+                      disabled={cooldownRemaining > 0}
                       onClick={() => handleSendReaction(emoji)}
-                      className={`p-1 text-xl transition-all cursor-pointer select-none ${
+                      className={`p-1 text-xl transition-all select-none ${
                         cooldownRemaining > 0
-                          ? "opacity-40 hover:opacity-70 active:scale-95"
-                          : "hover:scale-125 active:scale-90"
+                          ? "opacity-35 cursor-not-allowed grayscale-[30%]"
+                          : "hover:scale-125 active:scale-90 cursor-pointer"
                       }`}
-                      title={
-                        cooldownRemaining > 0
-                          ? isSpamPenalized
-                            ? "10s Penalty (Spam limit)"
-                            : `Cooldown active (${cooldownRemaining}s)`
-                          : `Send ${emoji}`
-                      }
+                      title={`Send ${emoji}`}
                     >
                       {emoji}
                     </button>
@@ -1908,34 +1887,24 @@ export default function LiveAudiencePage() {
           <div className="text-[11px] font-mono text-zinc-400">
             Unisole Live Arena
           </div>
-          {cooldownRemaining > 0 ? (
-            <div className="flex items-center gap-1.5">
-              <span
-                className={`text-[10px] font-mono font-bold px-2.5 py-0.5 rounded-full border flex items-center gap-1 animate-pulse ${
-                  isSpamPenalized
-                    ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
-                    : "bg-amber-500/15 text-amber-300 border-amber-500/30"
+          <div className="flex items-center gap-3">
+            {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
+              <button
+                key={emoji}
+                type="button"
+                disabled={cooldownRemaining > 0}
+                onClick={() => handleSendReaction(emoji)}
+                className={`p-1 text-lg transition-all select-none ${
+                  cooldownRemaining > 0
+                    ? "opacity-35 cursor-not-allowed grayscale-[30%]"
+                    : "hover:scale-125 active:scale-90 cursor-pointer"
                 }`}
+                title={`React ${emoji}`}
               >
-                <span>{isSpamPenalized ? "⚠️ Slow down!" : "⏳ Cooldown"}</span>
-                <strong>{cooldownRemaining}s</strong>
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center gap-3">
-              {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => handleSendReaction(emoji)}
-                  className="p-1 text-lg hover:scale-125 active:scale-90 transition-transform cursor-pointer select-none"
-                  title={`React ${emoji}`}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
+                {emoji}
+              </button>
+            ))}
+          </div>
         </footer>
 
         {/* Mid-Session Peer QR Modal */}
@@ -2177,35 +2146,23 @@ export default function LiveAudiencePage() {
 
       {/* Floating Bottom Emoji Reaction Bar */}
       <footer className="px-3 py-1.5 bg-zinc-900/90 backdrop-blur-xl border-t border-white/10 z-30 shrink-0">
-        <div className="flex items-center justify-between max-w-sm mx-auto">
-          {cooldownRemaining > 0 ? (
-            <div className="flex items-center gap-1.5 mx-auto">
-              <span
-                className={`text-[11px] font-mono font-bold px-3 py-0.5 rounded-full border flex items-center gap-1.5 animate-pulse ${
-                  isSpamPenalized
-                    ? "bg-rose-500/20 text-rose-300 border-rose-500/40"
-                    : "bg-amber-500/15 text-amber-300 border-amber-500/30"
-                }`}
-              >
-                <span>{isSpamPenalized ? "⚠️ Slow down!" : "⏳ Cooldown"}</span>
-                <strong>{cooldownRemaining}s</strong>
-              </span>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center gap-4 w-full">
-              {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
-                <button
-                  key={emoji}
-                  type="button"
-                  onClick={() => handleSendReaction(emoji)}
-                  className="p-1 text-lg sm:text-xl hover:scale-125 active:scale-90 transition-all cursor-pointer select-none"
-                  title={`React ${emoji}`}
-                >
-                  {emoji}
-                </button>
-              ))}
-            </div>
-          )}
+        <div className="flex items-center justify-center gap-4 max-w-xs mx-auto">
+          {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
+            <button
+              key={emoji}
+              type="button"
+              disabled={cooldownRemaining > 0}
+              onClick={() => handleSendReaction(emoji)}
+              className={`p-1 text-lg sm:text-xl transition-all select-none ${
+                cooldownRemaining > 0
+                  ? "opacity-35 cursor-not-allowed grayscale-[30%]"
+                  : "hover:scale-125 active:scale-90 cursor-pointer"
+              }`}
+              title={`React ${emoji}`}
+            >
+              {emoji}
+            </button>
+          ))}
         </div>
       </footer>
 
