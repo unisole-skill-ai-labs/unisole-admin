@@ -1363,77 +1363,139 @@ export default function SessionAnalyticsPage() {
                 Detailed Interaction Log & Answer Sheet:
               </h4>
 
-              {Object.keys(selectedLeadForDrilldown.responses || {}).length === 0 ? (
-                <div className="p-6 text-center text-xs text-zinc-400">
-                  No interaction submissions recorded for this student.
-                </div>
-              ) : (
-                <div className="space-y-2">
-                  {Object.entries(selectedLeadForDrilldown.responses || {}).map(
-                    ([key, resp]: [string, any], rIdx: number) => {
-                      const isInstantPoll = resp.type === "INSTANT_POLL" || key.startsWith("poll_");
-                      const isCorrect = resp.isCorrect;
+              {(() => {
+                const list =
+                  selectedLeadForDrilldown.enrichedResponses ||
+                  Object.entries(selectedLeadForDrilldown.responses || {}).map(
+                    ([key, val]: [string, any]) => {
+                      const isInstant =
+                        val.type === "INSTANT_POLL" || key.startsWith("poll_");
+                      return {
+                        key,
+                        type: isInstant
+                          ? "INSTANT_POLL"
+                          : val.isCorrect !== undefined
+                          ? "QUIZ"
+                          : "POLL",
+                        title: val.question || key,
+                        chosenOption:
+                          val.choice ||
+                          (val.optionIndex !== undefined
+                            ? `Option ${val.optionIndex + 1}`
+                            : "—"),
+                        isCorrect: val.isCorrect,
+                        responseTimeMs: val.responseTimeMs,
+                        pointsEarned: val.pointsEarned,
+                      };
+                    }
+                  );
+
+                if (list.length === 0) {
+                  return (
+                    <div className="p-6 text-center text-xs text-zinc-400">
+                      No interaction submissions recorded for this student.
+                    </div>
+                  );
+                }
+
+                return (
+                  <div className="space-y-2.5">
+                    {list.map((item: any, rIdx: number) => {
+                      const isInstantPoll = item.type === "INSTANT_POLL";
+                      const isQuiz =
+                        item.type === "QUIZ" ||
+                        (item.isCorrect !== undefined &&
+                          typeof item.isCorrect === "boolean");
 
                       return (
                         <div
                           key={rIdx}
-                          className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-between gap-3 text-xs"
+                          className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs"
                         >
-                          <div className="min-w-0">
-                            <div className="flex items-center gap-1.5">
-                              <span className="font-mono text-[10px] font-bold text-zinc-400 uppercase">
-                                {isInstantPoll ? "Instant Poll" : "Quiz / Survey"}
+                          <div className="min-w-0 space-y-1">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`font-mono text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-md ${
+                                  isInstantPoll
+                                    ? "bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/20"
+                                    : isQuiz
+                                    ? "bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20"
+                                    : "bg-purple-500/15 text-purple-600 dark:text-purple-400 border border-purple-500/20"
+                                }`}
+                              >
+                                {isInstantPoll
+                                  ? "Instant Pulse Poll"
+                                  : isQuiz
+                                  ? "Speed Quiz"
+                                  : "Slide Poll / Survey"}
                               </span>
+                              {item.responseTimeMs && (
+                                <span className="font-mono text-[11px] text-zinc-400">
+                                  ⏱️ {(item.responseTimeMs / 1000).toFixed(1)}s
+                                </span>
+                              )}
                             </div>
-                            <h5 className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5 truncate">
-                              {resp.question || key}
+
+                            <h5 className="font-bold text-zinc-900 dark:text-zinc-100 text-sm">
+                              {item.title}
                             </h5>
-                            <div className="text-[11px] text-zinc-500 mt-0.5">
-                              Chosen:{" "}
-                              <strong className="text-zinc-800 dark:text-zinc-200">
-                                {resp.choice || (resp.optionIndex !== undefined ? `Option ${resp.optionIndex + 1}` : "—")}
+
+                            <div className="text-xs text-zinc-600 dark:text-zinc-300">
+                              Selected Choice:{" "}
+                              <strong className="text-zinc-900 dark:text-white font-black bg-zinc-200/60 dark:bg-zinc-800 px-2 py-0.5 rounded-md">
+                                {item.chosenOption || "—"}
                               </strong>
-                              {resp.responseTimeMs && (
-                                <span className="ml-2 font-mono text-[10px] text-zinc-400">
-                                  ({(resp.responseTimeMs / 1000).toFixed(1)}s)
+                              {isQuiz && !item.isCorrect && item.correctOption && (
+                                <span className="ml-2 text-emerald-600 dark:text-emerald-400 font-semibold text-[11px]">
+                                  (Correct was: {item.correctOption})
                                 </span>
                               )}
                             </div>
                           </div>
 
-                          <div className="shrink-0 text-right">
+                          <div className="shrink-0 self-start sm:self-center">
                             {isInstantPoll ? (
                               <span
-                                className={`px-2.5 py-1 rounded-xl text-xs font-black ${
-                                  resp.choice === "YES" || resp.optionIndex === 0
+                                className={`px-3 py-1 rounded-xl text-xs font-black inline-flex items-center gap-1 ${
+                                  item.choice === "YES" ||
+                                  item.chosenOption?.includes("YES")
                                     ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                                     : "bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30"
                                 }`}
                               >
-                                {resp.choice === "YES" || resp.optionIndex === 0 ? "YES 👍" : "NO 👎"}
+                                {item.choice === "YES" ||
+                                item.chosenOption?.includes("YES")
+                                  ? "YES 👍"
+                                  : "NO 👎"}
                               </span>
-                            ) : resp.isCorrect !== undefined ? (
+                            ) : isQuiz ? (
                               <span
-                                className={`px-2.5 py-1 rounded-xl text-xs font-bold ${
-                                  isCorrect
+                                className={`px-3 py-1 rounded-xl text-xs font-bold inline-flex items-center gap-1 ${
+                                  item.isCorrect
                                     ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
                                     : "bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30"
                                 }`}
                               >
-                                {isCorrect ? "✓ Correct (+pts)" : "✗ Incorrect"}
+                                {item.isCorrect
+                                  ? `✓ Correct ${
+                                      item.pointsEarned
+                                        ? `(+${item.pointsEarned} pts)`
+                                        : ""
+                                    }`
+                                  : "✗ Incorrect"}
                               </span>
                             ) : (
-                              <span className="px-2 py-0.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-[10px] font-bold text-zinc-600 dark:text-zinc-400">
-                                Voted
+                              <span className="px-3 py-1 rounded-xl bg-purple-500/15 text-purple-600 dark:text-purple-300 border border-purple-500/30 text-xs font-bold">
+                                ● Voted Choice
                               </span>
                             )}
                           </div>
                         </div>
                       );
-                    }
-                  )}
-                </div>
-              )}
+                    })}
+                  </div>
+                );
+              })()}
             </div>
           </div>
         </div>
