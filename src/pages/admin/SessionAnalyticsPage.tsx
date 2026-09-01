@@ -26,9 +26,18 @@ import {
   ExternalLink,
   MessageCircle,
   Share2,
+  Zap,
+  Sliders,
+  Layers,
+  Sparkles,
+  Eye,
+  X,
+  Target,
+  FileSpreadsheet,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
+import Modal from "../../components/ui/Modal";
 
 export default function SessionAnalyticsPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
@@ -43,16 +52,19 @@ export default function SessionAnalyticsPage() {
   const [deleteSession, { isLoading: isDeletingSession }] = useDeleteSessionMutation();
 
   const [activeTab, setActiveTab] = useState<
-    "overview" | "leads" | "quizzes" | "surveys"
+    "overview" | "slides" | "instant_polls" | "leads" | "quizzes" | "surveys"
   >("overview");
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedBranchFilter, setSelectedBranchFilter] = useState("ALL");
+  const [selectedLeadForDrilldown, setSelectedLeadForDrilldown] = useState<any | null>(null);
 
   const analytics = analyticsRes?.data || null;
   const session = analytics?.session || null;
   const summary = analytics?.summary || null;
   const questions: any[] = analytics?.questions || [];
   const surveys: any[] = analytics?.surveys || [];
+  const slides: any[] = analytics?.slides || [];
+  const instantPolls: any[] = analytics?.instantPolls || [];
   const leads: any[] = analytics?.leads || [];
 
   // Format Duration in human-readable e.g. "45m 12s"
@@ -91,7 +103,7 @@ export default function SessionAnalyticsPage() {
     });
   }, [leads, searchQuery, selectedBranchFilter]);
 
-  // Export to CSV Function
+  // Export Comprehensive CSV Function
   const handleExportCSV = () => {
     if (!leads.length) return;
     const headers = [
@@ -102,8 +114,10 @@ export default function SessionAnalyticsPage() {
       "Branch",
       "Year of Study",
       "Total Score",
-      "Streak",
-      "Responses Count",
+      "Accuracy Rate (%)",
+      "Quizzes Answered",
+      "Correct Quizzes",
+      "Total Interaction Responses",
       "Joined At",
     ];
 
@@ -115,7 +129,9 @@ export default function SessionAnalyticsPage() {
       `"${(l.branch || "").replace(/"/g, '""')}"`,
       `"${(l.yearOfStudy || "").replace(/"/g, '""')}"`,
       l.totalScore || 0,
-      l.streak || 0,
+      `${l.accuracyRate || 0}%`,
+      l.quizzesAnswered || 0,
+      l.correctQuizzes || 0,
       l.responsesCount || 0,
       `"${l.joinedAt ? new Date(l.joinedAt).toLocaleString() : ""}"`,
     ]);
@@ -129,7 +145,7 @@ export default function SessionAnalyticsPage() {
     link.setAttribute("href", encodedUri);
     link.setAttribute(
       "download",
-      `Session_${session?.sessionCode || "Roadshow"}_Leads_${
+      `Session_${session?.sessionCode || "Roadshow"}_Detailed_Analytics_${
         new Date().toISOString().split("T")[0]
       }.csv`
     );
@@ -142,7 +158,7 @@ export default function SessionAnalyticsPage() {
     const code = session?.sessionCode || sessionId;
     if (
       !window.confirm(
-        `Are you sure you want to permanently DELETE Live Session #${code}?\n\n⚠️ Cascading Deletion Warning:\nThis will permanently remove:\n- The session record\n- All ${leads.length} student leads, quiz attempts & survey responses\n\nThis cannot be undone. Proceed?`
+        `Are you sure you want to permanently DELETE Live Session #${code}?\n\n⚠️ Cascading Deletion Warning:\nThis will permanently remove:\n- The session record\n- All ${leads.length} student leads, quiz attempts, instant poll votes & survey responses\n\nThis cannot be undone. Proceed?`
       )
     ) {
       return;
@@ -314,7 +330,7 @@ export default function SessionAnalyticsPage() {
               : "N/A"}
           </div>
           <p className="text-[11px] text-zinc-500 font-medium">
-            Across {questions.length} interactive speed quiz questions
+            Across {questions.length} speed quizzes • {instantPolls.length} instant polls
           </p>
         </div>
 
@@ -349,6 +365,32 @@ export default function SessionAnalyticsPage() {
         >
           <BarChart3 className="w-4 h-4" />
           <span>Executive Overview</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("slides")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === "slides"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/25"
+              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          }`}
+        >
+          <Layers className="w-4 h-4" />
+          <span>Slide-by-Slide Analytics ({slides.length})</span>
+        </button>
+
+        <button
+          type="button"
+          onClick={() => setActiveTab("instant_polls")}
+          className={`flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap ${
+            activeTab === "instant_polls"
+              ? "bg-indigo-600 text-white shadow-md shadow-indigo-600/25"
+              : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white hover:bg-zinc-100 dark:hover:bg-zinc-800"
+          }`}
+        >
+          <Zap className="w-4 h-4 text-amber-400" />
+          <span>Instant Yes/No Polls ({instantPolls.length})</span>
         </button>
 
         <button
@@ -436,6 +478,25 @@ export default function SessionAnalyticsPage() {
               </div>
             )}
 
+            {/* Year of Study Distribution */}
+            {Object.keys(summary?.yearDistribution || {}).length > 0 && (
+              <div className="pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 block mb-2">
+                  Year of Study Breakdown
+                </span>
+                <div className="flex flex-wrap items-center gap-2">
+                  {Object.entries(summary?.yearDistribution || {}).map(([yr, cnt]: [string, any]) => (
+                    <span
+                      key={yr}
+                      className="px-3 py-1 rounded-xl bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs font-semibold text-zinc-700 dark:text-zinc-300"
+                    >
+                      {yr}: <strong className="text-indigo-600 dark:text-indigo-400">{cnt}</strong>
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
+
             <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 text-xs text-zinc-500 flex items-center justify-between">
               <span>Total Checked-in Disciplines:</span>
               <span className="font-black text-indigo-600 dark:text-indigo-400">
@@ -465,7 +526,8 @@ export default function SessionAnalyticsPage() {
                 {leads.slice(0, 5).map((lead, idx) => (
                   <div
                     key={lead.id || idx}
-                    className={`p-3 rounded-2xl border flex items-center justify-between gap-3 transition-all ${
+                    onClick={() => setSelectedLeadForDrilldown(lead)}
+                    className={`p-3 rounded-2xl border flex items-center justify-between gap-3 transition-all cursor-pointer hover:border-indigo-500/50 ${
                       idx === 0
                         ? "bg-amber-500/10 border-amber-500/30"
                         : "bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200/80 dark:border-zinc-800/80"
@@ -491,7 +553,7 @@ export default function SessionAnalyticsPage() {
                           {lead.name}
                         </h4>
                         <p className="text-[10px] text-zinc-500 truncate">
-                          {lead.branch || "Student"}
+                          {lead.branch || "Student"} • Accuracy: {lead.accuracyRate || 0}%
                         </p>
                       </div>
                     </div>
@@ -521,7 +583,374 @@ export default function SessionAnalyticsPage() {
         </div>
       )}
 
-      {/* ─── 5. TAB 2: JOINED STUDENTS (LEADS ROSTER) ────────────────── */}
+      {/* ─── 5. TAB 2: SLIDE-BY-SLIDE INTERACTION & CLICK ANALYTICS ──── */}
+      {activeTab === "slides" && (
+        <div className="space-y-4 animate-fade-in">
+          {slides.length === 0 ? (
+            <div className="p-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl space-y-3">
+              <Layers className="w-10 h-10 text-zinc-400 mx-auto" />
+              <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                No Slides in Presentation
+              </h3>
+            </div>
+          ) : (
+            slides.map((s, idx) => {
+              const hasQuiz = Boolean(s.quiz);
+              const hasSurvey = Boolean(s.survey);
+
+              return (
+                <div
+                  key={s.slideId || idx}
+                  className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-4"
+                >
+                  {/* Slide Top Meta */}
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800/80 pb-4">
+                    <div className="flex items-start gap-3 min-w-0">
+                      <span className="px-3 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 border border-indigo-200 dark:border-indigo-800 text-indigo-700 dark:text-indigo-300 font-mono font-bold text-xs shrink-0">
+                        Slide {idx + 1}
+                      </span>
+                      <div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                            {s.type}
+                          </span>
+                          {s.isInteractive && (
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                              Interactive
+                            </span>
+                          )}
+                        </div>
+                        <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-zinc-100 mt-1">
+                          {s.title}
+                        </h3>
+                        {s.subtitle && (
+                          <p className="text-xs text-zinc-500 mt-0.5">{s.subtitle}</p>
+                        )}
+                      </div>
+                    </div>
+
+                    {hasQuiz && (
+                      <div className="flex items-center gap-4 shrink-0 bg-zinc-50 dark:bg-zinc-950/60 p-2.5 px-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800">
+                        <div className="text-right">
+                          <span className="text-[10px] uppercase font-bold text-zinc-400 block">
+                            Accuracy
+                          </span>
+                          <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                            {s.quiz.accuracyRate}%
+                          </span>
+                        </div>
+                        <div className="text-right border-l border-zinc-200 dark:border-zinc-800 pl-3">
+                          <span className="text-[10px] uppercase font-bold text-zinc-400 block">
+                            Submissions
+                          </span>
+                          <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">
+                            {s.quiz.totalSubmissions}
+                          </span>
+                        </div>
+                        <div className="text-right border-l border-zinc-200 dark:border-zinc-800 pl-3">
+                          <span className="text-[10px] uppercase font-bold text-zinc-400 block">
+                            Avg Speed
+                          </span>
+                          <span className="text-lg font-black text-amber-600 dark:text-amber-400 font-mono">
+                            {s.quiz.averageTimeMs > 0
+                              ? `${(s.quiz.averageTimeMs / 1000).toFixed(1)}s`
+                              : "—"}
+                          </span>
+                        </div>
+                      </div>
+                    )}
+
+                    {hasSurvey && (
+                      <div className="text-right shrink-0 bg-purple-50 dark:bg-purple-950/40 p-2.5 px-4 rounded-2xl border border-purple-200 dark:border-purple-800/60">
+                        <span className="text-[10px] uppercase font-bold text-purple-600 dark:text-purple-400 block">
+                          Total Responses
+                        </span>
+                        <span className="text-xl font-black text-purple-700 dark:text-purple-300 font-mono">
+                          {s.survey.totalVotes}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* If Quiz: Show Options & Voters */}
+                  {hasQuiz && (
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                        Quiz Options Breakdown & Student Clicks:
+                      </h4>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        {s.quiz.options.map((opt: any, optIdx: number) => {
+                          const letters = ["A", "B", "C", "D", "E", "F"];
+                          return (
+                            <div
+                              key={optIdx}
+                              className={`p-3.5 rounded-2xl border space-y-2 transition-all ${
+                                opt.isCorrect
+                                  ? "bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-500/50"
+                                  : "bg-zinc-50 dark:bg-zinc-950/60 border-zinc-200/80 dark:border-zinc-800/80"
+                              }`}
+                            >
+                              <div className="flex items-center justify-between text-xs">
+                                <div className="flex items-center gap-2 min-w-0">
+                                  <span
+                                    className={`w-6 h-6 rounded-lg flex items-center justify-center font-bold text-xs shrink-0 ${
+                                      opt.isCorrect
+                                        ? "bg-emerald-500 text-white"
+                                        : "bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300"
+                                    }`}
+                                  >
+                                    {letters[optIdx] || optIdx + 1}
+                                  </span>
+                                  <span
+                                    className={`font-bold truncate ${
+                                      opt.isCorrect
+                                        ? "text-emerald-800 dark:text-emerald-300"
+                                        : "text-zinc-800 dark:text-zinc-200"
+                                    }`}
+                                  >
+                                    {opt.label}
+                                  </span>
+                                </div>
+
+                                <div className="flex items-center gap-1.5 shrink-0">
+                                  {opt.isCorrect && (
+                                    <span className="px-1.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-[10px] font-bold">
+                                      Correct
+                                    </span>
+                                  )}
+                                  <span className="font-mono font-bold text-xs text-zinc-600 dark:text-zinc-400">
+                                    {opt.votes} ({opt.percentage}%)
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="w-full h-2 rounded-full bg-zinc-200/70 dark:bg-zinc-800 overflow-hidden">
+                                <div
+                                  className={`h-full rounded-full ${
+                                    opt.isCorrect
+                                      ? "bg-emerald-500"
+                                      : "bg-zinc-400 dark:bg-zinc-600"
+                                  }`}
+                                  style={{ width: `${opt.percentage}%` }}
+                                />
+                              </div>
+
+                              {opt.voters && opt.voters.length > 0 && (
+                                <div className="pt-1 flex flex-wrap gap-1">
+                                  {opt.voters.slice(0, 8).map((v: any, vIdx: number) => (
+                                    <span
+                                      key={vIdx}
+                                      className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[10px] text-zinc-600 dark:text-zinc-300 font-medium"
+                                      title={v.phone}
+                                    >
+                                      {v.name}
+                                    </span>
+                                  ))}
+                                  {opt.voters.length > 8 && (
+                                    <span className="text-[10px] text-zinc-400 font-bold self-center">
+                                      +{opt.voters.length - 8} more
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* If Survey / Poll */}
+                  {hasSurvey && (
+                    <div className="space-y-3">
+                      <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                        Survey Options & Choices:
+                      </h4>
+                      <div className="space-y-2">
+                        {s.survey.options.map((opt: any, optIdx: number) => (
+                          <div
+                            key={optIdx}
+                            className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 space-y-2"
+                          >
+                            <div className="flex items-center justify-between text-xs">
+                              <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                                {opt.label}
+                              </span>
+                              <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
+                                {opt.votes} votes ({opt.percentage}%)
+                              </span>
+                            </div>
+
+                            <div className="w-full h-2.5 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden">
+                              <div
+                                className="h-full rounded-full bg-gradient-to-r from-purple-500 to-indigo-600"
+                                style={{ width: `${opt.percentage}%` }}
+                              />
+                            </div>
+
+                            {opt.voters && opt.voters.length > 0 && (
+                              <div className="pt-1 flex flex-wrap gap-1">
+                                {opt.voters.slice(0, 8).map((v: any, vIdx: number) => (
+                                  <span
+                                    key={vIdx}
+                                    className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-[10px] text-zinc-600 dark:text-zinc-300 font-medium"
+                                  >
+                                    {v.name}
+                                  </span>
+                                ))}
+                                {opt.voters.length > 8 && (
+                                  <span className="text-[10px] text-zinc-400 font-bold self-center">
+                                    +{opt.voters.length - 8} more
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {!hasQuiz && !hasSurvey && (
+                    <div className="p-4 rounded-2xl bg-zinc-50 dark:bg-zinc-950/40 border border-zinc-100 dark:border-zinc-800/60 text-xs text-zinc-400 flex items-center justify-between">
+                      <span>Presentation Content Slide</span>
+                      <span className="text-zinc-500 font-mono">Viewed by {leads.length} attendees</span>
+                    </div>
+                  )}
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* ─── 6. TAB 3: INSTANT YES/NO PULSE POLLS ─────────────────────── */}
+      {activeTab === "instant_polls" && (
+        <div className="space-y-4 animate-fade-in">
+          {instantPolls.length === 0 ? (
+            <div className="p-16 text-center bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl space-y-3">
+              <Zap className="w-10 h-10 text-amber-400 mx-auto" />
+              <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
+                No Instant Yes/No Polls Triggered
+              </h3>
+              <p className="text-xs text-zinc-500 max-w-md mx-auto">
+                Instant 20-second Yes/No pulse polls launched by the presenter during presentation will be archived here.
+              </p>
+            </div>
+          ) : (
+            instantPolls.map((poll, idx) => (
+              <div
+                key={poll.pollId || idx}
+                className="p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-4"
+              >
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-zinc-100 dark:border-zinc-800/80 pb-4">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-2xl bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                      <Zap className="w-5 h-5 fill-current" />
+                    </div>
+                    <div>
+                      <span className="text-xs font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400">
+                        Instant Pulse Check #{idx + 1}
+                      </span>
+                      <h3 className="text-base sm:text-lg font-black text-zinc-900 dark:text-zinc-100">
+                        {poll.question || "YES or NO?"}
+                      </h3>
+                    </div>
+                  </div>
+
+                  <div className="text-right shrink-0 bg-zinc-50 dark:bg-zinc-950/60 p-2.5 px-4 rounded-2xl border border-zinc-200/80 dark:border-zinc-800">
+                    <span className="text-[10px] uppercase font-bold text-zinc-400 block">
+                      Total Responses
+                    </span>
+                    <span className="text-xl font-black text-amber-500 font-mono">
+                      {poll.totalVotes}
+                    </span>
+                  </div>
+                </div>
+
+                {/* Real-time YES vs NO split bars */}
+                <div className="space-y-3">
+                  <div className="grid grid-cols-2 gap-3">
+                    {/* YES Count Box */}
+                    <div className="p-4 rounded-2xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-500/30 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>👍 YES</span>
+                        </span>
+                        <span className="text-xl font-black text-emerald-700 dark:text-emerald-300 font-mono">
+                          {poll.yesVotes}{" "}
+                          <span className="text-xs font-normal">({poll.yesPercentage}%)</span>
+                        </span>
+                      </div>
+                      {poll.yesVoters && poll.yesVoters.length > 0 && (
+                        <div className="pt-1 flex flex-wrap gap-1">
+                          {poll.yesVoters.slice(0, 10).map((v: any, vIdx: number) => (
+                            <span
+                              key={vIdx}
+                              className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 border border-emerald-500/20 text-[10px] text-emerald-700 dark:text-emerald-300 font-semibold"
+                            >
+                              {v.name}
+                            </span>
+                          ))}
+                          {poll.yesVoters.length > 10 && (
+                            <span className="text-[10px] text-emerald-500 font-bold self-center">
+                              +{poll.yesVoters.length - 10} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* NO Count Box */}
+                    <div className="p-4 rounded-2xl bg-rose-50 dark:bg-rose-950/30 border border-rose-500/30 space-y-2">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-black text-rose-600 dark:text-rose-400 uppercase tracking-wider flex items-center gap-1.5">
+                          <span>👎 NO</span>
+                        </span>
+                        <span className="text-xl font-black text-rose-700 dark:text-rose-300 font-mono">
+                          {poll.noVotes}{" "}
+                          <span className="text-xs font-normal">({poll.noPercentage}%)</span>
+                        </span>
+                      </div>
+                      {poll.noVoters && poll.noVoters.length > 0 && (
+                        <div className="pt-1 flex flex-wrap gap-1">
+                          {poll.noVoters.slice(0, 10).map((v: any, vIdx: number) => (
+                            <span
+                              key={vIdx}
+                              className="px-2 py-0.5 rounded-md bg-white dark:bg-zinc-900 border border-rose-500/20 text-[10px] text-rose-700 dark:text-rose-300 font-semibold"
+                            >
+                              {v.name}
+                            </span>
+                          ))}
+                          {poll.noVoters.length > 10 && (
+                            <span className="text-[10px] text-rose-500 font-bold self-center">
+                              +{poll.noVoters.length - 10} more
+                            </span>
+                          )}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Visual Split Bar */}
+                  <div className="h-3 rounded-full bg-zinc-200 dark:bg-zinc-800 overflow-hidden flex shadow-inner">
+                    <div
+                      className="bg-emerald-500 transition-all duration-300"
+                      style={{ width: `${poll.yesPercentage}%` }}
+                    />
+                    <div
+                      className="bg-rose-500 transition-all duration-300"
+                      style={{ width: `${poll.noPercentage}%` }}
+                    />
+                  </div>
+                </div>
+              </div>
+            ))
+          )}
+        </div>
+      )}
+
+      {/* ─── 7. TAB 4: JOINED STUDENTS (LEADS ROSTER & DRILLDOWN) ─────── */}
       {activeTab === "leads" && (
         <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl shadow-xs p-6 space-y-5 animate-fade-in">
           {/* Table Header & Controls */}
@@ -573,8 +1002,9 @@ export default function SessionAnalyticsPage() {
                     <th className="py-3 px-3">WhatsApp / Phone</th>
                     <th className="py-3 px-3">Branch & Year</th>
                     <th className="py-3 px-3 text-right">Points</th>
-                    <th className="py-3 px-3 text-right">Answers</th>
-                    <th className="py-3 px-3 text-right">Joined At</th>
+                    <th className="py-3 px-3 text-right">Accuracy</th>
+                    <th className="py-3 px-3 text-right">Responses</th>
+                    <th className="py-3 px-3 text-right">Action</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 font-medium">
@@ -619,11 +1049,21 @@ export default function SessionAnalyticsPage() {
                         <td className="py-3.5 px-3 text-right font-mono font-black text-indigo-600 dark:text-indigo-400">
                           {lead.totalScore} pts
                         </td>
+                        <td className="py-3.5 px-3 text-right font-mono font-bold text-emerald-600 dark:text-emerald-400">
+                          {lead.accuracyRate || 0}%
+                        </td>
                         <td className="py-3.5 px-3 text-right text-zinc-500 font-mono">
                           {lead.responsesCount}
                         </td>
-                        <td className="py-3.5 px-3 text-right text-zinc-400 text-[11px]">
-                          {lead.joinedAt ? new Date(lead.joinedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : "—"}
+                        <td className="py-3.5 px-3 text-right">
+                          <button
+                            type="button"
+                            onClick={() => setSelectedLeadForDrilldown(lead)}
+                            className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200/60 dark:border-indigo-800/60 text-indigo-600 dark:text-indigo-400 font-bold text-[11px] transition-all cursor-pointer"
+                          >
+                            <Eye className="w-3 h-3" />
+                            <span>Drilldown</span>
+                          </button>
                         </td>
                       </tr>
                     );
@@ -635,7 +1075,7 @@ export default function SessionAnalyticsPage() {
         </div>
       )}
 
-      {/* ─── 6. TAB 3: SPEED QUIZ QUESTIONS BREAKDOWN ────────────────── */}
+      {/* ─── 8. TAB 5: SPEED QUIZ QUESTIONS BREAKDOWN ────────────────── */}
       {activeTab === "quizzes" && (
         <div className="space-y-4 animate-fade-in">
           {questions.length === 0 ? (
@@ -758,7 +1198,7 @@ export default function SessionAnalyticsPage() {
         </div>
       )}
 
-      {/* ─── 7. TAB 4: SURVEYS & LIVE POLLS BREAKDOWN ─────────────────── */}
+      {/* ─── 9. TAB 6: SURVEYS & LIVE POLLS BREAKDOWN ─────────────────── */}
       {activeTab === "surveys" && (
         <div className="space-y-4 animate-fade-in">
           {surveys.length === 0 ? (
@@ -844,6 +1284,158 @@ export default function SessionAnalyticsPage() {
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* ─── 10. STUDENT INDIVIDUAL DRILLDOWN MODAL / DRAWER ─────────── */}
+      {selectedLeadForDrilldown && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setSelectedLeadForDrilldown(null)}
+        >
+          <div
+            className="max-w-2xl w-full max-h-[88vh] overflow-y-auto p-6 rounded-3xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 shadow-2xl text-zinc-900 dark:text-zinc-100 space-y-5 animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Student Header */}
+            <div className="flex items-center justify-between border-b border-zinc-100 dark:border-zinc-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-11 h-11 rounded-2xl bg-indigo-600 text-white font-black flex items-center justify-center text-base shadow-lg shadow-indigo-600/30">
+                  #{selectedLeadForDrilldown.rank}
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-lg text-zinc-900 dark:text-zinc-100">
+                    {selectedLeadForDrilldown.name}
+                  </h3>
+                  <p className="text-xs text-zinc-500">
+                    {selectedLeadForDrilldown.branch} • {selectedLeadForDrilldown.yearOfStudy}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setSelectedLeadForDrilldown(null)}
+                className="p-1 rounded-full bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 text-zinc-400 hover:text-zinc-700 dark:hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Quick Metrics */}
+            <div className="grid grid-cols-3 gap-3">
+              <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800 text-center">
+                <span className="text-[10px] uppercase font-bold text-zinc-400 block">Total Score</span>
+                <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">
+                  {selectedLeadForDrilldown.totalScore} pts
+                </span>
+              </div>
+              <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800 text-center">
+                <span className="text-[10px] uppercase font-bold text-zinc-400 block">Accuracy</span>
+                <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                  {selectedLeadForDrilldown.accuracyRate || 0}%
+                </span>
+              </div>
+              <div className="p-3 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800 text-center">
+                <span className="text-[10px] uppercase font-bold text-zinc-400 block">Responses</span>
+                <span className="text-lg font-black text-zinc-700 dark:text-zinc-300 font-mono">
+                  {selectedLeadForDrilldown.responsesCount}
+                </span>
+              </div>
+            </div>
+
+            {/* WhatsApp Connect Button */}
+            {selectedLeadForDrilldown.phone && (
+              <a
+                href={`https://wa.me/${selectedLeadForDrilldown.phone.replace(/\D/g, "")}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center justify-center gap-2 shadow-lg shadow-emerald-600/20 transition-all cursor-pointer"
+              >
+                <Phone className="w-4 h-4" />
+                <span>Message Student on WhatsApp ({selectedLeadForDrilldown.phone})</span>
+              </a>
+            )}
+
+            {/* Full Answer Sheet Breakdown */}
+            <div className="space-y-3 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-400">
+                Detailed Interaction Log & Answer Sheet:
+              </h4>
+
+              {Object.keys(selectedLeadForDrilldown.responses || {}).length === 0 ? (
+                <div className="p-6 text-center text-xs text-zinc-400">
+                  No interaction submissions recorded for this student.
+                </div>
+              ) : (
+                <div className="space-y-2">
+                  {Object.entries(selectedLeadForDrilldown.responses || {}).map(
+                    ([key, resp]: [string, any], rIdx: number) => {
+                      const isInstantPoll = resp.type === "INSTANT_POLL" || key.startsWith("poll_");
+                      const isCorrect = resp.isCorrect;
+
+                      return (
+                        <div
+                          key={rIdx}
+                          className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 flex items-center justify-between gap-3 text-xs"
+                        >
+                          <div className="min-w-0">
+                            <div className="flex items-center gap-1.5">
+                              <span className="font-mono text-[10px] font-bold text-zinc-400 uppercase">
+                                {isInstantPoll ? "Instant Poll" : "Quiz / Survey"}
+                              </span>
+                            </div>
+                            <h5 className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5 truncate">
+                              {resp.question || key}
+                            </h5>
+                            <div className="text-[11px] text-zinc-500 mt-0.5">
+                              Chosen:{" "}
+                              <strong className="text-zinc-800 dark:text-zinc-200">
+                                {resp.choice || (resp.optionIndex !== undefined ? `Option ${resp.optionIndex + 1}` : "—")}
+                              </strong>
+                              {resp.responseTimeMs && (
+                                <span className="ml-2 font-mono text-[10px] text-zinc-400">
+                                  ({(resp.responseTimeMs / 1000).toFixed(1)}s)
+                                </span>
+                              )}
+                            </div>
+                          </div>
+
+                          <div className="shrink-0 text-right">
+                            {isInstantPoll ? (
+                              <span
+                                className={`px-2.5 py-1 rounded-xl text-xs font-black ${
+                                  resp.choice === "YES" || resp.optionIndex === 0
+                                    ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                    : "bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30"
+                                }`}
+                              >
+                                {resp.choice === "YES" || resp.optionIndex === 0 ? "YES 👍" : "NO 👎"}
+                              </span>
+                            ) : resp.isCorrect !== undefined ? (
+                              <span
+                                className={`px-2.5 py-1 rounded-xl text-xs font-bold ${
+                                  isCorrect
+                                    ? "bg-emerald-500/20 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30"
+                                    : "bg-rose-500/20 text-rose-600 dark:text-rose-400 border border-rose-500/30"
+                                }`}
+                              >
+                                {isCorrect ? "✓ Correct (+pts)" : "✗ Incorrect"}
+                              </span>
+                            ) : (
+                              <span className="px-2 py-0.5 rounded-lg bg-zinc-200 dark:bg-zinc-800 text-[10px] font-bold text-zinc-600 dark:text-zinc-400">
+                                Voted
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    }
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>
