@@ -37,6 +37,9 @@ import {
   ShieldCheck,
   Loader2,
   Zap,
+  MessageSquare,
+  Send,
+  CheckCheck,
 } from "lucide-react";
 import { setCredentials } from "../../store/auth-slice";
 import { getUser, isAuthenticated, setAuthSession, logout } from "../../utils/auth";
@@ -141,6 +144,13 @@ export default function LiveAudiencePage() {
   const [isKicked, setIsKicked] = useState(false);
   const [kickedMessage, setKickedMessage] = useState("");
   const [isSessionEnded, setIsSessionEnded] = useState(false);
+  const [isChatEnabled, setIsChatEnabled] = useState(false);
+  const [doubts, setDoubts] = useState<any[]>([]);
+  const [spotlightedDoubtId, setSpotlightedDoubtId] = useState<string | null>(null);
+  const [doubtsModalOpen, setDoubtsModalOpen] = useState(false);
+  const [myDoubtText, setMyDoubtText] = useState("");
+  const [isSubmittingDoubt, setIsSubmittingDoubt] = useState(false);
+  const [doubtSentSuccess, setDoubtSentSuccess] = useState(false);
   const [peerQrModalOpen, setPeerQrModalOpen] = useState(false);
   const [peerCopied, setPeerCopied] = useState(false);
 
@@ -408,6 +418,15 @@ export default function LiveAudiencePage() {
             : null,
         });
       }
+      if (typeof state.isChatEnabled === "boolean") {
+        setIsChatEnabled(state.isChatEnabled);
+      }
+      if (Array.isArray(state.doubts)) {
+        setDoubts(state.doubts);
+      }
+      if (state.spotlightedDoubtId) {
+        setSpotlightedDoubtId(state.spotlightedDoubtId);
+      }
     });
 
     socket.on("attendee_count", ({ count }) => {
@@ -651,6 +670,37 @@ export default function LiveAudiencePage() {
       setTimeout(() => {
         setReactions((prev) => prev.filter((r) => r.id !== id));
       }, 1800);
+    });
+
+    // ==================== DOUBTS & Q&A CHAT LISTENERS ====================
+    socket.on("chat_status_updated", ({ isChatEnabled: enabled, doubts: list, spotlightedDoubtId: sId }) => {
+      setIsChatEnabled(Boolean(enabled));
+      if (list) setDoubts(list);
+      if (sId !== undefined) setSpotlightedDoubtId(sId);
+    });
+
+    socket.on("doubt_received", ({ doubt, doubts: list }) => {
+      if (list) setDoubts(list);
+      else if (doubt) setDoubts((prev) => [doubt, ...prev.filter((d) => d.id !== doubt.id)]);
+    });
+
+    socket.on("doubt_spotlighted", ({ spotlightedDoubtId: sId }) => {
+      setSpotlightedDoubtId(sId);
+    });
+
+    socket.on("doubt_updated", ({ doubtId, isAnswered, doubts: list }) => {
+      if (list) setDoubts(list);
+      else {
+        setDoubts((prev) =>
+          prev.map((d) => (d.id === doubtId ? { ...d, isAnswered } : d))
+        );
+      }
+    });
+
+    socket.on("doubt_deleted", ({ doubtId, doubts: list, spotlightedDoubtId: sId }) => {
+      if (list) setDoubts(list);
+      else setDoubts((prev) => prev.filter((d) => d.id !== doubtId));
+      if (sId !== undefined) setSpotlightedDoubtId(sId);
     });
 
     return () => {
@@ -929,6 +979,23 @@ export default function LiveAudiencePage() {
       sessionCode: code,
       emoji,
     });
+  };
+
+  const handleSendDoubt = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!myDoubtText.trim() || !lead?.id || !socketRef.current || !isChatEnabled) {
+      return;
+    }
+    setIsSubmittingDoubt(true);
+    socketRef.current.emit("audience:send_doubt", {
+      sessionCode: code,
+      leadId: lead.id,
+      text: myDoubtText.trim(),
+    });
+    setMyDoubtText("");
+    setIsSubmittingDoubt(false);
+    setDoubtSentSuccess(true);
+    setTimeout(() => setDoubtSentSuccess(false), 3000);
   };
 
   const copyCoupon = (text: string) => {
@@ -1280,6 +1347,20 @@ export default function LiveAudiencePage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setDoubtsModalOpen(true)}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-full border text-xs font-bold transition-all cursor-pointer ${
+                isChatEnabled
+                  ? "bg-purple-500/20 hover:bg-purple-500/30 border-purple-500/40 text-purple-300 shadow-sm animate-pulse"
+                  : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200"
+              }`}
+              title="Ask doubts & questions to presenter"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
+              <span>Doubts {doubts.length > 0 ? `(${doubts.length})` : ""}</span>
+            </button>
+
             <div className="flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-mono font-bold">
               <span className="w-2 h-2 rounded-full bg-emerald-500 animate-ping" />
               <Users className="w-3.5 h-3.5" />
@@ -1764,6 +1845,20 @@ export default function LiveAudiencePage() {
           <div className="flex items-center gap-2">
             <button
               type="button"
+              onClick={() => setDoubtsModalOpen(true)}
+              className={`flex items-center gap-1.5 px-3 py-1 rounded-xl border text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-sm ${
+                isChatEnabled
+                  ? "bg-purple-500/20 hover:bg-purple-500/30 border-purple-500/40 text-purple-300 animate-pulse"
+                  : "bg-white/10 hover:bg-white/20 border-white/15 text-zinc-300"
+              }`}
+              title="Ask doubts & questions"
+            >
+              <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
+              <span>Doubts {doubts.length > 0 ? `(${doubts.length})` : ""}</span>
+            </button>
+
+            <button
+              type="button"
               onClick={() => setPeerQrModalOpen(true)}
               className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-200 text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-sm"
               title="Open QR for nearby classmates to join"
@@ -2025,6 +2120,26 @@ export default function LiveAudiencePage() {
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Doubts Q&A Button */}
+          <button
+            type="button"
+            onClick={() => setDoubtsModalOpen(true)}
+            className={`p-1.5 rounded-xl border flex items-center gap-1 text-xs font-bold transition-all cursor-pointer ${
+              isChatEnabled
+                ? "bg-purple-500/20 hover:bg-purple-500/30 border-purple-500/40 text-purple-300 shadow-sm animate-pulse"
+                : "bg-white/5 border-white/10 text-zinc-400 hover:text-zinc-200"
+            }`}
+            title="Ask doubts & questions"
+          >
+            <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden xs:inline sm:inline">Doubts</span>
+            {doubts.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-purple-500 text-white font-black text-[9px]">
+                {doubts.length}
+              </span>
+            )}
+          </button>
+
           {/* Peer QR Button */}
           <button
             type="button"
@@ -2242,6 +2357,156 @@ export default function LiveAudiencePage() {
                 <Share2 className="w-3.5 h-3.5" />
                 <span>WhatsApp</span>
               </a>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Student Live Doubts & Q&A Modal */}
+      {doubtsModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in"
+          onClick={() => setDoubtsModalOpen(false)}
+        >
+          <div
+            className="relative max-w-lg w-full p-5 rounded-3xl bg-zinc-900 border border-purple-500/40 shadow-2xl space-y-4 text-white max-h-[85vh] flex flex-col font-sans animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="flex items-center justify-between border-b border-white/10 pb-3 shrink-0">
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 rounded-xl bg-purple-500/20 border border-purple-500/40 flex items-center justify-center text-purple-400 font-bold">
+                  <MessageSquare className="w-4 h-4" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-white flex items-center gap-2">
+                    <span>Live Doubts & Questions</span>
+                    <span
+                      className={`text-[9px] font-mono px-2 py-0.2 rounded-full font-black uppercase ${
+                        isChatEnabled
+                          ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 animate-pulse"
+                          : "bg-zinc-800 text-zinc-400 border border-zinc-700"
+                      }`}
+                    >
+                      {isChatEnabled ? "● LIVE" : "LOCKED"}
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-zinc-400">
+                    {isChatEnabled
+                      ? "Ask questions directly to the speaker in real time."
+                      : "Q&A is currently locked by the speaker."}
+                  </p>
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => setDoubtsModalOpen(false)}
+                className="p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Input Form (If Chat is Allowed) */}
+            {isChatEnabled ? (
+              <form onSubmit={handleSendDoubt} className="space-y-2 shrink-0">
+                <div className="relative">
+                  <textarea
+                    value={myDoubtText}
+                    onChange={(e) => setMyDoubtText(e.target.value)}
+                    placeholder="Type your question or career doubt for the speaker..."
+                    maxLength={300}
+                    rows={3}
+                    className="w-full p-3 rounded-2xl bg-zinc-950/80 border border-purple-500/30 text-xs text-white placeholder-zinc-500 focus:outline-none focus:border-purple-500 transition-colors resize-none pr-14"
+                  />
+                  <div className="absolute right-3 bottom-3 flex items-center gap-2">
+                    <span className="text-[10px] font-mono text-zinc-500">
+                      {myDoubtText.length}/300
+                    </span>
+                    <button
+                      type="submit"
+                      disabled={!myDoubtText.trim() || isSubmittingDoubt}
+                      className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 disabled:opacity-40 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-all shadow-md active:scale-95"
+                    >
+                      <Send className="w-3 h-3" />
+                      <span>Send</span>
+                    </button>
+                  </div>
+                </div>
+                {doubtSentSuccess && (
+                  <div className="text-[11px] text-emerald-400 font-bold flex items-center gap-1 animate-fade-in">
+                    <Check className="w-3.5 h-3.5" />
+                    <span>Your question has been sent to the speaker!</span>
+                  </div>
+                )}
+              </form>
+            ) : (
+              <div className="p-4 rounded-2xl bg-zinc-950/60 border border-white/5 text-center space-y-1 text-xs text-zinc-400 shrink-0">
+                <Lock className="w-5 h-5 mx-auto text-zinc-500" />
+                <p className="font-bold text-zinc-300">Q&A Chat is Currently Closed</p>
+                <p className="text-[11px] text-zinc-500">
+                  The speaker will open the chat during or after the presentation.
+                </p>
+              </div>
+            )}
+
+            {/* Questions Feed */}
+            <div className="flex-1 overflow-y-auto space-y-2 pr-1 min-h-[160px]">
+              <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 block px-1">
+                Recent Questions ({doubts.length}):
+              </span>
+
+              {doubts.length === 0 ? (
+                <div className="py-8 text-center text-xs text-zinc-500">
+                  No questions asked yet. Be the first to ask!
+                </div>
+              ) : (
+                doubts.map((d) => {
+                  const isMine = d.leadId === lead?.id;
+                  return (
+                    <div
+                      key={d.id}
+                      className={`p-3 rounded-2xl border text-xs space-y-1.5 ${
+                        d.isSpotlighted
+                          ? "bg-amber-950/40 border-amber-400/80 shadow-md shadow-amber-500/10"
+                          : isMine
+                          ? "bg-purple-950/30 border-purple-500/40"
+                          : "bg-zinc-950/60 border-white/10"
+                      }`}
+                    >
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-1.5 min-w-0">
+                          <span className="font-extrabold text-zinc-200 truncate">
+                            {d.studentName} {isMine ? "(You)" : ""}
+                          </span>
+                          <span className="text-[10px] px-1.5 py-0.2 rounded bg-white/10 text-zinc-400 font-mono">
+                            {d.branch}
+                          </span>
+                        </div>
+
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          {d.isSpotlighted && (
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-300 font-bold text-[10px] flex items-center gap-1">
+                              <Sparkles className="w-3 h-3 text-amber-400" />
+                              <span>On Stage</span>
+                            </span>
+                          )}
+                          {d.isAnswered && (
+                            <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-400 font-bold text-[10px]">
+                              ✓ Answered
+                            </span>
+                          )}
+                        </div>
+                      </div>
+
+                      <p className="text-zinc-100 font-medium leading-relaxed">
+                        "{d.text}"
+                      </p>
+                    </div>
+                  );
+                })
+              )}
             </div>
           </div>
         </div>

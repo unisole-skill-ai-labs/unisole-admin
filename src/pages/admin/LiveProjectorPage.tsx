@@ -33,6 +33,14 @@ import {
   Check,
   ExternalLink,
   LogOut,
+  MessageSquare,
+  Phone,
+  Trash2,
+  CheckCheck,
+  Lock,
+  Unlock,
+  Pin,
+  PinOff,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Modal from "../../components/ui/Modal";
@@ -94,6 +102,11 @@ export default function LiveProjectorPage() {
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [reactions, setReactions] = useState<{ id: string; emoji: string }[]>([]);
+  const [isChatEnabled, setIsChatEnabled] = useState(false);
+  const [doubts, setDoubts] = useState<any[]>([]);
+  const [spotlightedDoubtId, setSpotlightedDoubtId] = useState<string | null>(null);
+  const [doubtsDrawerOpen, setDoubtsDrawerOpen] = useState(false);
+  const [doubtFilter, setDoubtFilter] = useState<"all" | "unanswered" | "answered">("all");
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const [copied, setCopied] = useState(false);
 
@@ -201,6 +214,15 @@ export default function LiveProjectorPage() {
             ? Math.max(0, state.instantPoll.timeLimit - Math.floor((Date.now() - state.instantPoll.startedAt) / 1000))
             : null,
         });
+      }
+      if (typeof state.isChatEnabled === "boolean") {
+        setIsChatEnabled(state.isChatEnabled);
+      }
+      if (Array.isArray(state.doubts)) {
+        setDoubts(state.doubts);
+      }
+      if (state.spotlightedDoubtId) {
+        setSpotlightedDoubtId(state.spotlightedDoubtId);
       }
     });
 
@@ -390,6 +412,37 @@ export default function LiveProjectorPage() {
       setTimeout(() => {
         setReactions((prev) => prev.filter((r) => r.id !== id));
       }, 1800);
+    });
+
+    // ==================== DOUBTS & Q&A CHAT LISTENERS ====================
+    socket.on("chat_status_updated", ({ isChatEnabled: enabled, doubts: list, spotlightedDoubtId: sId }) => {
+      setIsChatEnabled(Boolean(enabled));
+      if (list) setDoubts(list);
+      if (sId !== undefined) setSpotlightedDoubtId(sId);
+    });
+
+    socket.on("doubt_received", ({ doubt, doubts: list }) => {
+      if (list) setDoubts(list);
+      else if (doubt) setDoubts((prev) => [doubt, ...prev.filter((d) => d.id !== doubt.id)]);
+    });
+
+    socket.on("doubt_spotlighted", ({ spotlightedDoubtId: sId }) => {
+      setSpotlightedDoubtId(sId);
+    });
+
+    socket.on("doubt_updated", ({ doubtId, isAnswered, doubts: list }) => {
+      if (list) setDoubts(list);
+      else {
+        setDoubts((prev) =>
+          prev.map((d) => (d.id === doubtId ? { ...d, isAnswered } : d))
+        );
+      }
+    });
+
+    socket.on("doubt_deleted", ({ doubtId, doubts: list, spotlightedDoubtId: sId }) => {
+      if (list) setDoubts(list);
+      else setDoubts((prev) => prev.filter((d) => d.id !== doubtId));
+      if (sId !== undefined) setSpotlightedDoubtId(sId);
     });
 
     return () => {
@@ -601,6 +654,55 @@ export default function LiveProjectorPage() {
     });
   }, [session?.sessionCode]);
 
+  // Doubts Handlers
+  const handleToggleChat = useCallback(
+    (enabled: boolean) => {
+      if (!socketRef.current || !session?.sessionCode) return;
+      socketRef.current.emit("admin:toggle_chat", {
+        sessionCode: session.sessionCode,
+        isChatEnabled: enabled,
+      });
+      setIsChatEnabled(enabled);
+    },
+    [session?.sessionCode]
+  );
+
+  const handleSpotlightDoubt = useCallback(
+    (doubtId: string | null) => {
+      if (!socketRef.current || !session?.sessionCode) return;
+      const targetId = spotlightedDoubtId === doubtId ? null : doubtId;
+      socketRef.current.emit("admin:spotlight_doubt", {
+        sessionCode: session.sessionCode,
+        doubtId: targetId,
+      });
+      setSpotlightedDoubtId(targetId);
+    },
+    [session?.sessionCode, spotlightedDoubtId]
+  );
+
+  const handleResolveDoubt = useCallback(
+    (doubtId: string, isAnswered: boolean) => {
+      if (!socketRef.current || !session?.sessionCode) return;
+      socketRef.current.emit("admin:resolve_doubt", {
+        sessionCode: session.sessionCode,
+        doubtId,
+        isAnswered,
+      });
+    },
+    [session?.sessionCode]
+  );
+
+  const handleDeleteDoubt = useCallback(
+    (doubtId: string) => {
+      if (!socketRef.current || !session?.sessionCode) return;
+      socketRef.current.emit("admin:delete_doubt", {
+        sessionCode: session.sessionCode,
+        doubtId,
+      });
+    },
+    [session?.sessionCode]
+  );
+
   const handleToggleFullscreen = () => {
     if (!document.fullscreenElement) {
       stageRef.current?.requestFullscreen();
@@ -658,6 +760,9 @@ export default function LiveProjectorPage() {
       } else if (e.key === "u" || e.key === "U") {
         e.preventDefault();
         setAttendeesDrawerOpen((prev) => !prev);
+      } else if (e.key === "d" || e.key === "D") {
+        e.preventDefault();
+        setDoubtsDrawerOpen((prev) => !prev);
       } else if (e.key === "f" || e.key === "F") {
         e.preventDefault();
         handleToggleFullscreen();
@@ -783,6 +888,22 @@ export default function LiveProjectorPage() {
             <span>{attendeeCount} Students Checked In</span>
             <span className="text-[10px] bg-emerald-500/20 px-1.5 py-0.5 rounded font-mono text-emerald-300">
               U
+            </span>
+          </button>
+
+          <button
+            onClick={() => setDoubtsDrawerOpen(true)}
+            className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-xs font-bold transition-all cursor-pointer shadow-sm ${
+              isChatEnabled
+                ? "bg-purple-500/20 hover:bg-purple-500/30 border-purple-500/50 text-purple-300 shadow-purple-500/10"
+                : "bg-white/10 hover:bg-white/20 border-white/15 text-zinc-300"
+            }`}
+            title="Open Live Doubts & Q&A Stream (D)"
+          >
+            <MessageSquare className="w-3.5 h-3.5 text-purple-400" />
+            <span>Doubts {doubts.length > 0 ? `(${doubts.length})` : ""}</span>
+            <span className="text-[10px] bg-purple-500/20 px-1.5 py-0.2 rounded font-mono text-purple-300">
+              D
             </span>
           </button>
 
@@ -1431,6 +1552,27 @@ export default function LiveProjectorPage() {
               <span>Leaderboard (L)</span>
             </Button>
           )}
+
+          {/* Doubts / Live Q&A Drawer Toggle Button */}
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={() => setDoubtsDrawerOpen(true)}
+            className={`shadow-lg flex items-center gap-1.5 font-bold cursor-pointer transition-all ${
+              isChatEnabled
+                ? "bg-purple-600 hover:bg-purple-500 text-white border-purple-400/50"
+                : "bg-zinc-850 hover:bg-zinc-800 text-zinc-200 border-white/10"
+            }`}
+            title="Manage Live Doubts & Q&A Stream (D)"
+          >
+            <MessageSquare className="w-3.5 h-3.5" />
+            <span>Doubts (D)</span>
+            {doubts.length > 0 && (
+              <span className="px-1.5 py-0.2 rounded-full bg-purple-400 text-purple-950 font-black text-[10px] ml-0.5">
+                {doubts.length}
+              </span>
+            )}
+          </Button>
         </div>
 
         {/* Right: Shortcuts Guide Tooltip */}
@@ -1799,6 +1941,280 @@ export default function LiveProjectorPage() {
                 Done / Start Presentation
               </Button>
             </div>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Stage Live Question Spotlight Card */}
+      {(() => {
+        const spotlightedDoubt = doubts.find((d) => d.id === spotlightedDoubtId);
+        if (!spotlightedDoubt) return null;
+
+        return (
+          <div className="fixed bottom-24 left-1/2 -translate-x-1/2 max-w-3xl w-[92%] z-50 p-5 sm:p-6 rounded-3xl bg-zinc-950/95 border-2 border-amber-400 shadow-2xl shadow-amber-500/20 backdrop-blur-2xl text-white space-y-3 animate-scale-in">
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2.5">
+                <span className="px-3 py-1 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 font-black text-xs flex items-center gap-1.5">
+                  <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+                  <span>AUDIENCE QUESTION SPOTLIGHT</span>
+                </span>
+                <span className="text-sm font-extrabold text-zinc-100">
+                  {spotlightedDoubt.studentName}
+                </span>
+                <span className="text-xs px-2 py-0.5 rounded-md bg-white/10 text-zinc-300 font-mono">
+                  {spotlightedDoubt.branch}
+                </span>
+              </div>
+
+              <div className="flex items-center gap-2">
+                {spotlightedDoubt.phone && (
+                  <a
+                    href={`https://wa.me/${spotlightedDoubt.phone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                      `Hi ${spotlightedDoubt.studentName}, regarding your doubt in today's Unisole session: "${spotlightedDoubt.text}"`
+                    )}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-xs flex items-center gap-1 cursor-pointer transition-all shadow-sm"
+                    title="Message student on WhatsApp"
+                  >
+                    <Phone className="w-3 h-3" />
+                    <span>WhatsApp</span>
+                  </a>
+                )}
+                <button
+                  type="button"
+                  onClick={() => handleSpotlightDoubt(spotlightedDoubt.id)}
+                  className="p-1.5 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-400 hover:text-white cursor-pointer"
+                  title="Dismiss Spotlight"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            <p className="text-lg sm:text-2xl font-bold text-amber-100 leading-relaxed font-sans">
+              "{spotlightedDoubt.text}"
+            </p>
+          </div>
+        );
+      })()}
+
+      {/* Controllable Doubts & Live Q&A Stream Drawer Modal */}
+      <Modal
+        isOpen={doubtsDrawerOpen}
+        onClose={() => setDoubtsDrawerOpen(false)}
+        title="Live Audience Doubts & Q&A Stream"
+        maxWidth="max-w-3xl"
+      >
+        <div className="space-y-4 max-h-[75vh] flex flex-col font-sans">
+          {/* Master Chat Control & Filter Tabs */}
+          <div className="p-4 rounded-2xl bg-zinc-900/90 border border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shrink-0">
+            <div className="flex items-center gap-3">
+              <div
+                className={`w-10 h-10 rounded-2xl flex items-center justify-center font-bold shrink-0 ${
+                  isChatEnabled
+                    ? "bg-purple-500/20 text-purple-400 border border-purple-500/30"
+                    : "bg-zinc-800 text-zinc-400 border border-zinc-700"
+                }`}
+              >
+                <MessageSquare className="w-5 h-5" />
+              </div>
+              <div>
+                <h4 className="font-extrabold text-sm text-white flex items-center gap-2">
+                  <span>Student Q&A Chat Session</span>
+                  <span
+                    className={`px-2 py-0.5 rounded-full text-[10px] font-black uppercase ${
+                      isChatEnabled
+                        ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 animate-pulse"
+                        : "bg-zinc-800 text-zinc-400 border border-zinc-700"
+                    }`}
+                  >
+                    {isChatEnabled ? "● CHAT OPEN" : "LOCKED"}
+                  </span>
+                </h4>
+                <p className="text-xs text-zinc-400 mt-0.5">
+                  {isChatEnabled
+                    ? "Students can currently submit questions and doubts in real time."
+                    : "Chat is currently locked. Turn it ON to allow student questions."}
+                </p>
+              </div>
+            </div>
+
+            {/* Master Toggle Button */}
+            <button
+              type="button"
+              onClick={() => handleToggleChat(!isChatEnabled)}
+              className={`px-4 py-2.5 rounded-xl font-black text-xs flex items-center justify-center gap-2 transition-all cursor-pointer shadow-lg active:scale-95 shrink-0 ${
+                isChatEnabled
+                  ? "bg-rose-600 hover:bg-rose-500 text-white shadow-rose-600/20"
+                  : "bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 text-white shadow-emerald-600/25"
+              }`}
+            >
+              {isChatEnabled ? <Lock className="w-3.5 h-3.5" /> : <Unlock className="w-3.5 h-3.5" />}
+              <span>{isChatEnabled ? "Pause / Lock Chat" : "Allow Student Chat"}</span>
+            </button>
+          </div>
+
+          {/* Filter Pills */}
+          <div className="flex items-center gap-2 border-b border-white/10 pb-2 shrink-0">
+            <button
+              type="button"
+              onClick={() => setDoubtFilter("all")}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                doubtFilter === "all"
+                  ? "bg-purple-600 text-white"
+                  : "bg-white/5 text-zinc-400 hover:text-white"
+              }`}
+            >
+              All Questions ({doubts.length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setDoubtFilter("unanswered")}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                doubtFilter === "unanswered"
+                  ? "bg-amber-600 text-white"
+                  : "bg-white/5 text-zinc-400 hover:text-white"
+              }`}
+            >
+              Unresolved ({doubts.filter((d) => !d.isAnswered).length})
+            </button>
+            <button
+              type="button"
+              onClick={() => setDoubtFilter("answered")}
+              className={`px-3 py-1 rounded-xl text-xs font-bold transition-all cursor-pointer ${
+                doubtFilter === "answered"
+                  ? "bg-emerald-600 text-white"
+                  : "bg-white/5 text-zinc-400 hover:text-white"
+              }`}
+            >
+              Answered ({doubts.filter((d) => d.isAnswered).length})
+            </button>
+          </div>
+
+          {/* Doubts List Feed */}
+          <div className="flex-1 overflow-y-auto space-y-2.5 pr-1 min-h-[260px] max-h-[420px]">
+            {doubts
+              .filter((d) => {
+                if (doubtFilter === "unanswered") return !d.isAnswered;
+                if (doubtFilter === "answered") return d.isAnswered;
+                return true;
+              })
+              .length === 0 ? (
+              <div className="py-12 text-center text-zinc-500 space-y-2">
+                <MessageSquare className="w-8 h-8 mx-auto text-zinc-600" />
+                <h5 className="font-bold text-xs text-zinc-400">No doubts submitted yet</h5>
+                <p className="text-[11px] text-zinc-500 max-w-xs mx-auto">
+                  {isChatEnabled
+                    ? "When students ask questions on their phones, they will stream here live."
+                    : "Turn on Student Chat to allow questions from the audience."}
+                </p>
+              </div>
+            ) : (
+              doubts
+                .filter((d) => {
+                  if (doubtFilter === "unanswered") return !d.isAnswered;
+                  if (doubtFilter === "answered") return d.isAnswered;
+                  return true;
+                })
+                .map((doubt) => {
+                  const isSpotlight = doubt.id === spotlightedDoubtId;
+
+                  return (
+                    <div
+                      key={doubt.id}
+                      className={`p-4 rounded-2xl border transition-all space-y-2.5 ${
+                        isSpotlight
+                          ? "bg-amber-950/40 border-amber-400/80 shadow-lg shadow-amber-500/10"
+                          : doubt.isAnswered
+                          ? "bg-zinc-900/40 border-white/5 opacity-75"
+                          : "bg-zinc-900/80 border-white/10 hover:border-purple-500/40"
+                      }`}
+                    >
+                      {/* Top Student Metadata: Full Name, Phone with WhatsApp, Branch ONLY */}
+                      <div className="flex items-center justify-between gap-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <h5 className="font-extrabold text-xs text-white truncate">
+                            {doubt.studentName}
+                          </h5>
+                          <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 text-indigo-300 font-mono text-[10px] font-bold shrink-0">
+                            {doubt.branch || "General"}
+                          </span>
+                          {doubt.phone && (
+                            <span className="text-[11px] font-mono text-zinc-400 truncate">
+                              {doubt.phone}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* 1-Click WhatsApp Button */}
+                        {doubt.phone && (
+                          <a
+                            href={`https://wa.me/${doubt.phone.replace(/\D/g, "")}?text=${encodeURIComponent(
+                              `Hi ${doubt.studentName}, regarding your doubt in today's Unisole session: "${doubt.text}"`
+                            )}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="px-2.5 py-1 rounded-xl bg-emerald-600 hover:bg-emerald-500 text-white font-bold text-[11px] flex items-center gap-1 cursor-pointer transition-all shadow-sm shrink-0"
+                            title="Direct WhatsApp follow-up"
+                          >
+                            <Phone className="w-3 h-3" />
+                            <span>WhatsApp</span>
+                          </a>
+                        )}
+                      </div>
+
+                      {/* Question Text */}
+                      <p className="text-xs sm:text-sm text-zinc-100 leading-relaxed font-sans font-medium">
+                        "{doubt.text}"
+                      </p>
+
+                      {/* Action Bar */}
+                      <div className="flex items-center justify-between pt-2 border-t border-white/5 text-xs">
+                        <div className="flex items-center gap-1.5">
+                          {/* Spotlight on Stage Button */}
+                          <button
+                            type="button"
+                            onClick={() => handleSpotlightDoubt(doubt.id)}
+                            className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                              isSpotlight
+                                ? "bg-amber-500 text-black shadow-md shadow-amber-500/20"
+                                : "bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white"
+                            }`}
+                          >
+                            {isSpotlight ? <PinOff className="w-3.5 h-3.5" /> : <Pin className="w-3.5 h-3.5" />}
+                            <span>{isSpotlight ? "Spotlighted on Stage ✨" : "Spotlight on Stage"}</span>
+                          </button>
+
+                          {/* Mark Resolved */}
+                          <button
+                            type="button"
+                            onClick={() => handleResolveDoubt(doubt.id, !doubt.isAnswered)}
+                            className={`px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 transition-all cursor-pointer active:scale-95 ${
+                              doubt.isAnswered
+                                ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                                : "bg-white/10 hover:bg-white/20 text-zinc-300 hover:text-white"
+                            }`}
+                          >
+                            <CheckCheck className="w-3.5 h-3.5" />
+                            <span>{doubt.isAnswered ? "Answered ✓" : "Mark Answered"}</span>
+                          </button>
+                        </div>
+
+                        {/* Delete Question */}
+                        <button
+                          type="button"
+                          onClick={() => handleDeleteDoubt(doubt.id)}
+                          className="p-1.5 rounded-lg text-zinc-500 hover:text-rose-400 hover:bg-rose-500/10 transition-colors cursor-pointer"
+                          title="Delete this question"
+                        >
+                          <Trash2 className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })
+            )}
           </div>
         </div>
       </Modal>
