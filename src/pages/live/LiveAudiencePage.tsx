@@ -559,7 +559,7 @@ export default function LiveAudiencePage() {
     setAuthLoading(true);
     try {
       // Check user existence
-      const checkRes = await fetch(`${baseUrl}/api/public/auth/check-user`, {
+      const checkRes = await fetch(`${baseUrl}/api/auth/check-user`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ phone: cleanPhone }),
@@ -567,7 +567,7 @@ export default function LiveAudiencePage() {
 
       if (checkRes.exists && checkRes.user) {
         // Existing user -> log in immediately
-        const loginRes = await fetch(`${baseUrl}/api/public/auth/login`, {
+        const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -617,7 +617,7 @@ export default function LiveAudiencePage() {
 
     setAuthLoading(true);
     try {
-      const loginRes = await fetch(`${baseUrl}/api/public/auth/login`, {
+      const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
