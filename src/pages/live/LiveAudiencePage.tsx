@@ -133,6 +133,8 @@ export default function LiveAudiencePage() {
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [reactions, setReactions] = useState<{ id: string; emoji: string }[]>([]);
+  const [isReactionCoolingDown, setIsReactionCoolingDown] = useState(false);
+  const lastReactionTimeRef = useRef<number>(0);
   const [copied, setCopied] = useState(false);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const [isKicked, setIsKicked] = useState(false);
@@ -644,10 +646,10 @@ export default function LiveAudiencePage() {
     });
 
     socket.on("reaction_pulse", ({ emoji, id }) => {
-      setReactions((prev) => [...prev.slice(-10), { id, emoji }]);
+      setReactions((prev) => [...prev.slice(-4), { id, emoji }]);
       setTimeout(() => {
         setReactions((prev) => prev.filter((r) => r.id !== id));
-      }, 2000);
+      }, 1800);
     });
 
     return () => {
@@ -890,8 +892,16 @@ export default function LiveAudiencePage() {
     });
   };
 
-  // Send Floating Reaction
+  // Send Floating Reaction (1.5s client-side cooldown rate limit)
   const handleSendReaction = (emoji: string) => {
+    const now = Date.now();
+    if (now - lastReactionTimeRef.current < 1500) {
+      return;
+    }
+    lastReactionTimeRef.current = now;
+    setIsReactionCoolingDown(true);
+    setTimeout(() => setIsReactionCoolingDown(false), 1500);
+
     socketRef.current?.emit("audience:reaction", {
       sessionCode: code,
       emoji,
@@ -1211,13 +1221,13 @@ export default function LiveAudiencePage() {
   if (!isPresentationStarted) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex flex-col justify-between p-4 sm:p-6 relative overflow-x-hidden font-sans select-none">
-        {/* Floating Reaction Animation */}
-        <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
-          {reactions.map((r) => (
+        {/* Compact Corner Floating Reactions Track */}
+        <div className="fixed bottom-20 right-4 z-40 pointer-events-none w-12 h-44 flex flex-col items-center justify-end overflow-hidden">
+          {reactions.map((r, i) => (
             <div
               key={r.id}
-              className="absolute bottom-20 text-3xl animate-float-reaction"
-              style={{ left: `${20 + Math.random() * 60}%` }}
+              className="absolute bottom-0 text-base opacity-85 animate-float-reaction drop-shadow-sm select-none"
+              style={{ left: `${(i % 3) * 8 + 4}px` }}
             >
               {r.emoji}
             </div>
@@ -1460,7 +1470,7 @@ export default function LiveAudiencePage() {
               </div>
 
               {/* Send Cheer Reaction Dock */}
-              <div className="pt-3 border-t border-white/10 space-y-2">
+              <div className="pt-3 border-t border-white/10 space-y-1.5">
                 <span className="text-[10px] uppercase font-bold text-zinc-400 block text-center">
                   Send a Cheer to the Stage:
                 </span>
@@ -1469,8 +1479,13 @@ export default function LiveAudiencePage() {
                     <button
                       key={emoji}
                       type="button"
+                      disabled={isReactionCoolingDown}
                       onClick={() => handleSendReaction(emoji)}
-                      className="p-1.5 text-2xl hover:scale-125 active:scale-90 transition-transform cursor-pointer"
+                      className={`p-1 text-xl transition-all cursor-pointer ${
+                        isReactionCoolingDown
+                          ? "opacity-40 cursor-not-allowed scale-90"
+                          : "hover:scale-125 active:scale-90"
+                      }`}
                       title={`Send ${emoji}`}
                     >
                       {emoji}
@@ -1679,13 +1694,13 @@ export default function LiveAudiencePage() {
             : "fixed inset-0 w-full h-full"
         }`}
       >
-        {/* Floating Reaction Animation */}
-        <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
-          {reactions.map((r) => (
+        {/* Compact Corner Floating Reactions Track in Landscape */}
+        <div className="fixed bottom-16 right-4 z-40 pointer-events-none w-12 h-44 flex flex-col items-center justify-end overflow-hidden">
+          {reactions.map((r, i) => (
             <div
               key={r.id}
-              className="absolute bottom-16 text-3xl animate-float-reaction"
-              style={{ left: `${20 + Math.random() * 60}%` }}
+              className="absolute bottom-0 text-base opacity-85 animate-float-reaction drop-shadow-sm select-none"
+              style={{ left: `${(i % 3) * 8 + 4}px` }}
             >
               {r.emoji}
             </div>
@@ -1849,13 +1864,18 @@ export default function LiveAudiencePage() {
           <div className="text-[11px] font-mono text-zinc-400">
             Unisole Live Presentation Arena
           </div>
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-3">
             {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
               <button
                 key={emoji}
                 type="button"
+                disabled={isReactionCoolingDown}
                 onClick={() => handleSendReaction(emoji)}
-                className="p-1 text-xl hover:scale-125 active:scale-90 transition-transform cursor-pointer"
+                className={`p-1 text-lg transition-all cursor-pointer ${
+                  isReactionCoolingDown
+                    ? "opacity-40 cursor-not-allowed scale-90"
+                    : "hover:scale-125 active:scale-90"
+                }`}
                 title={`React ${emoji}`}
               >
                 {emoji}
@@ -1954,13 +1974,13 @@ export default function LiveAudiencePage() {
       ref={arenaRef}
       className="h-[100dvh] max-h-[100dvh] w-full bg-zinc-950 text-white flex flex-col justify-between relative overflow-hidden font-sans select-none"
     >
-      {/* Floating Reaction Animation on Mobile */}
-      <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
-        {reactions.map((r) => (
+      {/* Compact Corner Floating Reactions Track in Portrait */}
+      <div className="fixed bottom-16 right-4 z-40 pointer-events-none w-12 h-44 flex flex-col items-center justify-end overflow-hidden">
+        {reactions.map((r, i) => (
           <div
             key={r.id}
-            className="absolute bottom-20 text-3xl animate-float-reaction"
-            style={{ left: `${20 + Math.random() * 60}%` }}
+            className="absolute bottom-0 text-base opacity-85 animate-float-reaction drop-shadow-sm select-none"
+            style={{ left: `${(i % 3) * 8 + 4}px` }}
           >
             {r.emoji}
           </div>
@@ -1973,129 +1993,103 @@ export default function LiveAudiencePage() {
           <div className="flex items-center gap-1.5">
             <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping shrink-0" />
             <span className="text-xs font-black tracking-tight text-zinc-100 truncate max-w-[110px] sm:max-w-[200px]">
-              {lead.name}
+              {session?.collegeName || "Unisole Presentation"}
             </span>
           </div>
-
-          <span className="hidden sm:inline-block text-zinc-600">|</span>
-
-          <span className="hidden sm:inline-block text-[11px] font-mono text-zinc-400 truncate max-w-[180px]">
-            {session.collegeName || "Live Presentation"}
+          <span className="px-2 py-0.5 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-[11px] font-mono font-bold">
+            {code}
           </span>
         </div>
 
-        {/* Right HUD Controls: QR Button, Score, Slide Indicator & Fullscreen Button */}
-        <div className="flex items-center gap-1.5 sm:gap-2">
+        <div className="flex items-center gap-2">
+          {/* Peer QR Button */}
           <button
             type="button"
             onClick={() => setPeerQrModalOpen(true)}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-200 text-[10px] sm:text-[11px] font-bold transition-all active:scale-95 cursor-pointer shrink-0 shadow-sm"
-            title="Share QR code with nearby classmates"
+            className="p-1.5 rounded-xl bg-indigo-500/15 hover:bg-indigo-500/25 border border-indigo-500/30 text-indigo-300 hover:text-white transition-all flex items-center gap-1 text-xs font-bold cursor-pointer"
+            title="Invite peers via QR code"
           >
-            <QrCode className="w-3.5 h-3.5 text-indigo-400" />
-            <span className="hidden xs:inline sm:inline">Share QR</span>
-            <span className="inline xs:hidden sm:hidden">QR</span>
+            <QrCode className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Invite</span>
           </button>
 
-          <div className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-[10px] sm:text-[11px] font-mono font-bold shrink-0">
-            {currentSlideIndex + 1}/{slides.length}
-          </div>
-
-          <div className="px-2 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-[10px] sm:text-[11px] font-mono font-bold flex items-center gap-1 shrink-0">
-            <Flame className="w-3 h-3 text-amber-400" />
+          <div className="px-2.5 py-1 rounded-full bg-amber-500/10 border border-amber-500/30 text-amber-300 text-xs font-mono font-bold flex items-center gap-1">
+            <Flame className="w-3.5 h-3.5 text-amber-400" />
             <span>{myScore} pts</span>
           </div>
 
           {myRank && (
-            <div className="px-2 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-[10px] sm:text-[11px] font-mono font-bold flex items-center gap-1 shrink-0">
-              <Trophy className="w-3 h-3 text-indigo-400" />
+            <div className="px-2.5 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-mono font-bold flex items-center gap-1">
+              <Trophy className="w-3.5 h-3.5 text-indigo-400" />
               <span>#{myRank.rank}</span>
             </div>
           )}
-
-          <button
-            type="button"
-            onClick={handleExitShow}
-            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-rose-500/15 hover:bg-rose-500/25 border border-rose-500/30 text-rose-300 text-[10px] sm:text-[11px] font-bold transition-all cursor-pointer shrink-0"
-            title="Exit Show & Explore AI Pathways"
-          >
-            <LogOut className="w-3 h-3" />
-            <span>Exit Show</span>
-          </button>
         </div>
       </header>
 
-      {/* Main Interactive Stage Canvas (Responsive & Full-Width on Mobile) */}
-      <main className="flex-1 min-h-0 relative w-full overflow-y-auto px-3 sm:px-6 py-4 sm:py-6 z-20 overscroll-contain flex flex-col items-stretch">
-        {/* Glow ambient lights */}
-        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
-        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-violet-600/15 rounded-full blur-3xl pointer-events-none" />
-
-        <div className="w-full max-w-2xl mx-auto my-auto min-w-[280px] flex-1 flex flex-col justify-center shrink-0 z-10 animate-fade-in">
+      {/* Portrait Main Stage */}
+      <main className="flex-1 min-h-0 relative flex flex-col items-center justify-center p-2 sm:p-4 z-20 overflow-hidden w-full">
+        <div className="w-full h-full flex flex-col justify-center max-w-lg mx-auto">
           {quizState.isLeaderboardActive ? (
-            <div className="w-full space-y-4 pt-1 animate-fade-in text-center">
-              <div className="flex items-center justify-center gap-2 mb-1">
-                <Trophy className="w-6 h-6 text-amber-400" />
-                <h2 className="text-xl sm:text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-yellow-400">
-                  Live Leaderboard Podium
+            <div className="w-full max-w-sm mx-auto space-y-3 text-center py-2">
+              <div className="flex items-center justify-center gap-2">
+                <Trophy className="w-5 h-5 text-amber-400" />
+                <h2 className="text-xl sm:text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-amber-400 via-amber-200 to-yellow-400">
+                  Leaderboard Podium
                 </h2>
               </div>
 
-              {/* Personal Student Rank Banner */}
               {myRank && (
-                <div className="p-3 rounded-2xl bg-gradient-to-r from-indigo-900/70 to-violet-900/70 border border-indigo-500/40 text-center max-w-md mx-auto space-y-0.5 shadow-xl">
-                  <span className="text-[10px] text-indigo-300 font-bold uppercase tracking-wider">
-                    Your Live Standing
+                <div className="p-2.5 rounded-2xl bg-gradient-to-r from-indigo-900/70 to-violet-900/70 border border-indigo-500/40 text-center max-w-xs mx-auto space-y-0.5 shadow-xl">
+                  <span className="text-[9px] text-indigo-300 font-bold uppercase tracking-wider">
+                    Your Standing
                   </span>
-                  <div className="text-2xl font-black text-amber-300">
+                  <div className="text-xl font-black text-amber-300">
                     Rank #{myRank.rank}{" "}
-                    <span className="text-xs text-zinc-400 font-normal">
+                    <span className="text-[11px] text-zinc-400 font-normal">
                       of {myRank.totalPlayers}
                     </span>
-                  </div>
-                  <div className="text-[11px] font-mono font-bold text-indigo-200">
-                    Total Score: {myScore} pts
                   </div>
                 </div>
               )}
 
-              {/* Top 3 Podium Cards */}
-              <div className="grid grid-cols-3 gap-2.5 max-w-xl mx-auto items-end pt-2">
+              {/* Mobile Podium Cards */}
+              <div className="grid grid-cols-3 gap-2 pt-2 items-end">
                 {/* Rank 2 */}
-                <div className="p-2.5 rounded-2xl bg-white/10 border border-slate-400/40 text-center space-y-1 order-1 shadow-xl">
-                  <Medal className="w-5 h-5 text-slate-300 mx-auto" />
-                  <div className="font-extrabold text-xs text-zinc-100 truncate">
+                <div className="p-2 rounded-2xl bg-white/10 border border-slate-400/40 text-center space-y-1 order-1">
+                  <Medal className="w-4 h-4 text-slate-300 mx-auto" />
+                  <div className="font-bold text-[11px] text-zinc-100 truncate">
                     {leaderboard[1]?.name || "—"}
                   </div>
-                  <div className="text-[9px] font-mono font-bold text-indigo-300">
+                  <div className="text-[9px] font-mono text-indigo-300">
                     {leaderboard[1]?.score || 0} pts
                   </div>
-                  <div className="h-10 bg-slate-400/20 rounded-xl flex items-center justify-center font-black text-base text-slate-300">
+                  <div className="h-10 bg-slate-400/20 rounded-xl flex items-center justify-center font-black text-xs text-slate-300">
                     #2
                   </div>
                 </div>
 
                 {/* Rank 1 */}
-                <div className="p-3 rounded-3xl bg-gradient-to-b from-amber-500/30 to-amber-500/10 border border-amber-400/60 text-center space-y-1 order-2 shadow-2xl scale-105">
-                  <Crown className="w-7 h-7 text-amber-300 mx-auto animate-bounce" />
-                  <div className="font-black text-xs sm:text-sm text-amber-200 truncate">
+                <div className="p-2.5 rounded-2xl bg-gradient-to-b from-amber-500/30 to-amber-500/10 border border-amber-400/60 text-center space-y-1 order-2 scale-105">
+                  <Crown className="w-5 h-5 text-amber-300 mx-auto animate-bounce" />
+                  <div className="font-black text-xs text-amber-200 truncate">
                     {leaderboard[0]?.name || "—"}
                   </div>
                   <div className="text-[10px] font-mono font-black text-amber-400">
                     {leaderboard[0]?.score || 0} pts
                   </div>
-                  <div className="h-14 bg-amber-500/30 rounded-xl flex items-center justify-center font-black text-lg text-amber-300">
+                  <div className="h-14 bg-amber-500/30 rounded-xl flex items-center justify-center font-black text-sm text-amber-300">
                     #1
                   </div>
                 </div>
 
                 {/* Rank 3 */}
-                <div className="p-2.5 rounded-2xl bg-white/10 border border-amber-700/40 text-center space-y-1 order-3 shadow-xl">
-                  <Award className="w-5 h-5 text-amber-600 mx-auto" />
-                  <div className="font-extrabold text-xs text-zinc-100 truncate">
+                <div className="p-2 rounded-2xl bg-white/10 border border-amber-700/40 text-center space-y-1 order-3">
+                  <Award className="w-4 h-4 text-amber-600 mx-auto" />
+                  <div className="font-bold text-[11px] text-zinc-100 truncate">
                     {leaderboard[2]?.name || "—"}
                   </div>
-                  <div className="text-[9px] font-mono font-bold text-indigo-300">
+                  <div className="text-[9px] font-mono text-indigo-300">
                     {leaderboard[2]?.score || 0} pts
                   </div>
                   <div className="h-8 bg-amber-700/20 rounded-xl flex items-center justify-center font-black text-xs text-amber-600">
@@ -2128,14 +2122,19 @@ export default function LiveAudiencePage() {
       {renderInstantPollOverlay()}
 
       {/* Floating Bottom Emoji Reaction Bar */}
-      <footer className="px-3 py-2 bg-zinc-900/80 backdrop-blur-xl border-t border-white/10 z-30 shrink-0">
-        <div className="flex items-center justify-around max-w-md mx-auto">
+      <footer className="px-3 py-1.5 bg-zinc-900/90 backdrop-blur-xl border-t border-white/10 z-30 shrink-0">
+        <div className="flex items-center justify-center gap-4 max-w-xs mx-auto">
           {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
             <button
               key={emoji}
               type="button"
+              disabled={isReactionCoolingDown}
               onClick={() => handleSendReaction(emoji)}
-              className="p-1.5 text-2xl hover:scale-125 active:scale-90 transition-transform cursor-pointer"
+              className={`p-1 text-lg sm:text-xl transition-all cursor-pointer ${
+                isReactionCoolingDown
+                  ? "opacity-40 cursor-not-allowed scale-90"
+                  : "hover:scale-125 active:scale-90"
+              }`}
               title={`React ${emoji}`}
             >
               {emoji}

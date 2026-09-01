@@ -386,10 +386,10 @@ export default function LiveProjectorPage() {
     });
 
     socket.on("reaction_pulse", ({ emoji, id }) => {
-      setReactions((prev) => [...prev.slice(-15), { id, emoji }]);
+      setReactions((prev) => [...prev.slice(-4), { id, emoji }]);
       setTimeout(() => {
         setReactions((prev) => prev.filter((r) => r.id !== id));
-      }, 2500);
+      }, 1800);
     });
 
     return () => {
@@ -706,14 +706,14 @@ export default function LiveProjectorPage() {
       ref={stageRef}
       className="fixed inset-0 z-50 bg-zinc-950 text-white flex flex-col justify-between overflow-hidden select-none font-sans"
     >
-      {/* Floating Reaction Animations */}
-      <div className="absolute inset-0 pointer-events-none z-40 overflow-hidden">
-        {reactions.map((r) => (
+      {/* Compact Corner Floating Reactions Stream (Unobtrusive 56px column on bottom-right) */}
+      <div className="fixed bottom-20 right-6 z-40 pointer-events-none w-14 h-48 flex flex-col items-center justify-end overflow-hidden">
+        {reactions.map((r, i) => (
           <div
             key={r.id}
-            className="absolute bottom-16 text-4xl animate-float-reaction"
+            className="absolute bottom-0 text-lg opacity-85 animate-float-reaction drop-shadow-sm select-none"
             style={{
-              left: `${15 + Math.random() * 70}%`,
+              left: `${(i % 3) * 10 + 4}px`,
             }}
           >
             {r.emoji}
