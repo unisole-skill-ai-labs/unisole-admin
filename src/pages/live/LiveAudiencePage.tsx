@@ -36,6 +36,7 @@ import {
   Lock,
   ShieldCheck,
   Loader2,
+  Zap,
 } from "lucide-react";
 import { setCredentials } from "../../store/auth-slice";
 import { getUser, isAuthenticated, setAuthSession, logout } from "../../utils/auth";
@@ -101,6 +102,31 @@ export default function LiveAudiencePage() {
     pollCounts: {},
     myResponse: null,
   });
+  const [instantPollState, setInstantPollState] = useState<{
+    isActive: boolean;
+    pollId: string | null;
+    question: string;
+    options: string[];
+    startedAt: number | null;
+    timeLimit: number;
+    counts: Record<number, number>;
+    totalVotes: number;
+    myVote: number | null;
+    isSubmitted: boolean;
+    remainingTime: number | null;
+  }>({
+    isActive: false,
+    pollId: null,
+    question: "Quick Pulse Check",
+    options: ["YES", "NO"],
+    startedAt: null,
+    timeLimit: 20,
+    counts: { 0: 0, 1: 0 },
+    totalVotes: 0,
+    myVote: null,
+    isSubmitted: false,
+    remainingTime: null,
+  });
   const [myScore, setMyScore] = useState(0);
   const [myRank, setMyRank] = useState<{ rank: number; totalPlayers: number } | null>(null);
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
@@ -135,6 +161,7 @@ export default function LiveAudiencePage() {
 
   const socketRef = useRef<Socket | null>(null);
   const timerIntervalRef = useRef<any>(null);
+  const instantPollTimerRef = useRef<any>(null);
   const arenaRef = useRef<HTMLDivElement>(null);
 
   // Monitor physical orientation and fullscreen changes
@@ -361,6 +388,23 @@ export default function LiveAudiencePage() {
           setIsSubmitted(true);
         }
       }
+      if (state.instantPoll) {
+        setInstantPollState({
+          isActive: state.instantPoll.isActive,
+          pollId: state.instantPoll.pollId,
+          question: state.instantPoll.question || "Quick Pulse Check",
+          options: state.instantPoll.options || ["YES", "NO"],
+          startedAt: state.instantPoll.startedAt,
+          timeLimit: state.instantPoll.timeLimit || 20,
+          counts: state.instantPoll.counts || { 0: 0, 1: 0 },
+          totalVotes: state.instantPoll.totalVotes || 0,
+          myVote: typeof state.instantPoll.myVote === "number" ? state.instantPoll.myVote : null,
+          isSubmitted: typeof state.instantPoll.myVote === "number",
+          remainingTime: state.instantPoll.startedAt
+            ? Math.max(0, state.instantPoll.timeLimit - Math.floor((Date.now() - state.instantPoll.startedAt) / 1000))
+            : null,
+        });
+      }
     });
 
     socket.on("attendee_count", ({ count }) => {
@@ -407,7 +451,7 @@ export default function LiveAudiencePage() {
       if (data.attendees) setAttendeesList(data.attendees);
     });
 
-    socket.on("slide_updated", ({ slideIndex, buildStep: bStep, quizState: qState }) => {
+    socket.on("slide_updated", ({ slideIndex, buildStep: bStep, quizState: qState, instantPoll: ip }) => {
       setCurrentSlideIndex(slideIndex);
       if (typeof bStep === "number") {
         setBuildStep(bStep);
@@ -417,6 +461,9 @@ export default function LiveAudiencePage() {
       setSelectedOption(null);
       setIsSubmitted(false);
       if (qState) setQuizState(qState);
+      if (ip === null) {
+        setInstantPollState((prev) => ({ ...prev, isActive: false }));
+      }
     });
 
     socket.on("slides_reloaded", ({ slides: updatedSlides, currentSlideIndex: sIdx, buildStep: bStep }) => {
@@ -498,6 +545,64 @@ export default function LiveAudiencePage() {
       }
     });
 
+    // ==================== INSTANT PULSE POLL LISTENERS ====================
+    socket.on("instant_poll_started", (data) => {
+      setInstantPollState({
+        isActive: true,
+        pollId: data.pollId,
+        question: data.question || "Quick Pulse Check: Yes or No?",
+        options: data.options || ["YES", "NO"],
+        startedAt: data.startedAt,
+        timeLimit: data.timeLimit || 20,
+        counts: data.counts || { 0: 0, 1: 0 },
+        totalVotes: data.totalVotes || 0,
+        myVote: null,
+        isSubmitted: false,
+        remainingTime: data.timeLimit || 20,
+      });
+      confetti({
+        particleCount: 40,
+        spread: 60,
+        origin: { y: 0.3 },
+      });
+    });
+
+    socket.on("instant_poll_update", ({ pollId, counts, totalVotes }) => {
+      setInstantPollState((prev) => {
+        if (!prev.isActive && !prev.pollId) return prev;
+        return {
+          ...prev,
+          counts: counts || prev.counts,
+          totalVotes: typeof totalVotes === "number" ? totalVotes : prev.totalVotes,
+        };
+      });
+    });
+
+    socket.on("instant_poll_confirmed", ({ optionIndex }) => {
+      setInstantPollState((prev) => ({
+        ...prev,
+        myVote: optionIndex,
+        isSubmitted: true,
+      }));
+      confetti({
+        particleCount: 50,
+        spread: 70,
+        origin: { y: 0.6 },
+      });
+    });
+
+    socket.on("instant_poll_ended", ({ counts, totalVotes }) => {
+      setInstantPollState((prev) => ({
+        ...prev,
+        counts: counts || prev.counts,
+        totalVotes: typeof totalVotes === "number" ? totalVotes : prev.totalVotes,
+        remainingTime: 0,
+      }));
+      setTimeout(() => {
+        setInstantPollState((prev) => ({ ...prev, isActive: false }));
+      }, 4000);
+    });
+
     socket.on("audience:kicked", ({ message }: { message: string }) => {
       setIsKicked(true);
       setKickedMessage(message || "You have been removed from this live presentation by the host.");
@@ -524,6 +629,52 @@ export default function LiveAudiencePage() {
       socket.disconnect();
     };
   }, [baseUrl, code, lead?.id, lead?.name, lead?.phone]);
+
+  // Instant Poll countdown timer
+  useEffect(() => {
+    if (
+      instantPollState.isActive &&
+      instantPollState.startedAt &&
+      instantPollState.timeLimit
+    ) {
+      const updateTimer = () => {
+        const elapsed = Math.floor((Date.now() - instantPollState.startedAt!) / 1000);
+        const remaining = Math.max(0, instantPollState.timeLimit - elapsed);
+        setInstantPollState((prev) => ({ ...prev, remainingTime: remaining }));
+
+        if (remaining <= 0) {
+          clearInterval(instantPollTimerRef.current);
+        }
+      };
+
+      updateTimer();
+      instantPollTimerRef.current = setInterval(updateTimer, 500);
+      return () => clearInterval(instantPollTimerRef.current);
+    }
+  }, [instantPollState.isActive, instantPollState.startedAt, instantPollState.timeLimit]);
+
+  // Submit Instant Poll vote
+  const handleSubmitInstantPollVote = useCallback(
+    (optionIndex: number) => {
+      if (
+        !instantPollState.isActive ||
+        !instantPollState.pollId ||
+        instantPollState.isSubmitted ||
+        !lead?.id ||
+        !socketRef.current
+      ) {
+        return;
+      }
+
+      socketRef.current.emit("audience:submit_instant_poll", {
+        sessionCode: code,
+        leadId: lead.id,
+        pollId: instantPollState.pollId,
+        optionIndex,
+      });
+    },
+    [instantPollState.isActive, instantPollState.pollId, instantPollState.isSubmitted, lead?.id, code]
+  );
 
   // Quiz timer
   useEffect(() => {
@@ -1355,6 +1506,125 @@ export default function LiveAudiencePage() {
     );
   }
 
+  // ==================== SHARED: INSTANT PULSE POLL OVERLAY ====================
+  const renderInstantPollOverlay = () => {
+    if (!instantPollState.isActive && !instantPollState.pollId) return null;
+    if (!instantPollState.isActive && !instantPollState.isSubmitted && instantPollState.remainingTime === 0) return null;
+
+    const yes = instantPollState.counts[0] || 0;
+    const no = instantPollState.counts[1] || 0;
+    const total = yes + no;
+    const yesPct = total > 0 ? Math.round((yes / total) * 100) : 50;
+    const noPct = total > 0 ? Math.round((no / total) * 100) : 50;
+
+    return (
+      <div className="fixed inset-x-3 sm:inset-x-auto sm:right-6 bottom-20 z-50 max-w-md w-full mx-auto animate-scale-in">
+        <div className="p-4 sm:p-5 rounded-3xl bg-zinc-950/95 border-2 border-amber-500/60 shadow-2xl backdrop-blur-2xl text-white space-y-3">
+          {/* Header */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+              <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold font-mono">
+                <Zap className="w-3.5 h-3.5 fill-current text-amber-400" />
+                <span>LIVE 20s PULSE POLL</span>
+              </div>
+            </div>
+
+            <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-white/10 text-xs font-mono font-black text-amber-300 border border-white/10">
+              <Clock className="w-3.5 h-3.5" />
+              <span>{instantPollState.remainingTime !== null ? `${instantPollState.remainingTime}s` : "20s"}</span>
+            </div>
+          </div>
+
+          {/* Question */}
+          <div className="text-sm sm:text-base font-extrabold text-white text-center leading-snug">
+            {instantPollState.question}
+          </div>
+
+          {!instantPollState.isSubmitted && instantPollState.isActive ? (
+            /* Voting Buttons */
+            <div className="space-y-2 pt-1">
+              <div className="grid grid-cols-2 gap-3">
+                <button
+                  type="button"
+                  onClick={() => handleSubmitInstantPollVote(0)}
+                  className="py-4 px-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-500 hover:to-teal-500 active:scale-95 text-white font-black text-base sm:text-lg shadow-xl shadow-emerald-600/30 transition-all flex flex-col items-center justify-center gap-1 cursor-pointer border border-emerald-400/40"
+                >
+                  <span className="text-2xl">👍</span>
+                  <span>YES</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSubmitInstantPollVote(1)}
+                  className="py-4 px-3 rounded-2xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 active:scale-95 text-white font-black text-base sm:text-lg shadow-xl shadow-rose-600/30 transition-all flex flex-col items-center justify-center gap-1 cursor-pointer border border-rose-400/40"
+                >
+                  <span className="text-2xl">👎</span>
+                  <span>NO</span>
+                </button>
+              </div>
+              <p className="text-[11px] text-zinc-400 text-center font-medium">
+                Tap your choice before the 20s timer expires!
+              </p>
+            </div>
+          ) : (
+            /* Results Bar and Confirmation */
+            <div className="space-y-2.5 pt-1 animate-fade-in">
+              {instantPollState.isSubmitted && (
+                <div className="p-2 rounded-xl bg-emerald-500/15 border border-emerald-500/30 text-emerald-300 text-xs font-bold text-center flex items-center justify-center gap-1.5">
+                  <Check className="w-3.5 h-3.5 text-emerald-400" />
+                  <span>
+                    Your vote recorded:{" "}
+                    <strong className="uppercase underline">
+                      {instantPollState.myVote === 0 ? "YES 👍" : "NO 👎"}
+                    </strong>
+                  </span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-2 gap-2 text-center">
+                <div className="p-2 rounded-xl bg-emerald-950/50 border border-emerald-500/30">
+                  <span className="text-[10px] text-emerald-400 uppercase font-bold block">
+                    YES 👍
+                  </span>
+                  <span className="text-lg font-black text-white">
+                    {yes} ({total > 0 ? yesPct : 0}%)
+                  </span>
+                </div>
+
+                <div className="p-2 rounded-xl bg-rose-950/50 border border-rose-500/30">
+                  <span className="text-[10px] text-rose-400 uppercase font-bold block">
+                    NO 👎
+                  </span>
+                  <span className="text-lg font-black text-white">
+                    {no} ({total > 0 ? noPct : 0}%)
+                  </span>
+                </div>
+              </div>
+
+              {/* Live Animated Split Bar */}
+              <div className="h-3 rounded-full bg-zinc-800 overflow-hidden flex shadow-inner">
+                <div
+                  className="bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
+                  style={{ width: `${total > 0 ? yesPct : 0}%` }}
+                />
+                <div
+                  className="bg-gradient-to-r from-rose-500 to-pink-500 transition-all duration-300"
+                  style={{ width: `${total > 0 ? noPct : 0}%` }}
+                />
+              </div>
+
+              <div className="flex items-center justify-between text-[10px] font-mono text-zinc-400 px-1">
+                <span>{instantPollState.totalVotes} total votes</span>
+                <span>Real-time live sync</span>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  };
+
   // ==================== STAGE 2: LIVE AUDIENCE PRESENTATION ARENA ====================
   // Render Mode A: Landscape Fullscreen Presentation Mode
   if (isFullscreenLandscape) {
@@ -1530,6 +1800,9 @@ export default function LiveAudiencePage() {
             )}
           </AutoFitSlideStage>
         </main>
+
+        {/* Instant Pulse Poll Overlay in Landscape */}
+        {renderInstantPollOverlay()}
 
         {/* Landscape Floating Bottom Reactions Dock */}
         <footer className="px-4 py-1.5 bg-zinc-900/60 backdrop-blur-md border-t border-white/10 z-30 shrink-0 flex items-center justify-between">
@@ -1810,6 +2083,9 @@ export default function LiveAudiencePage() {
           )}
         </div>
       </main>
+
+      {/* Instant Pulse Poll Overlay in Portrait */}
+      {renderInstantPollOverlay()}
 
       {/* Floating Bottom Emoji Reaction Bar */}
       <footer className="px-3 py-2 bg-zinc-900/80 backdrop-blur-xl border-t border-white/10 z-30 shrink-0">

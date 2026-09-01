@@ -69,6 +69,29 @@ export default function LiveProjectorPage() {
     pollCounts: {},
     quizAnswers: {},
   });
+  const [instantPollState, setInstantPollState] = useState<{
+    isActive: boolean;
+    pollId: string | null;
+    question: string;
+    options: string[];
+    startedAt: number | null;
+    timeLimit: number;
+    counts: Record<number, number>;
+    totalVotes: number;
+    remainingTime: number | null;
+  }>({
+    isActive: false,
+    pollId: null,
+    question: "Quick Pulse Check: Yes or No?",
+    options: ["YES", "NO"],
+    startedAt: null,
+    timeLimit: 20,
+    counts: { 0: 0, 1: 0 },
+    totalVotes: 0,
+    remainingTime: null,
+  });
+  const [customPollModalOpen, setCustomPollModalOpen] = useState(false);
+  const [customPollQuestion, setCustomPollQuestion] = useState("");
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
@@ -79,6 +102,7 @@ export default function LiveProjectorPage() {
   const socketRef = useRef<Socket | null>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const timerIntervalRef = useRef<any>(null);
+  const instantPollTimerRef = useRef<any>(null);
 
   const handleCopyUrl = useCallback((e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -164,6 +188,21 @@ export default function LiveProjectorPage() {
       }
       if (state.leaderboard) {
         setLeaderboard(state.leaderboard);
+      }
+      if (state.instantPoll) {
+        setInstantPollState({
+          isActive: state.instantPoll.isActive,
+          pollId: state.instantPoll.pollId,
+          question: state.instantPoll.question || "Quick Pulse Check",
+          options: state.instantPoll.options || ["YES", "NO"],
+          startedAt: state.instantPoll.startedAt,
+          timeLimit: state.instantPoll.timeLimit || 20,
+          counts: state.instantPoll.counts || { 0: 0, 1: 0 },
+          totalVotes: state.instantPoll.totalVotes || 0,
+          remainingTime: state.instantPoll.startedAt
+            ? Math.max(0, state.instantPoll.timeLimit - Math.floor((Date.now() - state.instantPoll.startedAt) / 1000))
+            : null,
+        });
       }
     });
 
@@ -286,6 +325,42 @@ export default function LiveProjectorPage() {
       });
     });
 
+    // ==================== INSTANT PULSE POLL LISTENERS ====================
+    socket.on("instant_poll_started", (data) => {
+      setInstantPollState({
+        isActive: true,
+        pollId: data.pollId,
+        question: data.question || "Quick Pulse Check",
+        options: data.options || ["YES", "NO"],
+        startedAt: data.startedAt,
+        timeLimit: data.timeLimit || 20,
+        counts: data.counts || { 0: 0, 1: 0 },
+        totalVotes: data.totalVotes || 0,
+        remainingTime: data.timeLimit || 20,
+      });
+    });
+
+    socket.on("instant_poll_update", ({ pollId, counts, totalVotes }) => {
+      setInstantPollState((prev) => {
+        if (!prev.isActive && !prev.pollId) return prev;
+        return {
+          ...prev,
+          counts: counts || prev.counts,
+          totalVotes: typeof totalVotes === "number" ? totalVotes : prev.totalVotes,
+        };
+      });
+    });
+
+    socket.on("instant_poll_ended", ({ counts, totalVotes }) => {
+      setInstantPollState((prev) => ({
+        ...prev,
+        isActive: false,
+        counts: counts || prev.counts,
+        totalVotes: typeof totalVotes === "number" ? totalVotes : prev.totalVotes,
+        remainingTime: 0,
+      }));
+    });
+
     socket.on("reaction_pulse", ({ emoji, id }) => {
       setReactions((prev) => [...prev.slice(-15), { id, emoji }]);
       setTimeout(() => {
@@ -297,6 +372,29 @@ export default function LiveProjectorPage() {
       socket.disconnect();
     };
   }, [baseUrl, session?.sessionCode, session?.id]);
+
+  // Countdown timer effect for active instant poll
+  useEffect(() => {
+    if (
+      instantPollState.isActive &&
+      instantPollState.startedAt &&
+      instantPollState.timeLimit
+    ) {
+      const updateTimer = () => {
+        const elapsed = Math.floor((Date.now() - instantPollState.startedAt!) / 1000);
+        const remaining = Math.max(0, instantPollState.timeLimit - elapsed);
+        setInstantPollState((prev) => ({ ...prev, remainingTime: remaining }));
+
+        if (remaining <= 0) {
+          clearInterval(instantPollTimerRef.current);
+        }
+      };
+
+      updateTimer();
+      instantPollTimerRef.current = setInterval(updateTimer, 500);
+      return () => clearInterval(instantPollTimerRef.current);
+    }
+  }, [instantPollState.isActive, instantPollState.startedAt, instantPollState.timeLimit]);
 
   // Countdown timer effect for active quiz
   useEffect(() => {
@@ -448,6 +546,30 @@ export default function LiveProjectorPage() {
     });
   }, [session?.sessionCode]);
 
+  const handleStartInstantPoll = useCallback(
+    (customQuestion?: string) => {
+      if (!socketRef.current || !session?.sessionCode) return;
+      const question =
+        customQuestion?.trim() || "Quick Pulse Check: Do you understand / agree?";
+      socketRef.current.emit("admin:start_instant_poll", {
+        sessionCode: session.sessionCode,
+        question,
+        timeLimit: 20,
+        options: ["YES", "NO"],
+      });
+      setCustomPollModalOpen(false);
+      setCustomPollQuestion("");
+    },
+    [session?.sessionCode]
+  );
+
+  const handleCloseInstantPoll = useCallback(() => {
+    if (!socketRef.current || !session?.sessionCode) return;
+    socketRef.current.emit("admin:close_instant_poll", {
+      sessionCode: session.sessionCode,
+    });
+  }, [session?.sessionCode]);
+
   const handleToggleFullscreen = () => {
     if (!document.fullscreenElement) {
       stageRef.current?.requestFullscreen();
@@ -470,7 +592,7 @@ export default function LiveProjectorPage() {
       }
 
       if (!isPresentationStarted) {
-        if (e.key === "Enter" || e.key === " " || e.key === "p" || e.key === "P") {
+        if (e.key === "Enter" || e.key === " ") {
           e.preventDefault();
           handleStartPresentation();
           return;
@@ -492,6 +614,13 @@ export default function LiveProjectorPage() {
       } else if (e.key === "l" || e.key === "L") {
         e.preventDefault();
         handleShowLeaderboard();
+      } else if (e.key === "p" || e.key === "P") {
+        e.preventDefault();
+        if (instantPollState.isActive) {
+          handleCloseInstantPoll();
+        } else {
+          handleStartInstantPoll();
+        }
       } else if (e.key === "n" || e.key === "N") {
         e.preventDefault();
         setNotesOpen((prev) => !prev);
@@ -517,6 +646,9 @@ export default function LiveProjectorPage() {
     handleStartQuestion,
     handleRevealAnswer,
     handleShowLeaderboard,
+    handleStartInstantPoll,
+    handleCloseInstantPoll,
+    instantPollState.isActive,
   ]);
 
   if (!session || !presentation) {
@@ -1008,6 +1140,99 @@ export default function LiveProjectorPage() {
             leaderboard={leaderboard}
           />
         )}
+        {/* Floating Live Instant Pulse Poll HUD Widget */}
+        {instantPollState.isActive && (
+          <div className="absolute top-4 left-1/2 -translate-x-1/2 z-40 w-full max-w-xl px-4 animate-scale-in">
+            <div className="p-4 sm:p-5 rounded-3xl bg-zinc-950/95 border-2 border-amber-500/50 shadow-2xl backdrop-blur-2xl text-white space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping" />
+                  <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-amber-500/20 border border-amber-500/30 text-amber-300 text-xs font-bold font-mono">
+                    <Zap className="w-3.5 h-3.5 fill-current text-amber-400" />
+                    <span>LIVE 20s PULSE POLL</span>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-1 px-3 py-1 rounded-full bg-white/10 text-xs font-mono font-black text-amber-300 border border-white/10">
+                    <Clock className="w-3.5 h-3.5 animate-spin" />
+                    <span>{instantPollState.remainingTime ?? 0}s</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleCloseInstantPoll}
+                    className="p-1 rounded-full bg-white/10 hover:bg-white/20 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                    title="Close Poll"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                </div>
+              </div>
+
+              <div className="text-sm sm:text-base font-extrabold text-zinc-100 text-center">
+                {instantPollState.question}
+              </div>
+
+              {/* Real-time YES vs NO Live Vote Bars */}
+              {(() => {
+                const yes = instantPollState.counts[0] || 0;
+                const no = instantPollState.counts[1] || 0;
+                const total = yes + no;
+                const yesPct = total > 0 ? Math.round((yes / total) * 100) : 50;
+                const noPct = total > 0 ? Math.round((no / total) * 100) : 50;
+
+                return (
+                  <div className="space-y-2 pt-1">
+                    <div className="grid grid-cols-2 gap-3">
+                      {/* YES Count Box */}
+                      <div className="p-2.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-center">
+                        <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                          YES 👍
+                        </div>
+                        <div className="text-2xl font-black text-white">
+                          {yes}{" "}
+                          <span className="text-xs text-emerald-300 font-normal">
+                            ({total > 0 ? yesPct : 0}%)
+                          </span>
+                        </div>
+                      </div>
+
+                      {/* NO Count Box */}
+                      <div className="p-2.5 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-center">
+                        <div className="text-xs font-bold text-rose-400 uppercase tracking-wider">
+                          NO 👎
+                        </div>
+                        <div className="text-2xl font-black text-white">
+                          {no}{" "}
+                          <span className="text-xs text-rose-300 font-normal">
+                            ({total > 0 ? noPct : 0}%)
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Split Progress Bar */}
+                    <div className="h-3 rounded-full bg-zinc-800 overflow-hidden flex shadow-inner">
+                      <div
+                        className="bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
+                        style={{ width: `${total > 0 ? yesPct : 0}%` }}
+                      />
+                      <div
+                        className="bg-gradient-to-r from-rose-500 to-pink-500 transition-all duration-300"
+                        style={{ width: `${total > 0 ? noPct : 0}%` }}
+                      />
+                    </div>
+
+                    <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 px-1">
+                      <span>{instantPollState.totalVotes} responses recorded</span>
+                      <span>Audience: {attendees.length} active</span>
+                    </div>
+                  </div>
+                );
+              })()}
+            </div>
+          </div>
+        )}
       </main>
 
       {/* Presenter Notes / Teleprompter Floating Drawer (Key 'N') */}
@@ -1095,8 +1320,36 @@ export default function LiveProjectorPage() {
           )}
         </div>
 
-        {/* Center: Slide Interaction Buttons */}
+        {/* Center: Slide Interaction Buttons & Instant Poll Button */}
         <div className="flex items-center gap-2">
+          {/* Instant Yes/No Poll Launcher Button */}
+          {isPresentationStarted && (
+            <Button
+              variant={instantPollState.isActive ? "danger" : "primary"}
+              size="sm"
+              onClick={() => {
+                if (instantPollState.isActive) {
+                  handleCloseInstantPoll();
+                } else {
+                  setCustomPollModalOpen(true);
+                }
+              }}
+              className={
+                instantPollState.isActive
+                  ? "bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-lg flex items-center gap-1.5 animate-pulse"
+                  : "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold shadow-lg flex items-center gap-1.5 cursor-pointer"
+              }
+              title="Launch 20s Instant Yes/No Poll (P)"
+            >
+              <Zap className="w-3.5 h-3.5 fill-current" />
+              <span>
+                {instantPollState.isActive
+                  ? `Stop Poll (${instantPollState.remainingTime}s)`
+                  : "Instant Poll (P)"}
+              </span>
+            </Button>
+          )}
+
           {isPresentationStarted &&
             (currentSlide?.type === "POLL" || currentSlide?.type === "QUIZ") &&
             !quizState.isQuizActive &&
@@ -1155,6 +1408,7 @@ export default function LiveProjectorPage() {
           ) : (
             <>
               <span>[Space/→] Step</span>
+              <span>[P] Instant Poll</span>
               <span>[U] Attendees</span>
               <span>[N] Notes</span>
               <span>[Q] Start</span>
@@ -1511,6 +1765,95 @@ export default function LiveProjectorPage() {
           </div>
         </div>
       </Modal>
+
+      {/* Quick Launch Instant Poll Modal */}
+      {customPollModalOpen && (
+        <div
+          className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-fade-in"
+          onClick={() => setCustomPollModalOpen(false)}
+        >
+          <div
+            className="max-w-md w-full p-6 rounded-3xl bg-zinc-900 border border-amber-500/40 shadow-2xl text-white space-y-4 animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between border-b border-white/10 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-amber-500/20 text-amber-400">
+                  <Zap className="w-5 h-5 fill-current" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-base text-white">
+                    Launch Instant 20s Poll
+                  </h3>
+                  <p className="text-xs text-zinc-400">
+                    Broadcasts a 20-second YES/NO pulse poll to all students
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCustomPollModalOpen(false)}
+                className="p-1 rounded-full bg-white/10 hover:bg-white/20 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            {/* Quick 1-Click Preset Buttons */}
+            <div className="space-y-1.5">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                Quick 1-Click Questions:
+              </label>
+              <div className="space-y-1.5">
+                {[
+                  "Are you ready for the next challenge?",
+                  "Did you understand this concept clearly?",
+                  "Should we do a live coding demo right now?",
+                  "Are you finding this session valuable?",
+                ].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => handleStartInstantPoll(preset)}
+                    className="w-full p-2.5 rounded-xl bg-white/5 hover:bg-amber-500/15 border border-white/10 hover:border-amber-500/40 text-left text-xs font-semibold text-zinc-200 hover:text-amber-200 transition-all flex items-center justify-between cursor-pointer"
+                  >
+                    <span>{preset}</span>
+                    <Play className="w-3.5 h-3.5 opacity-60 text-amber-400 shrink-0" />
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Or Custom Question Input */}
+            <div className="pt-2 space-y-2 border-t border-white/10">
+              <label className="block text-[11px] font-bold uppercase tracking-wider text-zinc-400">
+                Or Type a Custom Question:
+              </label>
+              <input
+                type="text"
+                value={customPollQuestion}
+                onChange={(e) => setCustomPollQuestion(e.target.value)}
+                placeholder="e.g. Do you have Python installed on your laptop?"
+                className="w-full px-3.5 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-none focus:border-amber-500 font-medium"
+              />
+
+              <button
+                type="button"
+                onClick={() =>
+                  handleStartInstantPoll(
+                    customPollQuestion.trim() ||
+                      "Quick Pulse Check: Yes or No?"
+                  )
+                }
+                className="w-full py-3 rounded-xl bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold text-sm shadow-xl shadow-amber-500/20 transition-all active:scale-98 flex items-center justify-center gap-2 cursor-pointer mt-1"
+              >
+                <Zap className="w-4 h-4 fill-current" />
+                <span>Launch 20s Pulse Poll Now (YES / NO)</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
