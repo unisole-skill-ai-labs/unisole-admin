@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef, useCallback } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { useSelector } from "react-redux";
+import { useDispatch, useSelector } from "react-redux";
 import { io, Socket } from "socket.io-client";
 import confetti from "canvas-confetti";
 import {
@@ -14,6 +14,7 @@ import {
   BarChart3,
   Award,
   ArrowRight,
+  ArrowLeft,
   Phone,
   User,
   GraduationCap,
@@ -32,7 +33,12 @@ import {
   QrCode,
   Share2,
   X,
+  Lock,
+  ShieldCheck,
+  Loader2,
 } from "lucide-react";
+import { setCredentials } from "../../store/auth-slice";
+import { getUser, isAuthenticated, setAuthSession, logout } from "../../utils/auth";
 import SlideRenderer from "../../components/presentations/SlideRenderer";
 import AutoFitSlideStage from "../../components/presentations/AutoFitSlideStage";
 import BranchDistributionPieChart, {
@@ -42,6 +48,7 @@ import BranchDistributionPieChart, {
 
 export default function LiveAudiencePage() {
   const { sessionCode } = useParams<{ sessionCode: string }>();
+  const dispatch = useDispatch();
   const settingsBaseUrl = useSelector((s: any) => s?.settings?.baseUrl);
   const baseUrl = (
     settingsBaseUrl ||
@@ -62,11 +69,14 @@ export default function LiveAudiencePage() {
   const [isLoadingSession, setIsLoadingSession] = useState(true);
   const [sessionError, setSessionError] = useState<string | null>(null);
 
-  // Onboarding Form state
-  const [nameInput, setNameInput] = useState("");
-  const [phoneInput, setPhoneInput] = useState("");
-  const [branchInput, setBranchInput] = useState("");
-  const [yearInput, setYearInput] = useState("");
+  // Authentication & Onboarding Form state
+  const [authStep, setAuthStep] = useState<"PHONE" | "PROFILE_SETUP">("PHONE");
+  const [authPhone, setAuthPhone] = useState("");
+  const [authName, setAuthName] = useState("");
+  const [authBranch, setAuthBranch] = useState("");
+  const [authYear, setAuthYear] = useState("");
+  const [authLoading, setAuthLoading] = useState(false);
+  const [authError, setAuthError] = useState<string | null>(null);
   const [isJoining, setIsJoining] = useState(false);
   const [joinError, setJoinError] = useState<string | null>(null);
 
@@ -208,6 +218,46 @@ export default function LiveAudiencePage() {
     }
   };
 
+  // Helper to join session using authenticated user
+  const joinWithUser = useCallback(
+    async (currentUser: any) => {
+      if (!code || !currentUser?.phone) return;
+      setIsJoining(true);
+      setJoinError(null);
+      try {
+        const res = await fetch(
+          `${baseUrl}/api/public/presentations/sessions/${code}/join`,
+          {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              name: currentUser.name || (currentUser.phone ? `Student ${currentUser.phone.slice(-4)}` : "Student"),
+              phone: currentUser.phone,
+              branch: currentUser.branch || undefined,
+              userId: currentUser.id,
+            }),
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) {
+          throw new Error(data.message || "Failed to join session");
+        }
+        if (data.data?.lead) {
+          setLead(data.data.lead);
+          localStorage.setItem(
+            `unisole_lead_${code}`,
+            JSON.stringify(data.data.lead)
+          );
+        }
+      } catch (err: any) {
+        setJoinError(err.message || "Failed to join presentation");
+      } finally {
+        setIsJoining(false);
+      }
+    },
+    [baseUrl, code]
+  );
+
   // Fetch session details on mount
   useEffect(() => {
     if (!code) return;
@@ -233,9 +283,18 @@ export default function LiveAudiencePage() {
               const parsed = JSON.parse(savedLead);
               if (parsed?.id) {
                 setLead(parsed);
+                return;
               }
             } catch (e) {
               console.error(e);
+            }
+          }
+
+          // If user is already authenticated in Unisole, auto-join session
+          if (isAuthenticated()) {
+            const currentUser = getUser();
+            if (currentUser?.phone) {
+              joinWithUser(currentUser);
             }
           }
         }
@@ -246,7 +305,7 @@ export default function LiveAudiencePage() {
       .finally(() => {
         setIsLoadingSession(false);
       });
-  }, [baseUrl, code]);
+  }, [baseUrl, code, joinWithUser]);
 
   // Connect Socket.io once lead is registered
   useEffect(() => {
@@ -487,45 +546,133 @@ export default function LiveAudiencePage() {
     }
   }, [quizState.isQuizActive, quizState.startedAt, quizState.timeLimit]);
 
-  // Handle Fast-Pass Onboarding Submit
-  const handleOnboardingSubmit = async (e: React.FormEvent) => {
+  // Handle Step 1: Mobile Phone check / quick login
+  const handlePhoneSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!nameInput.trim() || !phoneInput.trim()) return;
+    setAuthError(null);
+    const cleanPhone = authPhone.replace(/\D/g, "");
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      setAuthError("Please enter a valid 10-digit mobile number");
+      return;
+    }
 
-    setIsJoining(true);
-    setJoinError(null);
-
+    setAuthLoading(true);
     try {
-      const res = await fetch(
+      // Check user existence
+      const checkRes = await fetch(`${baseUrl}/api/public/auth/check-user`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ phone: cleanPhone }),
+      }).then((r) => r.json());
+
+      if (checkRes.exists && checkRes.user) {
+        // Existing user -> log in immediately
+        const loginRes = await fetch(`${baseUrl}/api/public/auth/login`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            phone: cleanPhone,
+            signupSource: "SESSION_QR",
+            sessionCode: code,
+          }),
+        }).then((r) => r.json());
+
+        if (!loginRes.user || (!loginRes.token && !loginRes.accessToken)) {
+          throw new Error(loginRes.message || "Login failed");
+        }
+
+        const token = loginRes.token || loginRes.accessToken;
+        const user = loginRes.user;
+
+        setAuthSession({ token, user });
+        dispatch(setCredentials({ token, user }));
+
+        // Now auto-join the live session
+        await joinWithUser(user);
+      } else {
+        // New student -> Prompt for Profile Setup (Name, Branch, Year)
+        setAuthStep("PROFILE_SETUP");
+      }
+    } catch (err: any) {
+      setAuthError(err.message || "Authentication failed. Please try again.");
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  // Handle Step 2: New Student Registration and Session Join
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAuthError(null);
+    const cleanPhone = authPhone.replace(/\D/g, "");
+    if (!cleanPhone || cleanPhone.length !== 10) {
+      setAuthError("Please enter a valid 10-digit mobile number");
+      setAuthStep("PHONE");
+      return;
+    }
+    if (!authName.trim()) {
+      setAuthError("Please enter your full name");
+      return;
+    }
+
+    setAuthLoading(true);
+    try {
+      const loginRes = await fetch(`${baseUrl}/api/public/auth/login`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          phone: cleanPhone,
+          name: authName.trim(),
+          collegeName: session?.collegeName,
+          collegeId: session?.collegeId,
+          branch: authBranch.trim() || undefined,
+          signupSource: "SESSION_QR",
+          sessionCode: code,
+        }),
+      }).then((r) => r.json());
+
+      if (!loginRes.user || (!loginRes.token && !loginRes.accessToken)) {
+        throw new Error(loginRes.message || "Registration failed");
+      }
+
+      const token = loginRes.token || loginRes.accessToken;
+      const user = loginRes.user;
+
+      setAuthSession({ token, user });
+      dispatch(setCredentials({ token, user }));
+
+      // Join presentation session
+      const joinRes = await fetch(
         `${baseUrl}/api/public/presentations/sessions/${code}/join`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            name: nameInput.trim(),
-            phone: phoneInput.trim(),
-            branch: branchInput.trim() || undefined,
-            yearOfStudy: yearInput.trim() || undefined,
+            name: authName.trim(),
+            phone: cleanPhone,
+            branch: authBranch.trim() || undefined,
+            yearOfStudy: authYear.trim() || undefined,
+            userId: user.id,
           }),
         }
       );
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.message || "Failed to join session");
+      const joinData = await joinRes.json();
+      if (!joinRes.ok) {
+        throw new Error(joinData.message || "Failed to enter presentation");
       }
 
-      if (data.data?.lead) {
-        setLead(data.data.lead);
+      if (joinData.data?.lead) {
+        setLead(joinData.data.lead);
         localStorage.setItem(
           `unisole_lead_${code}`,
-          JSON.stringify(data.data.lead)
+          JSON.stringify(joinData.data.lead)
         );
       }
     } catch (err: any) {
-      setJoinError(err.message || "Failed to join presentation");
+      setAuthError(err.message || "Failed to complete signup & enter arena");
     } finally {
-      setIsJoining(false);
+      setAuthLoading(false);
     }
   };
 
@@ -638,7 +785,7 @@ export default function LiveAudiencePage() {
     );
   }
 
-  // ==================== STAGE 1: EXPRESS ONBOARDING FORM ====================
+  // ==================== STAGE 1: MANDATORY STUDENT LOGIN & AUTHENTICATION ====================
   if (!lead) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden font-sans">
@@ -659,120 +806,189 @@ export default function LiveAudiencePage() {
             </span>
           </div>
           <span className="px-3 py-1 rounded-full bg-white/10 text-[11px] font-mono font-bold text-indigo-300">
-            {code}
+            CODE: {code}
           </span>
         </div>
 
-        {/* Onboarding Card */}
-        <div className="my-auto max-w-md w-full mx-auto space-y-6 z-10 py-6">
+        {/* Login & Onboarding Card */}
+        <div className="my-auto max-w-md w-full mx-auto space-y-5 z-10 py-4">
           <div className="text-center space-y-2">
             <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-bold">
               <Radio className="w-3.5 h-3.5 animate-pulse" />
               <span>{session.collegeName || "Live College Roadshow"}</span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black tracking-tight text-zinc-100">
-              Join Live Presentation
+              {authStep === "PHONE" ? "Login to Join Session" : "Complete Student Profile"}
             </h1>
             <p className="text-xs text-zinc-400 max-w-xs mx-auto">
-              Enter your details to participate in live pulse polls, answer speed quizzes, and win scholarships!
+              {authStep === "PHONE"
+                ? "Enter your mobile number to authenticate, participate in live pulse polls, answer speed quizzes, and win scholarships!"
+                : "Just a few quick details to set up your student badge for this live campus presentation."}
             </p>
           </div>
 
-          <form
-            onSubmit={handleOnboardingSubmit}
-            className="p-6 rounded-3xl bg-zinc-900/90 border border-zinc-800/80 shadow-2xl backdrop-blur-xl space-y-4"
-          >
-            {joinError && (
-              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs">
-                {joinError}
+          <div className="p-6 rounded-3xl bg-zinc-900/90 border border-zinc-800/80 shadow-2xl backdrop-blur-xl space-y-4">
+            {(authError || joinError) && (
+              <div className="p-3 rounded-xl bg-rose-500/10 border border-rose-500/20 text-rose-400 text-xs flex items-center gap-2">
+                <XCircle className="w-4 h-4 shrink-0" />
+                <span>{authError || joinError}</span>
               </div>
             )}
 
-            <div>
-              <label className="block text-xs font-bold text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                <User className="w-3.5 h-3.5 text-indigo-400" />
-                <span>Your Full Name *</span>
-              </label>
-              <input
-                type="text"
-                required
-                value={nameInput}
-                onChange={(e) => setNameInput(e.target.value)}
-                placeholder="e.g. Rahul Sharma"
-                className="w-full px-3.5 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-hidden focus:border-indigo-500 font-medium"
-              />
-            </div>
+            {authStep === "PHONE" ? (
+              /* STEP 1: Mobile Phone Number Input */
+              <form onSubmit={handlePhoneSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-xs font-bold text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>WhatsApp Mobile Number *</span>
+                  </label>
+                  <div className="flex">
+                    <span className="inline-flex items-center px-3 rounded-l-xl bg-zinc-800 border border-r-0 border-zinc-800 text-xs font-mono text-zinc-400">
+                      +91
+                    </span>
+                    <input
+                      type="tel"
+                      required
+                      autoFocus
+                      maxLength={10}
+                      value={authPhone}
+                      onChange={(e) =>
+                        setAuthPhone(e.target.value.replace(/\D/g, ""))
+                      }
+                      placeholder="9876543210"
+                      className="w-full px-3.5 py-3 bg-zinc-950 border border-zinc-800 rounded-r-xl text-sm sm:text-base text-zinc-100 placeholder:text-zinc-600 focus:outline-hidden focus:border-indigo-500 font-mono tracking-wider"
+                    />
+                  </div>
+                </div>
 
-            <div>
-              <label className="block text-xs font-bold text-zinc-300 mb-1.5 flex items-center gap-1.5">
-                <Phone className="w-3.5 h-3.5 text-emerald-400" />
-                <span>WhatsApp Mobile Number *</span>
-              </label>
-              <div className="flex">
-                <span className="inline-flex items-center px-3 rounded-l-xl bg-zinc-800 border border-r-0 border-zinc-800 text-xs font-mono text-zinc-400">
-                  +91
-                </span>
-                <input
-                  type="tel"
-                  required
-                  maxLength={10}
-                  value={phoneInput}
-                  onChange={(e) =>
-                    setPhoneInput(e.target.value.replace(/\D/g, ""))
-                  }
-                  placeholder="9876543210"
-                  className="w-full px-3.5 py-3 bg-zinc-950 border border-zinc-800 rounded-r-xl text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-hidden focus:border-indigo-500 font-mono"
-                />
-              </div>
-            </div>
+                <div className="p-3 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-[11px] text-indigo-300 flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 shrink-0 text-indigo-400" />
+                  <span>Instant Verification: Existing students log in instantly, new learners are registered automatically.</span>
+                </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="block text-[11px] font-bold text-zinc-300 mb-1">
-                  Branch / Department
-                </label>
-                <select
-                  value={branchInput}
-                  onChange={(e) => setBranchInput(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-100 focus:outline-hidden focus:border-indigo-500 cursor-pointer"
+                <button
+                  type="submit"
+                  disabled={authLoading || isJoining || authPhone.length !== 10}
+                  className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold text-sm shadow-xl shadow-indigo-600/25 transition-all active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  <option value="">Select Branch</option>
-                  <option value="BA">BA</option>
-                  <option value="BBA">BBA</option>
-                  <option value="BCOM">BCOM</option>
-                  <option value="BCA">BCA</option>
-                  <option value="BSC Non-Med">BSC Non-Med</option>
-                  <option value="BSC Med">BSC Med</option>
-                  <option value="Others">Others</option>
-                </select>
-              </div>
-              <div>
-                <label className="block text-[11px] font-bold text-zinc-300 mb-1">
-                  Year of Study
-                </label>
-                <select
-                  value={yearInput}
-                  onChange={(e) => setYearInput(e.target.value)}
-                  className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-100 focus:outline-hidden focus:border-indigo-500 cursor-pointer"
-                >
-                  <option value="">Select Year</option>
-                  <option value="1st yr">1st yr</option>
-                  <option value="2nd yr">2nd yr</option>
-                  <option value="3rd yr">3rd yr</option>
-                  <option value="4th yr">4th yr</option>
-                </select>
-              </div>
-            </div>
+                  {authLoading || isJoining ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span>Verifying & Entering...</span>
+                    </>
+                  ) : (
+                    <>
+                      <span>Continue & Enter Live Arena</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </>
+                  )}
+                </button>
+              </form>
+            ) : (
+              /* STEP 2: New Student Profile Setup */
+              <form onSubmit={handleProfileSubmit} className="space-y-4">
+                {/* Verified Mobile Number Badge */}
+                <div className="p-2.5 rounded-xl bg-white/5 border border-white/10 flex items-center justify-between text-xs">
+                  <div className="flex items-center gap-2 text-zinc-300 font-mono">
+                    <Phone className="w-3.5 h-3.5 text-emerald-400" />
+                    <span>+91 {authPhone}</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setAuthStep("PHONE")}
+                    className="text-[11px] text-indigo-400 hover:text-indigo-300 font-bold cursor-pointer"
+                  >
+                    Change
+                  </button>
+                </div>
 
-            <button
-              type="submit"
-              disabled={isJoining || !nameInput.trim() || !phoneInput.trim()}
-              className="w-full py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold text-sm shadow-xl shadow-indigo-600/25 transition-all active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2 mt-2 cursor-pointer"
-            >
-              <span>{isJoining ? "Entering Live Arena..." : "Enter Live Arena"}</span>
-              <ArrowRight className="w-4 h-4" />
-            </button>
-          </form>
+                <div>
+                  <label className="block text-xs font-bold text-zinc-300 mb-1.5 flex items-center gap-1.5">
+                    <User className="w-3.5 h-3.5 text-indigo-400" />
+                    <span>Your Full Name *</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    value={authName}
+                    onChange={(e) => setAuthName(e.target.value)}
+                    placeholder="e.g. Rahul Sharma"
+                    className="w-full px-3.5 py-3 bg-zinc-950 border border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-100 placeholder:text-zinc-600 focus:outline-hidden focus:border-indigo-500 font-medium"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-300 mb-1 flex items-center gap-1">
+                      <GraduationCap className="w-3 h-3 text-indigo-400" />
+                      <span>Branch / Dept</span>
+                    </label>
+                    <select
+                      value={authBranch}
+                      onChange={(e) => setAuthBranch(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-100 focus:outline-hidden focus:border-indigo-500 cursor-pointer"
+                    >
+                      <option value="">Select Branch</option>
+                      <option value="BA">BA</option>
+                      <option value="BBA">BBA</option>
+                      <option value="BCOM">BCOM</option>
+                      <option value="BCA">BCA</option>
+                      <option value="BSC Non-Med">BSC Non-Med</option>
+                      <option value="BSC Med">BSC Med</option>
+                      <option value="Others">Others</option>
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-[11px] font-bold text-zinc-300 mb-1 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-violet-400" />
+                      <span>Year of Study</span>
+                    </label>
+                    <select
+                      value={authYear}
+                      onChange={(e) => setAuthYear(e.target.value)}
+                      className="w-full px-3 py-2.5 bg-zinc-950 border border-zinc-800 rounded-xl text-xs text-zinc-100 focus:outline-hidden focus:border-indigo-500 cursor-pointer"
+                    >
+                      <option value="">Select Year</option>
+                      <option value="1st yr">1st yr</option>
+                      <option value="2nd yr">2nd yr</option>
+                      <option value="3rd yr">3rd yr</option>
+                      <option value="4th yr">4th yr</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 pt-1">
+                  <button
+                    type="button"
+                    onClick={() => setAuthStep("PHONE")}
+                    className="p-3 rounded-xl bg-white/10 hover:bg-white/20 text-zinc-300 transition-colors cursor-pointer"
+                    title="Back to phone input"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={authLoading || isJoining || !authName.trim()}
+                    className="flex-1 py-3.5 px-4 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-500 hover:to-violet-500 text-white font-extrabold text-sm shadow-xl shadow-indigo-600/25 transition-all active:scale-98 disabled:opacity-50 flex items-center justify-center gap-2 cursor-pointer"
+                  >
+                    {authLoading || isJoining ? (
+                      <>
+                        <Loader2 className="w-4 h-4 animate-spin" />
+                        <span>Creating Account...</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>Complete & Enter Arena</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
         </div>
 
         {/* Footer */}
@@ -886,7 +1102,7 @@ export default function LiveAudiencePage() {
               <div className="relative p-3 rounded-2xl bg-white shadow-2xl">
                 <img
                   src={`https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
-                    `https://unisole.org/live/${code}`
+                    session?.joinUrl || `https://unisole.org/live/${code}`
                   )}`}
                   alt="Scan QR to Join"
                   className="w-44 h-44 sm:w-52 sm:h-52 rounded-xl object-contain mx-auto"
@@ -915,7 +1131,7 @@ export default function LiveAudiencePage() {
 
               <a
                 href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
-                  `Join our live ${session?.collegeName || "Unisole"} college presentation session here: https://unisole.org/live/${code}`
+                  `Join our live ${session?.collegeName || "Unisole"} college presentation session here: ${session?.joinUrl || `https://unisole.org/live/${code}`}`
                 )}`}
                 target="_blank"
                 rel="noopener noreferrer"
@@ -1198,6 +1414,16 @@ export default function LiveAudiencePage() {
           </div>
 
           <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setPeerQrModalOpen(true)}
+              className="flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-200 text-xs font-bold transition-all active:scale-95 cursor-pointer shadow-sm"
+              title="Open QR for nearby classmates to join"
+            >
+              <QrCode className="w-3.5 h-3.5 text-indigo-400" />
+              <span>Share QR</span>
+            </button>
+
             <div className="px-3 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-xs font-mono font-bold">
               Slide {currentSlideIndex + 1}/{slides.length}
             </div>
@@ -1324,6 +1550,87 @@ export default function LiveAudiencePage() {
             ))}
           </div>
         </footer>
+
+        {/* Mid-Session Peer QR Modal */}
+        {peerQrModalOpen && (
+          <div
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in"
+            onClick={() => setPeerQrModalOpen(false)}
+          >
+            <div
+              className="relative max-w-sm w-full p-5 sm:p-6 rounded-3xl bg-zinc-900 border border-indigo-500/40 shadow-2xl space-y-4 text-center text-white animate-scale-in"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                type="button"
+                onClick={() => setPeerQrModalOpen(false)}
+                className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+                title="Close QR modal"
+              >
+                <X className="w-4 h-4" />
+              </button>
+
+              <div className="space-y-1.5 pt-1">
+                <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold">
+                  <QrCode className="w-3.5 h-3.5 text-indigo-400" />
+                  <span>Invite Classmates</span>
+                </div>
+                <h3 className="text-lg font-black text-white">
+                  Scan to Join Mid-Session
+                </h3>
+                <p className="text-xs text-zinc-400 max-w-xs mx-auto">
+                  Hold this up! Other students can scan this QR code with their mobile camera to log in and join the ongoing presentation right now.
+                </p>
+              </div>
+
+              {/* High Resolution QR Code Frame */}
+              <div className="relative group w-fit mx-auto my-2">
+                <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl blur-sm opacity-60" />
+                <div className="relative p-3.5 rounded-2xl bg-white shadow-2xl">
+                  <img
+                    src={`https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
+                      session?.joinUrl || `https://unisole.org/live/${code}`
+                    )}`}
+                    alt="Scan QR to Join"
+                    className="w-48 h-48 sm:w-56 sm:h-56 rounded-xl object-contain mx-auto"
+                  />
+                </div>
+              </div>
+
+              {/* Session Join Code */}
+              <div className="p-2.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between px-4 max-w-xs mx-auto text-xs">
+                <span className="font-mono text-zinc-400 text-[11px] font-bold">SESSION CODE:</span>
+                <span className="font-black font-mono tracking-widest text-indigo-300 text-sm">
+                  {code}
+                </span>
+              </div>
+
+              {/* 1-Click Action Buttons: Copy Link & WhatsApp */}
+              <div className="grid grid-cols-2 gap-2.5 max-w-xs mx-auto pt-1">
+                <button
+                  type="button"
+                  onClick={handlePeerCopy}
+                  className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+                >
+                  {peerCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                  <span>{peerCopied ? "Copied!" : "Copy Link"}</span>
+                </button>
+
+                <a
+                  href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                    `Join our live ${session?.collegeName || "Unisole"} college presentation session here: ${session?.joinUrl || `https://unisole.org/live/${code}`}`
+                  )}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/25 transition-all cursor-pointer"
+                >
+                  <Share2 className="w-3.5 h-3.5" />
+                  <span>WhatsApp</span>
+                </a>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
@@ -1364,8 +1671,19 @@ export default function LiveAudiencePage() {
           </span>
         </div>
 
-        {/* Right HUD Controls: Score, Slide Indicator & Fullscreen Button */}
+        {/* Right HUD Controls: QR Button, Score, Slide Indicator & Fullscreen Button */}
         <div className="flex items-center gap-1.5 sm:gap-2">
+          <button
+            type="button"
+            onClick={() => setPeerQrModalOpen(true)}
+            className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-indigo-500/20 hover:bg-indigo-500/30 border border-indigo-500/40 text-indigo-200 text-[10px] sm:text-[11px] font-bold transition-all active:scale-95 cursor-pointer shrink-0 shadow-sm"
+            title="Share QR code with nearby classmates"
+          >
+            <QrCode className="w-3.5 h-3.5 text-indigo-400" />
+            <span className="hidden xs:inline sm:inline">Share QR</span>
+            <span className="inline xs:hidden sm:hidden">QR</span>
+          </button>
+
           <div className="px-2.5 py-1 rounded-full bg-white/5 border border-white/10 text-zinc-300 text-[10px] sm:text-[11px] font-mono font-bold shrink-0">
             {currentSlideIndex + 1}/{slides.length}
           </div>
@@ -1509,6 +1827,87 @@ export default function LiveAudiencePage() {
           ))}
         </div>
       </footer>
+
+      {/* Mid-Session Peer QR Modal */}
+      {peerQrModalOpen && (
+        <div
+          className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/85 backdrop-blur-md animate-fade-in"
+          onClick={() => setPeerQrModalOpen(false)}
+        >
+          <div
+            className="relative max-w-sm w-full p-5 sm:p-6 rounded-3xl bg-zinc-900 border border-indigo-500/40 shadow-2xl space-y-4 text-center text-white animate-scale-in"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              type="button"
+              onClick={() => setPeerQrModalOpen(false)}
+              className="absolute top-4 right-4 p-1.5 rounded-full bg-white/10 hover:bg-white/20 text-zinc-400 hover:text-white transition-colors cursor-pointer"
+              title="Close QR modal"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="space-y-1.5 pt-1">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-indigo-500/15 border border-indigo-500/30 text-indigo-300 text-xs font-bold">
+                <QrCode className="w-3.5 h-3.5 text-indigo-400" />
+                <span>Invite Classmates</span>
+              </div>
+              <h3 className="text-lg font-black text-white">
+                Scan to Join Mid-Session
+              </h3>
+              <p className="text-xs text-zinc-400 max-w-xs mx-auto">
+                Hold this up! Other students can scan this QR code with their mobile camera to log in and join the ongoing presentation right now.
+              </p>
+            </div>
+
+            {/* High Resolution QR Code Frame */}
+            <div className="relative group w-fit mx-auto my-2">
+              <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-2xl blur-sm opacity-60" />
+              <div className="relative p-3.5 rounded-2xl bg-white shadow-2xl">
+                <img
+                  src={`https://api.qrserver.com/v1/create-qr-code/?size=320x320&data=${encodeURIComponent(
+                    session?.joinUrl || `https://unisole.org/live/${code}`
+                  )}`}
+                  alt="Scan QR to Join"
+                  className="w-48 h-48 sm:w-56 sm:h-56 rounded-xl object-contain mx-auto"
+                />
+              </div>
+            </div>
+
+            {/* Session Join Code */}
+            <div className="p-2.5 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-between px-4 max-w-xs mx-auto text-xs">
+              <span className="font-mono text-zinc-400 text-[11px] font-bold">SESSION CODE:</span>
+              <span className="font-black font-mono tracking-widest text-indigo-300 text-sm">
+                {code}
+              </span>
+            </div>
+
+            {/* 1-Click Action Buttons: Copy Link & WhatsApp */}
+            <div className="grid grid-cols-2 gap-2.5 max-w-xs mx-auto pt-1">
+              <button
+                type="button"
+                onClick={handlePeerCopy}
+                className="py-2.5 px-3 rounded-xl bg-white/10 hover:bg-white/20 active:scale-95 text-zinc-200 font-bold text-xs flex items-center justify-center gap-1.5 transition-all cursor-pointer"
+              >
+                {peerCopied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{peerCopied ? "Copied!" : "Copy Link"}</span>
+              </button>
+
+              <a
+                href={`https://api.whatsapp.com/send?text=${encodeURIComponent(
+                  `Join our live ${session?.collegeName || "Unisole"} college presentation session here: ${session?.joinUrl || `https://unisole.org/live/${code}`}`
+                )}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-500 active:scale-95 text-white font-bold text-xs flex items-center justify-center gap-1.5 shadow-md shadow-emerald-600/25 transition-all cursor-pointer"
+              >
+                <Share2 className="w-3.5 h-3.5" />
+                <span>WhatsApp</span>
+              </a>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
