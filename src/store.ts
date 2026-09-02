@@ -722,10 +722,14 @@ export const adminApi = createApi({
       providesTags: ["LeaderRadar"],
     }),
     getTeamMembers: build.query({
-      query: ({ baseUrl, search }) => ({
-        url: `${baseUrl}/api/admin/team/members`,
-        params: search ? { search } : undefined,
-      }),
+      query: (arg: any) => {
+        const baseUrl = typeof arg === "string" ? arg : arg?.baseUrl;
+        const search = typeof arg === "object" ? arg?.search : undefined;
+        return {
+          url: `${baseUrl}/api/admin/team/members`,
+          params: search ? { search } : undefined,
+        };
+      },
       providesTags: ["TeamMembers"],
     }),
     createTeamMember: build.mutation({
@@ -778,13 +782,17 @@ export const adminApi = createApi({
         url: `${baseUrl}/api/admin/team/departments/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Departments", "TeamMembers"],
+      invalidatesTags: ["Departments"],
     }),
     getTemplates: build.query({
-      query: ({ baseUrl, departmentId }) => ({
-        url: `${baseUrl}/api/admin/templates`,
-        params: departmentId ? { departmentId } : undefined,
-      }),
+      query: (arg: any) => {
+        const baseUrl = typeof arg === "string" ? arg : arg?.baseUrl;
+        const departmentId = typeof arg === "object" ? arg?.departmentId : undefined;
+        return {
+          url: `${baseUrl}/api/admin/templates`,
+          params: departmentId ? { departmentId } : undefined,
+        };
+      },
       providesTags: ["Templates"],
     }),
     createTemplate: build.mutation({
