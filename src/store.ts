@@ -14,10 +14,24 @@ const DEFAULT_BASE_URL =
       : "http://localhost:3000"
     : "http://localhost:3000");
 
+const getInitialBaseUrl = () => {
+  if (typeof window === "undefined") return "http://localhost:3000";
+  const stored = localStorage.getItem(STORAGE_KEY);
+  if (stored && (stored.includes("stg-engine.unisole.org") || stored.includes("stg-engine"))) {
+    localStorage.setItem(STORAGE_KEY, "https://stg.engine.unisole.org");
+    return "https://stg.engine.unisole.org";
+  }
+  if (window.location.hostname.includes("stg") && (!stored || stored.includes("localhost"))) {
+    localStorage.setItem(STORAGE_KEY, "https://stg.engine.unisole.org");
+    return "https://stg.engine.unisole.org";
+  }
+  return stored || DEFAULT_BASE_URL;
+};
+
 const settingsSlice = createSlice({
   name: "settings",
   initialState: {
-    baseUrl: localStorage.getItem(STORAGE_KEY) || DEFAULT_BASE_URL,
+    baseUrl: getInitialBaseUrl(),
   },
   reducers: {
     setBaseUrl(state, action) {
