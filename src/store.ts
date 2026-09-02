@@ -3,7 +3,16 @@ import { createApi, fetchBaseQuery } from "@reduxjs/toolkit/query/react";
 import authReducer, { logout } from "./store/auth-slice";
 
 const STORAGE_KEY = "unisole-admin:baseUrl";
-const DEFAULT_BASE_URL = import.meta.env.VITE_API_BASE_URL || "http://localhost:3000";
+
+const DEFAULT_BASE_URL =
+  import.meta.env.VITE_API_BASE_URL ||
+  (typeof window !== "undefined"
+    ? window.location.hostname.includes("stg")
+      ? "https://stg.engine.unisole.org"
+      : window.location.hostname !== "localhost" && window.location.hostname !== "127.0.0.1"
+      ? "https://api.unisole.org"
+      : "http://localhost:3000"
+    : "http://localhost:3000");
 
 const settingsSlice = createSlice({
   name: "settings",
