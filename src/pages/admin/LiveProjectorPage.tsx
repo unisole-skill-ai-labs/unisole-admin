@@ -117,7 +117,13 @@ export default function LiveProjectorPage() {
 
   const handleCopyUrl = useCallback((e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const seoBase = (import.meta as any).env?.VITE_SEO_URL || "https://unisole.org";
+    const seoBase =
+      (import.meta as any).env?.VITE_SEO_URL ||
+      (typeof window !== "undefined" && window.location.hostname.includes("stg")
+        ? "https://stg.unisole.org"
+        : typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+        ? window.location.origin
+        : "https://unisole.org");
     const url = session?.joinUrl || `${seoBase.replace(/\/+$/, "")}/live/${session?.sessionCode || ""}`;
     if (!url) return;
     navigator.clipboard.writeText(url);
@@ -801,7 +807,12 @@ export default function LiveProjectorPage() {
   }
 
   const seoBaseUrl =
-    (import.meta as any).env?.VITE_SEO_URL || "https://unisole.org";
+    (import.meta as any).env?.VITE_SEO_URL ||
+    (typeof window !== "undefined" && window.location.hostname.includes("stg")
+      ? "https://stg.unisole.org"
+      : typeof window !== "undefined" && (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1")
+      ? window.location.origin
+      : "https://unisole.org");
   const joinUrl =
     session.joinUrl ||
     `${seoBaseUrl.replace(/\/+$/, "")}/live/${session.sessionCode}`;
