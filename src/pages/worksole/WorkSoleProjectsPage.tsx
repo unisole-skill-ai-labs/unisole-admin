@@ -10,6 +10,8 @@ import {
 import {
   useGetProjectsQuery,
   useGetDepartmentsQuery,
+  useGetTeamMembersQuery,
+  useGetTemplatesQuery,
   useCreateTaskMutation,
 } from "../../store";
 import { Project, TaskItem } from "../../types";
@@ -36,10 +38,14 @@ export const WorkSoleProjectsPage: React.FC<WorkSoleProjectsPageProps> = ({ base
 
   const { data: projectsData, refetch: refetchProjects } = useGetProjectsQuery(baseUrl);
   const { data: deptsData } = useGetDepartmentsQuery(baseUrl);
+  const { data: teamData } = useGetTeamMembersQuery(baseUrl);
+  const { data: templatesData } = useGetTemplatesQuery(baseUrl);
   const [createTask] = useCreateTaskMutation();
 
   const projects: Project[] = projectsData?.data || [];
   const departments = deptsData?.data || [];
+  const teamMembers = teamData?.data || [];
+  const templates = templatesData?.data || [];
 
   const handleOpenCreateTask = (projId: string, subProjId?: string) => {
     setActiveProjectIdForTask(projId);
@@ -189,8 +195,8 @@ export const WorkSoleProjectsPage: React.FC<WorkSoleProjectsPageProps> = ({ base
         onClose={() => setIsCreateTaskOpen(false)}
         onSubmit={handleTaskSubmit}
         departments={departments}
-        teamMembers={[]}
-        templates={[]}
+        teamMembers={teamMembers}
+        templates={templates}
         projects={projects}
         defaultProjectId={activeProjectIdForTask}
         defaultSubProjectId={activeSubProjectIdForTask}
