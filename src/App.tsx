@@ -46,29 +46,22 @@ export default function App() {
         <Route element={<AdminShell />}>
           <Route index element={<Navigate to="worksole" replace />} />
           
-          {/* WorkSole Suite Consolidated Routes */}
-          {/* 1. Projects & 4-tier Hierarchy Hub */}
+          {/* WorkSole Suite Single Canvas Route */}
           <Route path="worksole" element={<WorkSoleProjectsPage baseUrl={baseUrl} />} />
-          <Route path="worksole/projects/:id" element={<WorkSoleProjectDetailPage baseUrl={baseUrl} />} />
+          <Route path="worksole/projects/:id" element={<WorkSoleProjectsPage baseUrl={baseUrl} />} />
 
-          {/* 2. My Work Personal Execution Cockpit */}
-          <Route path="my-work" element={<MyWorkPage baseUrl={baseUrl} />} />
-
-          {/* 3. Task Board (Kanban / Table) */}
-          <Route path="tasks" element={<TasksPage />} />
-
-          {/* 4. Calendar & Timeline */}
+          {/* Calendar & Timeline */}
           <Route path="calendar" element={<TaskCalendarPage baseUrl={baseUrl} />} />
 
-          {/* 5. Team Directory & Workload */}
+          {/* Team Directory & Workload */}
           <Route path="team" element={<TeamMembersPage />} />
 
-          {/* 6. Admin Ops & Leader Radar */}
-          <Route path="admin-ops" element={<AdminOpsPage baseUrl={baseUrl} />} />
-
-          {/* Backwards-compatible routes */}
-          <Route path="templates" element={<Navigate to="/admin-ops" replace />} />
-          <Route path="standup" element={<Navigate to="/my-work" replace />} />
+          {/* Backwards-compatible aliases -> redirect to unified worksole */}
+          <Route path="tasks" element={<Navigate to="/worksole" replace />} />
+          <Route path="my-work" element={<Navigate to="/worksole" replace />} />
+          <Route path="admin-ops" element={<Navigate to="/worksole" replace />} />
+          <Route path="templates" element={<Navigate to="/worksole" replace />} />
+          <Route path="standup" element={<Navigate to="/worksole" replace />} />
 
           {/* Platform & Curriculum Operations */}
           <Route path="dashboard" element={<DashboardPage />} />

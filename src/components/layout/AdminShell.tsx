@@ -208,7 +208,7 @@ export default function AdminShell() {
               ) : null}
             </div>
 
-            {/* 1. Projects */}
+            {/* 1. WorkSole All-in-One Canvas */}
             <NavLink
               to="/worksole"
               className={({ isActive }) =>
@@ -220,47 +220,10 @@ export default function AdminShell() {
               }
             >
               <Folder className="w-4 h-4 text-indigo-500" />
-              <span>Projects</span>
+              <span>WorkSole</span>
             </NavLink>
 
-            {/* 2. My Work */}
-            <NavLink
-              to="/my-work"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <Sparkles className="w-4 h-4 text-amber-500" />
-              <span>My Work</span>
-            </NavLink>
-
-            {/* 3. Task Board */}
-            <NavLink
-              to="/tasks"
-              className={({ isActive }) =>
-                `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <div className="flex items-center gap-3">
-                <CheckSquare className="w-4 h-4 text-blue-500" />
-                <span>Task Board</span>
-              </div>
-              {radar?.reviewCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-md bg-amber-500 text-white text-[10px] font-bold">
-                  {radar.reviewCount}
-                </span>
-              )}
-            </NavLink>
-
-            {/* 4. Calendar */}
+            {/* 2. Calendar */}
             <NavLink
               to="/calendar"
               className={({ isActive }) =>
@@ -275,7 +238,7 @@ export default function AdminShell() {
               <span>Calendar</span>
             </NavLink>
 
-            {/* 5. Team */}
+            {/* 3. Team */}
             <NavLink
               to="/team"
               className={({ isActive }) =>
@@ -289,30 +252,6 @@ export default function AdminShell() {
               <UsersRound className="w-4 h-4 text-teal-500" />
               <span>Team</span>
             </NavLink>
-
-            {/* 6. Admin Ops */}
-            {isAdmin && (
-              <NavLink
-                to="/admin-ops"
-                className={({ isActive }) =>
-                  `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    isActive
-                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                  }`
-                }
-              >
-                <div className="flex items-center gap-3">
-                  <Shield className="w-4 h-4 text-rose-500" />
-                  <span>Admin</span>
-                </div>
-                {radar?.blockedCount > 0 && (
-                  <span className="px-1.5 py-0.2 rounded-md bg-rose-500 text-white text-[10px] font-bold">
-                    {radar.blockedCount}
-                  </span>
-                )}
-              </NavLink>
-            )}
           </div>
 
           {/* Platform Operations */}
