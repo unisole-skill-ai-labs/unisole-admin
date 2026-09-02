@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   X,
   Sparkles,
@@ -7,6 +7,8 @@ import {
   User,
   Clock,
   Link2,
+  Folder,
+  Layers,
 } from "lucide-react";
 import Button from "../ui/Button";
 
@@ -15,6 +17,9 @@ interface TaskCreateModalProps {
   departments: any[];
   teamMembers: any[];
   templates: any[];
+  projects?: any[];
+  defaultProjectId?: string;
+  defaultSubProjectId?: string;
   defaultStatus?: string;
   defaultAssigneeId?: string;
   defaultDepartmentId?: string;
@@ -27,6 +32,9 @@ export default function TaskCreateModal({
   departments,
   teamMembers,
   templates,
+  projects = [],
+  defaultProjectId = "",
+  defaultSubProjectId = "",
   defaultStatus = "TODO",
   defaultAssigneeId = "",
   defaultDepartmentId = "",
@@ -38,6 +46,8 @@ export default function TaskCreateModal({
   const [title, setTitle] = useState("");
   const [description, setDescription] = useState("");
   const [priority, setPriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM");
+  const [projectId, setProjectId] = useState(defaultProjectId);
+  const [subProjectId, setSubProjectId] = useState(defaultSubProjectId);
   const [departmentId, setDepartmentId] = useState(defaultDepartmentId);
   const [assigneeId, setAssigneeId] = useState(defaultAssigneeId);
   const [templateId, setTemplateId] = useState("");
@@ -47,6 +57,9 @@ export default function TaskCreateModal({
   const [relatedEntityName, setRelatedEntityName] = useState("");
   const [customSubtasks, setCustomSubtasks] = useState<string[]>([]);
   const [newSubtaskInput, setNewSubtaskInput] = useState("");
+
+  const selectedProject = projects.find((p) => p.id === projectId);
+  const availableSubProjects = selectedProject?.subProjects || [];
 
   const handleTemplateChange = (tmplId: string) => {
     setTemplateId(tmplId);
@@ -84,6 +97,8 @@ export default function TaskCreateModal({
       description: description.trim() || undefined,
       priority,
       status: defaultStatus,
+      projectId: projectId || undefined,
+      subProjectId: subProjectId || undefined,
       departmentId: departmentId || undefined,
       assigneeId: assigneeId || undefined,
       templateId: templateId || undefined,
@@ -109,7 +124,7 @@ export default function TaskCreateModal({
                 Create New Task / Deliverable
               </h3>
               <p className="text-[11px] text-zinc-500">
-                Assign work with pre-loaded SOP checklists and deadlines
+                Link to Projects, Sub-Projects (Milestones), and add Sub-Tasks
               </p>
             </div>
           </div>
@@ -123,6 +138,51 @@ export default function TaskCreateModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4 max-h-[80vh] overflow-y-auto">
+          {/* WorkSole Project & Sub-Project Selector */}
+          {projects && projects.length > 0 && (
+            <div className="p-3.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950/50 border border-zinc-200 dark:border-zinc-800 grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Folder className="w-3.5 h-3.5 text-indigo-500" /> Project
+                </label>
+                <select
+                  value={projectId}
+                  onChange={(e) => {
+                    setProjectId(e.target.value);
+                    setSubProjectId("");
+                  }}
+                  className="w-full text-xs font-medium px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="">-- No Project (Standalone) --</option>
+                  {projects.map((p) => (
+                    <option key={p.id} value={p.id}>
+                      [{p.code}] {p.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1 flex items-center gap-1.5">
+                  <Layers className="w-3.5 h-3.5 text-indigo-500" /> Sub-Project (Milestone)
+                </label>
+                <select
+                  value={subProjectId}
+                  onChange={(e) => setSubProjectId(e.target.value)}
+                  disabled={!projectId || availableSubProjects.length === 0}
+                  className="w-full text-xs font-medium px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 disabled:opacity-50"
+                >
+                  <option value="">-- Direct Project Task --</option>
+                  {availableSubProjects.map((sp: any) => (
+                    <option key={sp.id} value={sp.id}>
+                      {sp.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+
           {/* Quick SOP Template Selector */}
           {templates && templates.length > 0 && (
             <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-200/60 dark:border-indigo-900/60">
@@ -221,12 +281,12 @@ export default function TaskCreateModal({
               <select
                 value={priority}
                 onChange={(e) => setPriority(e.target.value as any)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-bold"
+                className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
               >
                 <option value="LOW">Low</option>
                 <option value="MEDIUM">Medium</option>
                 <option value="HIGH">High</option>
-                <option value="URGENT">🔴 Urgent</option>
+                <option value="URGENT">Urgent ⚡</option>
               </select>
             </div>
 
@@ -251,100 +311,85 @@ export default function TaskCreateModal({
                 min="0.5"
                 step="0.5"
                 value={estimatedHours}
-                onChange={(e) => setEstimatedHours(Number(e.target.value))}
+                onChange={(e) => setEstimatedHours(parseFloat(e.target.value) || 1)}
                 className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
               />
             </div>
           </div>
 
-          {/* Linked Platform Entity (Optional) */}
-          <div className="grid grid-cols-2 gap-3 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-            <div>
-              <label className="block text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-1 font-mono">
-                Connect Entity Type
+          {/* Sub-Tasks / Checklists (Tier 4) */}
+          <div className="pt-2 border-t border-zinc-200/80 dark:border-zinc-800">
+            <div className="flex items-center justify-between mb-2">
+              <label className="text-xs font-bold text-zinc-700 dark:text-zinc-300 flex items-center gap-1.5">
+                <FileCheck2 className="w-3.5 h-3.5 text-indigo-500" />
+                Sub-Tasks / Checklist (Tier 4)
               </label>
-              <select
-                value={relatedEntityType}
-                onChange={(e) => setRelatedEntityType(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-              >
-                <option value="">None (Generic)</option>
-                <option value="COLLEGE">University / College</option>
-                <option value="PATHWAY">Pathway / Curriculum</option>
-                <option value="PRESENTATION">Live Roadshow Session</option>
-                <option value="TECH">Product / Bug Fix</option>
-              </select>
+              <span className="text-[10px] text-zinc-400 font-mono">
+                {customSubtasks.length} items
+              </span>
             </div>
 
-            <div>
-              <label className="block text-[11px] font-bold text-zinc-500 uppercase tracking-wider mb-1 font-mono">
-                Entity Name / Reference
-              </label>
-              <input
-                type="text"
-                placeholder="e.g. IIT Delhi or Session #102"
-                value={relatedEntityName}
-                onChange={(e) => setRelatedEntityName(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
-              />
-            </div>
-          </div>
-
-          {/* SOP Subtasks Checklist Editor */}
-          <div className="space-y-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
-            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300">
-              SOP Checklist Items ({customSubtasks.length})
-            </label>
-
-            <div className="space-y-1.5 max-h-36 overflow-y-auto">
-              {customSubtasks.map((st, i) => (
-                <div
-                  key={i}
-                  className="flex items-center justify-between gap-2 p-2 rounded-xl bg-zinc-50 dark:bg-zinc-800/50 text-xs"
-                >
-                  <span className="text-zinc-800 dark:text-zinc-200 truncate font-medium">
-                    {i + 1}. {st}
-                  </span>
-                  <button
-                    type="button"
-                    onClick={() => handleRemoveSubtask(i)}
-                    className="p-1 text-zinc-400 hover:text-rose-500 transition-colors"
+            {/* Checklist items list */}
+            {customSubtasks.length > 0 && (
+              <div className="space-y-1.5 mb-3 max-h-36 overflow-y-auto">
+                {customSubtasks.map((st, idx) => (
+                  <div
+                    key={idx}
+                    className="flex items-center justify-between text-xs px-3 py-1.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/60 dark:border-zinc-700/60"
                   >
-                    <X className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-              ))}
-            </div>
+                    <span className="text-zinc-800 dark:text-zinc-200">{st}</span>
+                    <button
+                      type="button"
+                      onClick={() => handleRemoveSubtask(idx)}
+                      className="text-zinc-400 hover:text-rose-500 p-0.5 rounded"
+                    >
+                      <X className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
+            )}
 
+            {/* Add subtask input */}
             <div className="flex gap-2">
               <input
                 type="text"
-                placeholder="+ Add checklist step..."
+                placeholder="Add sub-task step..."
                 value={newSubtaskInput}
                 onChange={(e) => setNewSubtaskInput(e.target.value)}
-                className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
+                    handleAddSubtask(e);
+                  }
+                }}
+                className="flex-1 px-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
               />
-              <button
+              <Button
                 type="button"
+                variant="outline"
+                size="sm"
                 onClick={handleAddSubtask}
-                className="px-3 py-1.5 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-xs font-bold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 transition-colors"
+                className="text-xs py-1.5 px-3"
               >
-                Add Step
-              </button>
+                + Add Step
+              </Button>
             </div>
           </div>
 
           {/* Actions */}
-          <div className="flex items-center justify-end gap-3 pt-4 border-t border-zinc-200/80 dark:border-zinc-800">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-            >
+          <div className="pt-4 border-t border-zinc-200/80 dark:border-zinc-800 flex items-center justify-end gap-2.5">
+            <Button type="button" variant="outline" size="sm" onClick={onClose}>
               Cancel
-            </button>
-            <Button type="submit" variant="primary" className="text-xs font-bold px-5">
-              Create & Assign Task
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              disabled={!title.trim()}
+              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+            >
+              Create Task
             </Button>
           </div>
         </form>

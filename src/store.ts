@@ -69,6 +69,8 @@ export const adminApi = createApi({
     "Templates",
     "DailyLogs",
     "LeaderRadar",
+    "Projects",
+    "SubProjects",
   ],
   endpoints: (build) => ({
     // Students
@@ -537,6 +539,90 @@ export const adminApi = createApi({
       }),
       providesTags: ["Sessions", "Leads"],
     }),
+    // ==================== WORKSOLE: PROJECTS & HIERARCHY ====================
+    getProjects: build.query({
+      query: (arg) => {
+        const baseUrl = typeof arg === "string" ? arg : arg?.baseUrl;
+        const params: Record<string, string> = {};
+        if (typeof arg === "object" && arg) {
+          if (arg.departmentId) params.departmentId = arg.departmentId;
+          if (arg.leadId) params.leadId = arg.leadId;
+          if (arg.status && arg.status !== "ALL") params.status = arg.status;
+          if (arg.priority) params.priority = arg.priority;
+          if (arg.search) params.search = arg.search;
+        }
+        return {
+          url: `${baseUrl}/api/admin/projects`,
+          params: Object.keys(params).length > 0 ? params : undefined,
+        };
+      },
+      providesTags: ["Projects"],
+    }),
+    getProjectById: build.query({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/projects/${id}`,
+      }),
+      providesTags: ["Projects"],
+    }),
+    getProjectHierarchy: build.query({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/projects/${id}/hierarchy`,
+      }),
+      providesTags: ["Projects", "SubProjects", "Tasks"],
+    }),
+    createProject: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/projects`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Projects", "Departments"],
+    }),
+    updateProject: build.mutation({
+      query: ({ baseUrl, id, body }) => ({
+        url: `${baseUrl}/api/admin/projects/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Projects", "Departments"],
+    }),
+    deleteProject: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/projects/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Projects", "SubProjects", "Tasks"],
+    }),
+    getSubProjects: build.query({
+      query: ({ baseUrl, projectId }) => ({
+        url: `${baseUrl}/api/admin/projects/${projectId}/sub-projects`,
+      }),
+      providesTags: ["SubProjects"],
+    }),
+    createSubProject: build.mutation({
+      query: ({ baseUrl, projectId, body }) => ({
+        url: `${baseUrl}/api/admin/projects/${projectId}/sub-projects`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["SubProjects", "Projects"],
+    }),
+    updateSubProject: build.mutation({
+      query: ({ baseUrl, id, body }) => ({
+        url: `${baseUrl}/api/admin/sub-projects/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["SubProjects", "Projects"],
+    }),
+    deleteSubProject: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/sub-projects/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["SubProjects", "Projects", "Tasks"],
+    }),
+
     // ==================== TEAM & TASK MANAGEMENT ====================
     getTasks: build.query({
       query: ({ baseUrl, params }) => ({
@@ -557,7 +643,7 @@ export const adminApi = createApi({
         method: "POST",
         body,
       }),
-      invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers"],
+      invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers", "Projects", "SubProjects"],
     }),
     updateTask: build.mutation({
       query: ({ baseUrl, id, body }) => ({
@@ -565,14 +651,14 @@ export const adminApi = createApi({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers"],
+      invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers", "Projects", "SubProjects"],
     }),
     deleteTask: build.mutation({
       query: ({ baseUrl, id }) => ({
         url: `${baseUrl}/api/admin/tasks/${id}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers"],
+      invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers", "Projects", "SubProjects"],
     }),
     toggleSubtask: build.mutation({
       query: ({ baseUrl, taskId, subtaskId, isCompleted }) => ({
@@ -580,7 +666,7 @@ export const adminApi = createApi({
         method: "PATCH",
         body: { isCompleted },
       }),
-      invalidatesTags: ["Tasks"],
+      invalidatesTags: ["Tasks", "Projects", "SubProjects"],
     }),
     addSubtask: build.mutation({
       query: ({ baseUrl, taskId, title }) => ({
@@ -588,14 +674,14 @@ export const adminApi = createApi({
         method: "POST",
         body: { title },
       }),
-      invalidatesTags: ["Tasks"],
+      invalidatesTags: ["Tasks", "Projects", "SubProjects"],
     }),
     deleteSubtask: build.mutation({
       query: ({ baseUrl, taskId, subtaskId }) => ({
         url: `${baseUrl}/api/admin/tasks/${taskId}/subtasks/${subtaskId}`,
         method: "DELETE",
       }),
-      invalidatesTags: ["Tasks"],
+      invalidatesTags: ["Tasks", "Projects", "SubProjects"],
     }),
     submitTaskProof: build.mutation({
       query: ({ baseUrl, taskId, body }) => ({
@@ -846,6 +932,17 @@ export const {
   useGetSessionLeadsQuery,
   useGetSessionAnalyticsQuery,
   useGetLeadDiversificationQuery,
+  // WorkSole Projects & Hierarchy
+  useGetProjectsQuery,
+  useGetProjectByIdQuery,
+  useGetProjectHierarchyQuery,
+  useCreateProjectMutation,
+  useUpdateProjectMutation,
+  useDeleteProjectMutation,
+  useGetSubProjectsQuery,
+  useCreateSubProjectMutation,
+  useUpdateSubProjectMutation,
+  useDeleteSubProjectMutation,
   // Team & Tasks
   useGetTasksQuery,
   useGetTaskByIdQuery,
