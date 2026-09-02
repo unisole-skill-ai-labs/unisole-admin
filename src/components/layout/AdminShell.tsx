@@ -23,6 +23,7 @@ import {
   UsersRound,
   FileCheck2,
   CalendarCheck,
+  Folder,
   AlertCircle,
   Clock,
   TrendingUp,
@@ -198,77 +199,120 @@ export default function AdminShell() {
             mobileSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
           }`}
         >
-          {/* Operations & Team Workstream */}
+          {/* WorkSole Operational Suite */}
           <div className="space-y-1">
             <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2 flex items-center justify-between">
-              <span>Operations & Team</span>
+              <span>WorkSole Suite</span>
               {radar?.blockedCount ? (
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               ) : null}
             </div>
 
+            {/* 1. Projects */}
+            <NavLink
+              to="/worksole"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive || location.pathname.startsWith("/worksole")
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                }`
+              }
+            >
+              <Folder className="w-4 h-4 text-indigo-500" />
+              <span>Projects</span>
+            </NavLink>
+
+            {/* 2. My Work */}
+            <NavLink
+              to="/my-work"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                }`
+              }
+            >
+              <Sparkles className="w-4 h-4 text-amber-500" />
+              <span>My Work</span>
+            </NavLink>
+
+            {/* 3. Task Board */}
             <NavLink
               to="/tasks"
               className={({ isActive }) =>
                 `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                   isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
                     : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
                 }`
               }
             >
               <div className="flex items-center gap-3">
-                <CheckSquare className="w-4 h-4" />
-                <span>Tasks & Deadlines</span>
+                <CheckSquare className="w-4 h-4 text-blue-500" />
+                <span>Task Board</span>
               </div>
-              {radar?.reviewQueueCount > 0 && (
+              {radar?.reviewCount > 0 && (
                 <span className="px-1.5 py-0.2 rounded-md bg-amber-500 text-white text-[10px] font-bold">
-                  {radar.reviewQueueCount}
+                  {radar.reviewCount}
                 </span>
               )}
             </NavLink>
 
+            {/* 4. Calendar */}
+            <NavLink
+              to="/calendar"
+              className={({ isActive }) =>
+                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                }`
+              }
+            >
+              <CalendarCheck className="w-4 h-4 text-purple-500" />
+              <span>Calendar</span>
+            </NavLink>
+
+            {/* 5. Team */}
             <NavLink
               to="/team"
               className={({ isActive }) =>
                 `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
                   isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
                     : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
                 }`
               }
             >
-              <UsersRound className="w-4 h-4" />
-              <span>Team Management</span>
+              <UsersRound className="w-4 h-4 text-teal-500" />
+              <span>Team</span>
             </NavLink>
 
-            <NavLink
-              to="/templates"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <FileCheck2 className="w-4 h-4" />
-              <span>SOP Checklists</span>
-            </NavLink>
-
-            <NavLink
-              to="/standup"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <CalendarCheck className="w-4 h-4" />
-              <span>Daily Standup EOD</span>
-            </NavLink>
+            {/* 6. Admin Ops */}
+            {isAdmin && (
+              <NavLink
+                to="/admin-ops"
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    isActive
+                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                  }`
+                }
+              >
+                <div className="flex items-center gap-3">
+                  <Shield className="w-4 h-4 text-rose-500" />
+                  <span>Admin</span>
+                </div>
+                {radar?.blockedCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-md bg-rose-500 text-white text-[10px] font-bold">
+                    {radar.blockedCount}
+                  </span>
+                )}
+              </NavLink>
+            )}
           </div>
 
           {/* Platform Operations */}
