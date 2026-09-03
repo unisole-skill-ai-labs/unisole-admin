@@ -22,6 +22,7 @@ import { WorkSoleProjectDetailPage } from "./pages/worksole/WorkSoleProjectDetai
 import { MyWorkPage } from "./pages/worksole/MyWorkPage";
 import { TaskCalendarPage } from "./pages/worksole/TaskCalendarPage";
 import { AdminOpsPage } from "./pages/worksole/AdminOpsPage";
+import LeadsManagementPage from "./pages/admin/LeadsManagementPage";
 import LiveAudiencePage from "./pages/live/LiveAudiencePage";
 import JoinSessionPage from "./pages/live/JoinSessionPage";
 
@@ -71,8 +72,9 @@ export default function App() {
           <Route path="presentations/builder/:id?" element={<PresentationBuilderPage />} />
           <Route path="presentations/sessions/:sessionId/analytics" element={<SessionAnalyticsPage />} />
           <Route path="presentations/analytics/:sessionId" element={<SessionAnalyticsPage />} />
-          <Route path="leads" element={<Navigate to="/colleges" replace />} />
-          <Route path="lead-diversification" element={<Navigate to="/colleges" replace />} />
+          <Route path="leads" element={<LeadsManagementPage />} />
+          <Route path="leads/analytics" element={<LeadsManagementPage />} />
+          <Route path="lead-diversification" element={<Navigate to="/leads" replace />} />
           <Route path="metadata" element={<CollegesPage />} />
           <Route path="colleges" element={<CollegesPage />} />
           <Route path="colleges/:id" element={<CollegeDetailPage />} />
