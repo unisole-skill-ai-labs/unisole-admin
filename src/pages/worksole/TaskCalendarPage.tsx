@@ -67,13 +67,20 @@ export const TaskCalendarPage: React.FC<TaskCalendarPageProps> = ({ baseUrl }) =
 
   const calendarDays: Array<{ date: Date; isCurrentMonth: boolean; dateStr: string }> = [];
 
+  const formatDateKey = (d: Date) => {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    const day = String(d.getDate()).padStart(2, "0");
+    return `${y}-${m}-${day}`;
+  };
+
   // Prev month padding
   for (let i = firstDayOfMonth - 1; i >= 0; i--) {
     const d = new Date(year, month - 1, daysInPrevMonth - i);
     calendarDays.push({
       date: d,
       isCurrentMonth: false,
-      dateStr: d.toISOString().slice(0, 10),
+      dateStr: formatDateKey(d),
     });
   }
 
@@ -83,7 +90,7 @@ export const TaskCalendarPage: React.FC<TaskCalendarPageProps> = ({ baseUrl }) =
     calendarDays.push({
       date: dateObj,
       isCurrentMonth: true,
-      dateStr: dateObj.toISOString().slice(0, 10),
+      dateStr: formatDateKey(dateObj),
     });
   }
 
@@ -94,7 +101,7 @@ export const TaskCalendarPage: React.FC<TaskCalendarPageProps> = ({ baseUrl }) =
     calendarDays.push({
       date: dateObj,
       isCurrentMonth: false,
-      dateStr: dateObj.toISOString().slice(0, 10),
+      dateStr: formatDateKey(dateObj),
     });
   }
 
