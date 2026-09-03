@@ -656,6 +656,13 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Leads", "LeadAnalytics", "LeadMeta"],
     }),
+    syncUsersToLeads: build.mutation({
+      query: ({ baseUrl }: any) => ({
+        url: `${baseUrl}/api/admin/leads/sync-users`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Leads", "LeadAnalytics", "LeadMeta"],
+    }),
     logLeadCall: build.mutation({
       query: ({ baseUrl, leadId, data }) => ({
         url: `${baseUrl}/api/admin/leads/${leadId}/calls`,
@@ -1082,6 +1089,7 @@ export const {
   useBulkAssignLeadsMutation,
   useBulkUpdateLeadStatusMutation,
   useBulkImportLeadsMutation,
+  useSyncUsersToLeadsMutation,
   useLogLeadCallMutation,
   useGetLeadCallLogsQuery,
   // WorkSole Projects & Hierarchy

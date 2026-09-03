@@ -28,6 +28,9 @@ import {
   ChevronDown,
   Layers,
   Sparkles,
+  UserX,
+  UserCheck,
+  Ban,
 } from "lucide-react";
 import {
   useGetLeadsQuery,
@@ -36,6 +39,7 @@ import {
   useDeleteLeadMutation,
   useBulkAssignLeadsMutation,
   useBulkUpdateLeadStatusMutation,
+  useSyncUsersToLeadsMutation,
 } from "../../store";
 import LogCallModal from "../../components/leads/LogCallModal";
 import LeadDetailDrawer from "../../components/leads/LeadDetailDrawer";
@@ -60,6 +64,7 @@ const STATUS_BADGES: Record<string, string> = {
   CONVERTED: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-black",
   LOST: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30",
   JUNK: "bg-zinc-500/10 text-zinc-500 border-zinc-500/30",
+  NOT_A_LEAD: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30 font-semibold",
 };
 
 export default function LeadsManagementPage() {
@@ -67,6 +72,7 @@ export default function LeadsManagementPage() {
   const currentUser = useSelector((s: any) => s.auth.user);
 
   const [activeTab, setActiveTab] = useState<"directory" | "analytics">("directory");
+  const [scopeFilter, setScopeFilter] = useState<"ACTIVE" | "NON_LEADS" | "ALL">("ACTIVE");
 
   // Filters State
   const [search, setSearch] = useState("");
@@ -76,6 +82,9 @@ export default function LeadsManagementPage() {
   const [quality, setQuality] = useState("");
   const [status, setStatus] = useState("");
   const [nextCallDue, setNextCallDue] = useState<any>("");
+
+  // Sync Notification Banner
+  const [syncBanner, setSyncBanner] = useState<{ type: "success" | "error"; msg: string } | null>(null);
 
   // Modals & Drawers State
   const [selectedLeadForCall, setSelectedLeadForCall] = useState<any | null>(null);
@@ -89,6 +98,13 @@ export default function LeadsManagementPage() {
   const [bulkAssignee, setBulkAssignee] = useState("");
   const [bulkStatus, setBulkStatus] = useState("");
 
+  // Computed status filter based on scopeFilter
+  const effectiveStatus = useMemo(() => {
+    if (status) return status;
+    if (scopeFilter === "NON_LEADS") return "NOT_A_LEAD";
+    return undefined;
+  }, [status, scopeFilter]);
+
   // Queries & Mutations
   const { data: leadsRes, isLoading, refetch } = useGetLeadsQuery({
     baseUrl,
@@ -97,7 +113,8 @@ export default function LeadsManagementPage() {
     branch: branch || undefined,
     assignedToUserId: assignedToUserId || undefined,
     quality: quality || undefined,
-    status: status || undefined,
+    status: effectiveStatus,
+    excludeNonLeads: scopeFilter === "ACTIVE" && !status ? true : undefined,
     nextCallDue: nextCallDue || undefined,
   });
 
@@ -108,6 +125,27 @@ export default function LeadsManagementPage() {
   const [deleteLead] = useDeleteLeadMutation();
   const [bulkAssign] = useBulkAssignLeadsMutation();
   const [bulkUpdateStatusMutation] = useBulkUpdateLeadStatusMutation();
+  const [syncUsersToLeads, { isLoading: isSyncingUsers }] = useSyncUsersToLeadsMutation();
+
+  const handleSyncUsers = async () => {
+    try {
+      const res = await syncUsersToLeads({ baseUrl }).unwrap();
+      const { synced, existing, totalUsers } = res.data || {};
+      setSyncBanner({
+        type: "success",
+        msg: `Sync Complete! ${synced || 0} registered students added as new leads. (${existing || 0} were already linked, Total platform students: ${totalUsers || 0})`,
+      });
+      refetch();
+      setTimeout(() => setSyncBanner(null), 7000);
+    } catch (err: any) {
+      setSyncBanner({
+        type: "error",
+        msg: err?.data?.error || "Failed to sync platform users to leads.",
+      });
+      setTimeout(() => setSyncBanner(null), 5000);
+    }
+  };
+
 
   const leadsList = leadsRes?.data || [];
 
@@ -305,6 +343,16 @@ export default function LeadsManagementPage() {
           </div>
 
           <button
+            onClick={handleSyncUsers}
+            disabled={isSyncingUsers}
+            title="Sync all registered platform students into CRM leads"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800/80 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+          >
+            <Sparkles className={`w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 ${isSyncingUsers ? "animate-spin" : ""}`} />
+            <span>{isSyncingUsers ? "Syncing Platform Users..." : "Sync All Users to Leads"}</span>
+          </button>
+
+          <button
             onClick={() => setShowImportModal(true)}
             className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-xs font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer"
           >
@@ -330,6 +378,25 @@ export default function LeadsManagementPage() {
         </div>
       </div>
 
+      {/* Sync Status Banner */}
+      {syncBanner && (
+        <div
+          className={`p-3.5 rounded-2xl text-xs font-bold flex items-center justify-between animate-fade-in border ${
+            syncBanner.type === "success"
+              ? "bg-emerald-50 dark:bg-emerald-950/40 text-emerald-800 dark:text-emerald-300 border-emerald-500/30"
+              : "bg-rose-50 dark:bg-rose-950/40 text-rose-800 dark:text-rose-300 border-rose-500/30"
+          }`}
+        >
+          <div className="flex items-center gap-2">
+            <Sparkles className="w-4 h-4 shrink-0" />
+            <span>{syncBanner.msg}</span>
+          </div>
+          <button onClick={() => setSyncBanner(null)} className="p-1 hover:opacity-75">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
+
       {/* 2. Main Tab Views */}
       {activeTab === "analytics" ? (
         <LeadAnalyticsDashboard
@@ -340,13 +407,49 @@ export default function LeadsManagementPage() {
         />
       ) : (
         <div className="space-y-4">
-          {/* Advanced Multi-Filter Bar */}
+          {/* Advanced Multi-Filter Bar & Scope Switcher */}
           <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-3">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-2 text-xs font-bold text-zinc-700 dark:text-zinc-300">
-                <Filter className="w-4 h-4 text-indigo-500" />
-                <span>Smart Multi-Filters</span>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+              <div className="flex items-center gap-2">
+                <div className="flex items-center gap-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 mr-2">
+                  <Filter className="w-4 h-4 text-indigo-500" />
+                  <span>Pipeline Scope:</span>
+                </div>
+                {/* Scope Filter Pills */}
+                <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
+                  <button
+                    onClick={() => setScopeFilter("ACTIVE")}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      scopeFilter === "ACTIVE"
+                        ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                    }`}
+                  >
+                    Active Leads Only
+                  </button>
+                  <button
+                    onClick={() => setScopeFilter("NON_LEADS")}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      scopeFilter === "NON_LEADS"
+                        ? "bg-white dark:bg-zinc-900 text-rose-600 dark:text-rose-400 shadow-xs"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                    }`}
+                  >
+                    Non-Leads / Excluded
+                  </button>
+                  <button
+                    onClick={() => setScopeFilter("ALL")}
+                    className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                      scopeFilter === "ALL"
+                        ? "bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 shadow-xs"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                    }`}
+                  >
+                    All Records
+                  </button>
+                </div>
               </div>
+
               {hasActiveFilters && (
                 <button
                   onClick={clearFilters}
@@ -517,9 +620,19 @@ export default function LeadsManagementPage() {
                   <option value="NEW">New</option>
                   <option value="CONTACTED">Contacted</option>
                   <option value="INTERESTED">Interested</option>
-                  <option value="CONVERTED">Converted</option>
+                  <option value="CONVERTED">🎉 Converted</option>
                   <option value="LOST">Lost</option>
+                  <option value="JUNK">🗑️ Junk</option>
+                  <option value="NOT_A_LEAD">🚫 Not a Lead</option>
                 </select>
+
+                <button
+                  onClick={() => handleBulkStatusSubmit("NOT_A_LEAD")}
+                  className="px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-500/20 transition-colors flex items-center gap-1.5"
+                >
+                  <UserX className="w-3.5 h-3.5" />
+                  <span>Mark Selected Non-Leads</span>
+                </button>
 
                 <button
                   onClick={() => setSelectedLeadIds([])}
@@ -746,12 +859,33 @@ export default function LeadsManagementPage() {
                               <option value="DEMO_GIVEN">Demo Given</option>
                               <option value="CONVERTED">🎉 Converted</option>
                               <option value="LOST">Lost</option>
+                              <option value="JUNK">Junk</option>
+                              <option value="NOT_A_LEAD">🚫 Non-Lead</option>
                             </select>
                           </td>
 
                           {/* Quick Actions */}
                           <td className="p-3 text-right">
                             <div className="flex items-center justify-end gap-1">
+                              {/* Quick Mark / Unmark Non-Lead */}
+                              {lead.status === "NOT_A_LEAD" ? (
+                                <button
+                                  onClick={() => handleInlineStatus(lead.id, "NEW")}
+                                  title="Reactivate as Active Lead"
+                                  className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 transition-colors"
+                                >
+                                  <UserCheck className="w-3.5 h-3.5" />
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleInlineStatus(lead.id, "NOT_A_LEAD")}
+                                  title="Mark as Non-Lead"
+                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors"
+                                >
+                                  <UserX className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
                               <a
                                 href={whatsappUrl}
                                 target="_blank"
