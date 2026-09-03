@@ -121,6 +121,15 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
     setLaunchModalOpen(true);
   };
 
+  const getClientBaseUrl = () => {
+    if ((import.meta as any).env?.VITE_SEO_URL) return (import.meta as any).env.VITE_SEO_URL;
+    if (typeof window !== "undefined") {
+      if (window.location.hostname.includes("stg")) return "https://stg.unisole.org";
+      if (window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1") return window.location.origin;
+    }
+    return "https://unisole.org";
+  };
+
   const handleDirectLaunch = async (deck: any) => {
     const deckId = deck.id || deck._id || deck.presentationId;
     if (!deckId) {
@@ -135,6 +144,7 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
         presentationId: deckId,
         body: {
           collegeId: deck.collegeId || undefined,
+          clientBaseUrl: getClientBaseUrl(),
         },
       }).unwrap();
 
@@ -164,6 +174,7 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
         body: {
           collegeId: activeDeck.collegeId || selectedCollegeId || undefined,
           customCode: customSessionCode.trim() || undefined,
+          clientBaseUrl: getClientBaseUrl(),
         },
       }).unwrap();
 

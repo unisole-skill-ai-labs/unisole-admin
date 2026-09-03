@@ -173,9 +173,19 @@ export default function TaskDrawer({
       <div className="w-full max-w-2xl bg-white dark:bg-zinc-900 h-full shadow-2xl flex flex-col border-l border-zinc-200/80 dark:border-zinc-800 overflow-hidden animate-slide-in-right">
         {/* Header */}
         <div className="px-6 py-4 border-b border-zinc-200/80 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/80 dark:bg-zinc-950/70 backdrop-blur-md">
-          <div className="flex items-center gap-2.5">
+          <div className="flex items-center gap-2 flex-wrap">
+            {task.projectName && (
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                📁 {task.projectCode ? `[${task.projectCode}] ` : ""}{task.projectName}
+              </span>
+            )}
+            {task.subProjectName && (
+              <span className="px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                📂 {task.subProjectName}
+              </span>
+            )}
             <span
-              className="px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider"
+              className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider"
               style={{
                 backgroundColor: `${task.departmentColor || "#6366f1"}18`,
                 color: task.departmentColor || "#6366f1",

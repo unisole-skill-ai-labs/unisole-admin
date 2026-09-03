@@ -1,5 +1,6 @@
 import React from "react";
 import { Navigate, Route, Routes } from "react-router-dom";
+import { useSelector } from "react-redux";
 import LoginPage from "./pages/login";
 import RequireAdminAuth from "./components/auth/RequireAdminAuth";
 import AdminShell from "./components/layout/AdminShell";
@@ -16,12 +17,17 @@ import SessionAnalyticsPage from "./pages/admin/SessionAnalyticsPage";
 import CollegeDetailPage from "./pages/admin/CollegeDetailPage";
 import TasksPage from "./pages/admin/TasksPage";
 import TeamMembersPage from "./pages/admin/TeamMembersPage";
-import SOPTemplatesPage from "./pages/admin/SOPTemplatesPage";
-import DailyStandupPage from "./pages/admin/DailyStandupPage";
+import { WorkSoleProjectsPage } from "./pages/worksole/WorkSoleProjectsPage";
+import { WorkSoleProjectDetailPage } from "./pages/worksole/WorkSoleProjectDetailPage";
+import { MyWorkPage } from "./pages/worksole/MyWorkPage";
+import { TaskCalendarPage } from "./pages/worksole/TaskCalendarPage";
+import { AdminOpsPage } from "./pages/worksole/AdminOpsPage";
 import LiveAudiencePage from "./pages/live/LiveAudiencePage";
 import JoinSessionPage from "./pages/live/JoinSessionPage";
 
 export default function App() {
+  const baseUrl = useSelector((s: any) => s.settings.baseUrl);
+
   return (
     <Routes>
       <Route path="/login" element={<LoginPage />} />
@@ -36,16 +42,26 @@ export default function App() {
       <Route path="/live/projector/:sessionId" element={<LiveProjectorPage />} />
 
       <Route element={<RequireAdminAuth />}>
-
         {/* Admin Console Workspace */}
         <Route element={<AdminShell />}>
-          <Route index element={<Navigate to="tasks" replace />} />
+          <Route index element={<Navigate to="worksole" replace />} />
           
-          {/* Operations & Team Management */}
-          <Route path="tasks" element={<TasksPage />} />
+          {/* WorkSole Suite Single Canvas Route */}
+          <Route path="worksole" element={<WorkSoleProjectsPage baseUrl={baseUrl} />} />
+          <Route path="worksole/projects/:id" element={<WorkSoleProjectsPage baseUrl={baseUrl} />} />
+
+          {/* Calendar & Timeline */}
+          <Route path="calendar" element={<TaskCalendarPage baseUrl={baseUrl} />} />
+
+          {/* Team Directory & Workload */}
           <Route path="team" element={<TeamMembersPage />} />
-          <Route path="templates" element={<SOPTemplatesPage />} />
-          <Route path="standup" element={<DailyStandupPage />} />
+
+          {/* Backwards-compatible aliases -> redirect to unified worksole */}
+          <Route path="tasks" element={<Navigate to="/worksole" replace />} />
+          <Route path="my-work" element={<Navigate to="/worksole" replace />} />
+          <Route path="admin-ops" element={<Navigate to="/worksole" replace />} />
+          <Route path="templates" element={<Navigate to="/worksole" replace />} />
+          <Route path="standup" element={<Navigate to="/worksole" replace />} />
 
           {/* Platform & Curriculum Operations */}
           <Route path="dashboard" element={<DashboardPage />} />
@@ -62,11 +78,10 @@ export default function App() {
           <Route path="colleges/:id" element={<CollegeDetailPage />} />
           <Route path="students" element={<StudentsPage />} />
           <Route path="payments" element={<PaymentsPage />} />
-          <Route path="*" element={<Navigate to="tasks" replace />} />
+          <Route path="*" element={<Navigate to="worksole" replace />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/tasks" replace />} />
+      <Route path="*" element={<Navigate to="/worksole" replace />} />
     </Routes>
   );
 }
-
