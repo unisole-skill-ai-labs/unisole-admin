@@ -27,6 +27,7 @@ import {
   AlertCircle,
   Clock,
   TrendingUp,
+  PhoneCall,
 } from "lucide-react";
 
 export default function AdminShell() {
@@ -251,6 +252,32 @@ export default function AdminShell() {
             >
               <UsersRound className="w-4 h-4 text-teal-500" />
               <span>Team</span>
+            </NavLink>
+          </div>
+
+          {/* Admissions & CRM */}
+          <div className="space-y-1">
+            <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
+              Admissions & Growth
+            </div>
+
+            <NavLink
+              to="/leads"
+              className={({ isActive }) =>
+                `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive || location.pathname.startsWith("/leads")
+                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
+                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                }`
+              }
+            >
+              <div className="flex items-center gap-3">
+                <PhoneCall className="w-4 h-4 text-emerald-500" />
+                <span>Lead Management</span>
+              </div>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                CRM
+              </span>
             </NavLink>
           </div>
 

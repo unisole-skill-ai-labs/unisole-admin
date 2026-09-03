@@ -85,6 +85,8 @@ export const adminApi = createApi({
     "LeaderRadar",
     "Projects",
     "SubProjects",
+    "LeadAnalytics",
+    "LeadMeta",
   ],
   endpoints: (build) => ({
     // Students
@@ -553,6 +555,121 @@ export const adminApi = createApi({
       }),
       providesTags: ["Sessions", "Leads"],
     }),
+    // ==================== CRM LEADS & CALL MANAGEMENT ====================
+    getLeads: build.query({
+      query: (arg) => {
+        const baseUrl = typeof arg === "string" ? arg : arg?.baseUrl;
+        const params: Record<string, string> = {};
+        if (typeof arg === "object" && arg) {
+          if (arg.search) params.search = arg.search;
+          if (arg.collegeId) params.collegeId = arg.collegeId;
+          if (arg.branch) params.branch = arg.branch;
+          if (arg.assignedToUserId) params.assignedToUserId = arg.assignedToUserId;
+          if (arg.quality) params.quality = arg.quality;
+          if (arg.status) params.status = arg.status;
+          if (arg.source) params.source = arg.source;
+          if (arg.nextCallDue) params.nextCallDue = arg.nextCallDue;
+          if (arg.dateFrom) params.dateFrom = arg.dateFrom;
+          if (arg.dateTo) params.dateTo = arg.dateTo;
+        }
+        return {
+          url: `${baseUrl}/api/admin/leads`,
+          params: Object.keys(params).length > 0 ? params : undefined,
+        };
+      },
+      providesTags: ["Leads"],
+    }),
+    getLeadById: build.query({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/leads/${id}`,
+      }),
+      providesTags: (_res, _err, { id }) => [{ type: "Leads", id }],
+    }),
+    getLeadsAnalytics: build.query({
+      query: (arg) => {
+        const baseUrl = typeof arg === "string" ? arg : arg?.baseUrl;
+        const params: Record<string, string> = {};
+        if (typeof arg === "object" && arg) {
+          if (arg.collegeId) params.collegeId = arg.collegeId;
+          if (arg.branch) params.branch = arg.branch;
+          if (arg.assignedToUserId) params.assignedToUserId = arg.assignedToUserId;
+          if (arg.dateFrom) params.dateFrom = arg.dateFrom;
+          if (arg.dateTo) params.dateTo = arg.dateTo;
+        }
+        return {
+          url: `${baseUrl}/api/admin/leads/analytics`,
+          params: Object.keys(params).length > 0 ? params : undefined,
+        };
+      },
+      providesTags: ["LeadAnalytics", "Leads"],
+    }),
+    getLeadsMeta: build.query({
+      query: ({ baseUrl }: any) => ({
+        url: `${baseUrl}/api/admin/leads/meta`,
+      }),
+      providesTags: ["LeadMeta", "Leads", "Colleges", "TeamMembers"],
+    }),
+    createLead: build.mutation({
+      query: ({ baseUrl, data }) => ({
+        url: `${baseUrl}/api/admin/leads`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: ["Leads", "LeadAnalytics", "LeadMeta"],
+    }),
+    updateLead: build.mutation({
+      query: ({ baseUrl, id, data }) => ({
+        url: `${baseUrl}/api/admin/leads/${id}`,
+        method: "PATCH",
+        body: data,
+      }),
+      invalidatesTags: (_res, _err, { id }) => [{ type: "Leads", id }, "Leads", "LeadAnalytics"],
+    }),
+    deleteLead: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/leads/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Leads", "LeadAnalytics"],
+    }),
+    bulkAssignLeads: build.mutation({
+      query: ({ baseUrl, leadIds, assignedToUserId }) => ({
+        url: `${baseUrl}/api/admin/leads/bulk-assign`,
+        method: "POST",
+        body: { leadIds, assignedToUserId },
+      }),
+      invalidatesTags: ["Leads", "LeadAnalytics"],
+    }),
+    bulkUpdateLeadStatus: build.mutation({
+      query: ({ baseUrl, leadIds, status }) => ({
+        url: `${baseUrl}/api/admin/leads/bulk-status`,
+        method: "POST",
+        body: { leadIds, status },
+      }),
+      invalidatesTags: ["Leads", "LeadAnalytics"],
+    }),
+    bulkImportLeads: build.mutation({
+      query: ({ baseUrl, leads }) => ({
+        url: `${baseUrl}/api/admin/leads/import`,
+        method: "POST",
+        body: { leads },
+      }),
+      invalidatesTags: ["Leads", "LeadAnalytics", "LeadMeta"],
+    }),
+    logLeadCall: build.mutation({
+      query: ({ baseUrl, leadId, data }) => ({
+        url: `${baseUrl}/api/admin/leads/${leadId}/calls`,
+        method: "POST",
+        body: data,
+      }),
+      invalidatesTags: (_res, _err, { leadId }) => [{ type: "Leads", id: leadId }, "Leads", "LeadAnalytics"],
+    }),
+    getLeadCallLogs: build.query({
+      query: ({ baseUrl, leadId }) => ({
+        url: `${baseUrl}/api/admin/leads/${leadId}/calls`,
+      }),
+      providesTags: (_res, _err, { leadId }) => [{ type: "Leads", id: leadId }],
+    }),
     // ==================== WORKSOLE: PROJECTS & HIERARCHY ====================
     getProjects: build.query({
       query: (arg) => {
@@ -954,6 +1071,19 @@ export const {
   useGetSessionLeadsQuery,
   useGetSessionAnalyticsQuery,
   useGetLeadDiversificationQuery,
+  // Lead Management CRM
+  useGetLeadsQuery,
+  useGetLeadByIdQuery,
+  useGetLeadsAnalyticsQuery,
+  useGetLeadsMetaQuery,
+  useCreateLeadMutation,
+  useUpdateLeadMutation,
+  useDeleteLeadMutation,
+  useBulkAssignLeadsMutation,
+  useBulkUpdateLeadStatusMutation,
+  useBulkImportLeadsMutation,
+  useLogLeadCallMutation,
+  useGetLeadCallLogsQuery,
   // WorkSole Projects & Hierarchy
   useGetProjectsQuery,
   useGetProjectByIdQuery,
