@@ -24,6 +24,9 @@ interface LeadFormModalProps {
   colleges?: Array<{ id: string; name: string }>;
   branches?: string[];
   teamMembers?: Array<{ id: string; name: string; phone: string; role: string }>;
+  initialCollegeId?: string;
+  initialCollegeName?: string;
+  initialBranch?: string;
 }
 
 export default function LeadFormModal({
@@ -34,6 +37,9 @@ export default function LeadFormModal({
   colleges = [],
   branches = [],
   teamMembers = [],
+  initialCollegeId,
+  initialCollegeName,
+  initialBranch,
 }: LeadFormModalProps) {
   const [createLead, { isLoading: isCreating }] = useCreateLeadMutation();
   const [updateLead, { isLoading: isUpdating }] = useUpdateLeadMutation();
@@ -43,9 +49,9 @@ export default function LeadFormModal({
   const [name, setName] = useState(lead?.name || "");
   const [phone, setPhone] = useState(lead?.phone || "");
   const [email, setEmail] = useState(lead?.email || "");
-  const [collegeId, setCollegeId] = useState(lead?.collegeId || "");
-  const [collegeName, setCollegeName] = useState(lead?.collegeName || "");
-  const [branch, setBranch] = useState(lead?.branch || "");
+  const [collegeId, setCollegeId] = useState(lead?.collegeId || initialCollegeId || "");
+  const [collegeName, setCollegeName] = useState(lead?.collegeName || initialCollegeName || "");
+  const [branch, setBranch] = useState(lead?.branch || initialBranch || "");
   const [customBranch, setCustomBranch] = useState("");
   const [yearOfStudy, setYearOfStudy] = useState(lead?.yearOfStudy || "1st yr");
   const [assignedToUserId, setAssignedToUserId] = useState(lead?.assignedToUserId || "");

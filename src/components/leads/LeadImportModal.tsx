@@ -19,6 +19,9 @@ interface LeadImportModalProps {
   onSuccess?: () => void;
   colleges?: Array<{ id: string; name: string }>;
   teamMembers?: Array<{ id: string; name: string; phone: string; role: string }>;
+  initialCollegeId?: string;
+  initialCollegeName?: string;
+  initialBranch?: string;
 }
 
 export default function LeadImportModal({
@@ -27,14 +30,18 @@ export default function LeadImportModal({
   onSuccess,
   colleges = [],
   teamMembers = [],
+  initialCollegeId,
+  initialCollegeName,
+  initialBranch,
 }: LeadImportModalProps) {
   const [bulkImport, { isLoading }] = useBulkImportLeadsMutation();
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const [fileName, setFileName] = useState("");
   const [parsedLeads, setParsedLeads] = useState<any[]>([]);
-  const [defaultCollegeId, setDefaultCollegeId] = useState("");
-  const [defaultCollegeName, setDefaultCollegeName] = useState("");
+  const [defaultCollegeId, setDefaultCollegeId] = useState(initialCollegeId || "");
+  const [defaultCollegeName, setDefaultCollegeName] = useState(initialCollegeName || "");
+  const [defaultBranch, setDefaultBranch] = useState(initialBranch || "");
   const [defaultAssignedTo, setDefaultAssignedTo] = useState("");
   const [defaultQuality, setDefaultQuality] = useState("WARM");
   const [errorMsg, setErrorMsg] = useState("");

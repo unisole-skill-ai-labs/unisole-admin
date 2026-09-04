@@ -569,6 +569,7 @@ export const adminApi = createApi({
           if (arg.status) params.status = arg.status;
           if (arg.source) params.source = arg.source;
           if (arg.nextCallDue) params.nextCallDue = arg.nextCallDue;
+          if (arg.excludeNonLeads !== undefined) params.excludeNonLeads = String(arg.excludeNonLeads);
           if (arg.dateFrom) params.dateFrom = arg.dateFrom;
           if (arg.dateTo) params.dateTo = arg.dateTo;
         }
@@ -577,12 +578,18 @@ export const adminApi = createApi({
           params: Object.keys(params).length > 0 ? params : undefined,
         };
       },
+      transformResponse: (response: any) => {
+        if (Array.isArray(response)) return response;
+        if (Array.isArray(response?.data)) return response.data;
+        return [];
+      },
       providesTags: ["Leads"],
     }),
     getLeadById: build.query({
       query: ({ baseUrl, id }) => ({
         url: `${baseUrl}/api/admin/leads/${id}`,
       }),
+      transformResponse: (response: any) => response?.data || response,
       providesTags: (_res, _err, { id }) => [{ type: "Leads", id }],
     }),
     getLeadsAnalytics: build.query({
@@ -601,12 +608,14 @@ export const adminApi = createApi({
           params: Object.keys(params).length > 0 ? params : undefined,
         };
       },
+      transformResponse: (response: any) => response?.data || response,
       providesTags: ["LeadAnalytics", "Leads"],
     }),
     getLeadsMeta: build.query({
       query: ({ baseUrl }: any) => ({
         url: `${baseUrl}/api/admin/leads/meta`,
       }),
+      transformResponse: (response: any) => response?.data || response,
       providesTags: ["LeadMeta", "Leads", "Colleges", "TeamMembers"],
     }),
     createLead: build.mutation({
