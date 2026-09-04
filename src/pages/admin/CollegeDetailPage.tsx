@@ -38,6 +38,7 @@ import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import Modal from "../../components/ui/Modal";
 import Input from "../../components/ui/Input";
+import CollegeLeadsSection from "../../components/leads/CollegeLeadsSection";
 
 export default function CollegeDetailPage() {
   const { id } = useParams<{ id: string }>();
@@ -492,7 +493,7 @@ export default function CollegeDetailPage() {
           }`}
         >
           <Users className="w-4 h-4" />
-          <span>All Students ({students.length})</span>
+          <span>Students & Leads CRM</span>
         </button>
 
         <button
@@ -577,116 +578,24 @@ export default function CollegeDetailPage() {
                 </div>
               </div>
 
-              {/* Students in this branch */}
+              {/* Integrated Leads & Students CRM in this branch */}
               <div className="space-y-4">
                 <div className="flex items-center justify-between">
                   <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
                     <Users className="w-4 h-4 text-emerald-500" />
-                    <span>Enrolled Students ({branchStudents.length})</span>
+                    <span>Branch Leads & Student Management</span>
                   </h3>
                   <span className="text-xs text-zinc-400 font-medium">
-                    Branch cohort registry
+                    Live integrated CRM pipeline for {selectedBranch.name}
                   </span>
                 </div>
 
-                {isLoadingStudents ? (
-                  <div className="p-8 text-center text-zinc-400">
-                    <div className="inline-block w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mb-2" />
-                    <p className="text-xs font-semibold">Loading enrolled students...</p>
-                  </div>
-                ) : branchStudents.length === 0 ? (
-                  <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl p-12 text-center space-y-3">
-                    <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-400 flex items-center justify-center mx-auto">
-                      <Users className="w-6 h-6" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                        No students enrolled in this branch yet
-                      </h4>
-                      <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
-                        Add students to <strong>{selectedBranch.name}</strong> to manage their cohort details.
-                      </p>
-                    </div>
-                    <Button
-                      size="sm"
-                      onClick={() => handleOpenAddStudent(selectedBranch.name)}
-                      className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
-                    >
-                      <Plus className="w-3.5 h-3.5 mr-1" /> Add Student
-                    </Button>
-                  </div>
-                ) : (
-                  <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-xs">
-                    <div className="overflow-x-auto">
-                      <table className="w-full text-left text-xs">
-                        <thead className="bg-zinc-50 dark:bg-zinc-800/60 text-zinc-500 dark:text-zinc-400 border-b border-zinc-200/80 dark:border-zinc-800 uppercase tracking-wider font-mono text-[10px]">
-                          <tr>
-                            <th className="py-3 px-4">Student</th>
-                            <th className="py-3 px-4">Contact Phone</th>
-                            <th className="py-3 px-4">Role</th>
-                            <th className="py-3 px-4">Status</th>
-                            <th className="py-3 px-4 text-right">Actions</th>
-                          </tr>
-                        </thead>
-                        <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
-                          {branchStudents.map((s: any) => (
-                            <tr key={s.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 transition-colors">
-                              <td className="py-3.5 px-4">
-                                <div className="flex items-center gap-3">
-                                  <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-600 text-white font-bold text-xs flex items-center justify-center">
-                                    {(s.name || s.phone || "S").charAt(0).toUpperCase()}
-                                  </div>
-                                  <div>
-                                    <p className="font-bold text-zinc-900 dark:text-zinc-100">
-                                      {s.name || "Unnamed Student"}
-                                    </p>
-                                    <p className="text-[10px] text-zinc-400 font-mono">
-                                      {s.id}
-                                    </p>
-                                  </div>
-                                </div>
-                              </td>
-                              <td className="py-3.5 px-4 font-mono font-medium text-zinc-700 dark:text-zinc-300">
-                                <div className="flex items-center gap-1.5">
-                                  <Phone className="w-3 h-3 text-zinc-400" />
-                                  {s.phone}
-                                </div>
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
-                                  {s.role || "STUDENT"}
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-4">
-                                <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-4 text-right">
-                                <div className="flex items-center justify-end gap-1">
-                                  <button
-                                    title="Edit Student"
-                                    onClick={() => handleOpenEditStudent(s)}
-                                    className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                  >
-                                    <Edit2 className="w-3.5 h-3.5" />
-                                  </button>
-                                  <button
-                                    title="Delete Student"
-                                    onClick={() => setDeletingStudent(s)}
-                                    className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                                  >
-                                    <Trash2 className="w-3.5 h-3.5" />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          ))}
-                        </tbody>
-                      </table>
-                    </div>
-                  </div>
-                )}
+                <CollegeLeadsSection
+                  collegeId={currentCollege?.id || id!}
+                  collegeName={currentCollege?.name || "College"}
+                  branch={selectedBranch.name}
+                  branches={branches}
+                />
               </div>
             </div>
           ) : (
@@ -815,148 +724,22 @@ export default function CollegeDetailPage() {
       )}
 
       {/* ========================================================================= */}
-      {/* TAB 2: ALL STUDENTS DIRECTORY */}
+      {/* TAB 2: COLLEGE LEADS & STUDENTS CRM DIRECTORY */}
       {/* ========================================================================= */}
       {activeTab === "students" && (
         <div className="space-y-4">
-          {/* Filter Toolbar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-zinc-900 p-2.5 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 shadow-xs">
-            <div className="flex items-center gap-3 flex-1">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={studentSearch}
-                  onChange={(e) => setStudentSearch(e.target.value)}
-                  placeholder="Search students by name, phone, or branch..."
-                  className="w-full bg-transparent pl-9 pr-4 py-1.5 text-xs text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none"
-                />
-              </div>
-
-              {/* Branch Filter Dropdown */}
-              <select
-                value={selectedBranchFilter}
-                onChange={(e) => setSelectedBranchFilter(e.target.value)}
-                className="bg-zinc-100 dark:bg-zinc-800 border-none rounded-xl px-3 py-1.5 text-xs font-bold text-zinc-700 dark:text-zinc-300 focus:outline-none"
-              >
-                <option value="ALL">All Branches ({students.length})</option>
-                {branches.map((b: any) => (
-                  <option key={b.id} value={b.name}>
-                    {b.name} ({b.studentsCount || 0})
-                  </option>
-                ))}
-              </select>
-            </div>
-
-            <Button
-              onClick={() => handleOpenAddStudent()}
-              className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs px-3.5 py-2 rounded-xl flex items-center gap-1.5"
-            >
-              <UserPlus className="w-4 h-4" /> Add Student
-            </Button>
-          </div>
-
-          {/* Students Directory Table */}
-          {isLoadingStudents ? (
-            <div className="p-12 text-center text-zinc-400">
-              <div className="inline-block w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full animate-spin mb-2" />
-              <p className="text-xs font-semibold">Loading students directory...</p>
-            </div>
-          ) : filteredDirectoryStudents.length === 0 ? (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl p-12 text-center space-y-3">
-              <div className="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-400 flex items-center justify-center mx-auto">
-                <Users className="w-6 h-6" />
-              </div>
-              <div>
-                <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
-                  {studentSearch || selectedBranchFilter !== "ALL"
-                    ? "No students match your filter"
-                    : "No students registered yet"}
-                </h3>
-                <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
-                  Add student accounts to assign them to branches and track cohort participation.
-                </p>
-              </div>
-              {selectedBranchFilter === "ALL" && !studentSearch && (
-                <Button
-                  size="sm"
-                  onClick={() => handleOpenAddStudent()}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs"
-                >
-                  <Plus className="w-3.5 h-3.5 mr-1" /> Add Student
-                </Button>
-              )}
-            </div>
-          ) : (
-            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl overflow-hidden shadow-xs">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs">
-                  <thead className="bg-zinc-50 dark:bg-zinc-800/60 text-zinc-500 dark:text-zinc-400 border-b border-zinc-200/80 dark:border-zinc-800 uppercase tracking-wider font-mono text-[10px]">
-                    <tr>
-                      <th className="py-3 px-4">Student</th>
-                      <th className="py-3 px-4">Branch</th>
-                      <th className="py-3 px-4">Phone Number</th>
-                      <th className="py-3 px-4">Status</th>
-                      <th className="py-3 px-4 text-right">Actions</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
-                    {filteredDirectoryStudents.map((s: any) => (
-                      <tr key={s.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 transition-colors">
-                        <td className="py-3.5 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-violet-600 text-white font-bold text-xs flex items-center justify-center">
-                              {(s.name || s.phone || "S").charAt(0).toUpperCase()}
-                            </div>
-                            <div>
-                              <p className="font-bold text-zinc-900 dark:text-zinc-100">
-                                {s.name || "Unnamed Student"}
-                              </p>
-                              <p className="text-[10px] text-zinc-400 font-mono">{s.id}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                            {s.branch || "General / Unassigned"}
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 font-mono font-medium text-zinc-700 dark:text-zinc-300">
-                          <div className="flex items-center gap-1.5">
-                            <Phone className="w-3 h-3 text-zinc-400" />
-                            {s.phone}
-                          </div>
-                        </td>
-                        <td className="py-3.5 px-4">
-                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" /> Active
-                          </span>
-                        </td>
-                        <td className="py-3.5 px-4 text-right">
-                          <div className="flex items-center justify-end gap-1">
-                            <button
-                              title="Edit Student"
-                              onClick={() => handleOpenEditStudent(s)}
-                              className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              title="Delete Student"
-                              onClick={() => setDeletingStudent(s)}
-                              className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
+          <CollegeLeadsSection
+            collegeId={currentCollege?.id || id!}
+            collegeName={currentCollege?.name || "College"}
+            branches={branches}
+            onSelectBranch={(bName) => {
+              const found = branches.find((b: any) => b.name === bName);
+              if (found) {
+                setSelectedBranch(found);
+                setActiveTab("branches");
+              }
+            }}
+          />
         </div>
       )}
 
