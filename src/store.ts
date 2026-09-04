@@ -87,6 +87,7 @@ export const adminApi = createApi({
     "SubProjects",
     "LeadAnalytics",
     "LeadMeta",
+    "MyWork",
   ],
   endpoints: (build) => ({
     // Students
@@ -868,6 +869,17 @@ export const adminApi = createApi({
       }),
       providesTags: ["LeaderRadar"],
     }),
+    getMyWorkSummary: build.query({
+      query: (arg) => {
+        const baseUrl = typeof arg === "string" ? arg : arg?.baseUrl;
+        const userId = typeof arg === "object" ? arg?.userId : undefined;
+        return {
+          url: `${baseUrl}/api/admin/my-work/summary`,
+          params: userId ? { userId } : undefined,
+        };
+      },
+      providesTags: ["MyWork", "Tasks", "Leads", "DailyLogs"],
+    }),
     getTeamMembers: build.query({
       query: (arg: any) => {
         const baseUrl = typeof arg === "string" ? arg : arg?.baseUrl;
@@ -1126,6 +1138,7 @@ export const {
   useReviewTaskMutation,
   useAddTaskCommentMutation,
   useGetLeaderRadarQuery,
+  useGetMyWorkSummaryQuery,
   useGetTeamMembersQuery,
   useCreateTeamMemberMutation,
   useUpdateTeamMemberMutation,

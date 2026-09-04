@@ -26,6 +26,8 @@ import LeadsManagementPage from "./pages/admin/LeadsManagementPage";
 import LiveAudiencePage from "./pages/live/LiveAudiencePage";
 import JoinSessionPage from "./pages/live/JoinSessionPage";
 
+import PermissionGuard from "./components/auth/PermissionGuard";
+
 export default function App() {
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
 
@@ -45,45 +47,167 @@ export default function App() {
       <Route element={<RequireAdminAuth />}>
         {/* Admin Console Workspace */}
         <Route element={<AdminShell />}>
-          <Route index element={<Navigate to="worksole" replace />} />
+          {/* Default landing page for all staff is their personalized My Work Cockpit */}
+          <Route index element={<Navigate to="my-work" replace />} />
           
-          {/* WorkSole Suite Single Canvas Route */}
-          <Route path="worksole" element={<WorkSoleProjectsPage baseUrl={baseUrl} />} />
-          <Route path="worksole/projects/:id" element={<WorkSoleProjectsPage baseUrl={baseUrl} />} />
+          {/* Personal Assigned Work Cockpit */}
+          <Route path="my-work" element={<MyWorkPage baseUrl={baseUrl} />} />
 
           {/* Calendar & Timeline */}
           <Route path="calendar" element={<TaskCalendarPage baseUrl={baseUrl} />} />
 
-          {/* Team Directory & Workload */}
-          <Route path="team" element={<TeamMembersPage />} />
+          {/* WorkSole Suite Canvas */}
+          <Route
+            path="worksole"
+            element={
+              <PermissionGuard permission="worksole:manage">
+                <WorkSoleProjectsPage baseUrl={baseUrl} />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="worksole/projects/:id"
+            element={
+              <PermissionGuard permission="worksole:manage">
+                <WorkSoleProjectsPage baseUrl={baseUrl} />
+              </PermissionGuard>
+            }
+          />
 
-          {/* Backwards-compatible aliases -> redirect to unified worksole */}
-          <Route path="tasks" element={<Navigate to="/worksole" replace />} />
-          <Route path="my-work" element={<Navigate to="/worksole" replace />} />
-          <Route path="admin-ops" element={<Navigate to="/worksole" replace />} />
-          <Route path="templates" element={<Navigate to="/worksole" replace />} />
-          <Route path="standup" element={<Navigate to="/worksole" replace />} />
+          {/* Team Directory & Roles */}
+          <Route
+            path="team"
+            element={
+              <PermissionGuard permission="team:view">
+                <TeamMembersPage />
+              </PermissionGuard>
+            }
+          />
+
+          {/* Admissions & CRM Leads */}
+          <Route
+            path="leads"
+            element={
+              <PermissionGuard permission="leads:view">
+                <LeadsManagementPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="leads/analytics"
+            element={
+              <PermissionGuard permission="leads:view">
+                <LeadsManagementPage />
+              </PermissionGuard>
+            }
+          />
 
           {/* Platform & Curriculum Operations */}
-          <Route path="dashboard" element={<DashboardPage />} />
-          <Route path="pathways" element={<PathwaysPage />} />
-          <Route path="curriculum" element={<CurriculumPage />} />
-          <Route path="presentations" element={<PresentationsPage />} />
-          <Route path="presentations/builder/:id?" element={<PresentationBuilderPage />} />
-          <Route path="presentations/sessions/:sessionId/analytics" element={<SessionAnalyticsPage />} />
-          <Route path="presentations/analytics/:sessionId" element={<SessionAnalyticsPage />} />
-          <Route path="leads" element={<LeadsManagementPage />} />
-          <Route path="leads/analytics" element={<LeadsManagementPage />} />
+          <Route
+            path="dashboard"
+            element={
+              <PermissionGuard permission="analytics:view">
+                <DashboardPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="pathways"
+            element={
+              <PermissionGuard permission="curriculum:view">
+                <PathwaysPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="curriculum"
+            element={
+              <PermissionGuard permission="curriculum:view">
+                <CurriculumPage />
+              </PermissionGuard>
+            }
+          />
+
+          {/* Campus Ecosystem & Roadshows */}
+          <Route
+            path="colleges"
+            element={
+              <PermissionGuard permission="colleges:view">
+                <CollegesPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="colleges/:id"
+            element={
+              <PermissionGuard permission="colleges:view">
+                <CollegeDetailPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="presentations"
+            element={
+              <PermissionGuard permission="presentations:manage">
+                <PresentationsPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="presentations/builder/:id?"
+            element={
+              <PermissionGuard permission="presentations:manage">
+                <PresentationBuilderPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="presentations/sessions/:sessionId/analytics"
+            element={
+              <PermissionGuard permission="presentations:manage">
+                <SessionAnalyticsPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="presentations/analytics/:sessionId"
+            element={
+              <PermissionGuard permission="presentations:manage">
+                <SessionAnalyticsPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="students"
+            element={
+              <PermissionGuard permission="students:manage">
+                <StudentsPage />
+              </PermissionGuard>
+            }
+          />
+
+          {/* Financial Ledger (Strictly Protected) */}
+          <Route
+            path="payments"
+            element={
+              <PermissionGuard permission="payments:view">
+                <PaymentsPage />
+              </PermissionGuard>
+            }
+          />
+
+          {/* Backwards-compatible aliases */}
+          <Route path="tasks" element={<Navigate to="/my-work" replace />} />
+          <Route path="admin-ops" element={<Navigate to="/worksole" replace />} />
+          <Route path="templates" element={<Navigate to="/worksole" replace />} />
+          <Route path="standup" element={<Navigate to="/my-work" replace />} />
+          <Route path="metadata" element={<Navigate to="/colleges" replace />} />
           <Route path="lead-diversification" element={<Navigate to="/leads" replace />} />
-          <Route path="metadata" element={<CollegesPage />} />
-          <Route path="colleges" element={<CollegesPage />} />
-          <Route path="colleges/:id" element={<CollegeDetailPage />} />
-          <Route path="students" element={<StudentsPage />} />
-          <Route path="payments" element={<PaymentsPage />} />
-          <Route path="*" element={<Navigate to="worksole" replace />} />
+
+          <Route path="*" element={<Navigate to="my-work" replace />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/worksole" replace />} />
+      <Route path="*" element={<Navigate to="/my-work" replace />} />
     </Routes>
   );
 }

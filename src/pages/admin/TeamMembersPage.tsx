@@ -28,9 +28,17 @@ import {
   Briefcase,
   Sparkles,
   Filter,
+  Check,
+  ChevronDown,
+  Layers,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
+import {
+  ALL_PERMISSIONS,
+  DESIGNATION_PRESETS,
+  getDefaultPermissionsForUser,
+} from "../../utils/permissions";
 
 export default function TeamMembersPage() {
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
@@ -59,6 +67,8 @@ export default function TeamMembersPage() {
   const [memberRole, setMemberRole] = useState<string>("MEMBER");
   const [memberDeptId, setMemberDeptId] = useState<string>("");
   const [memberDesignation, setMemberDesignation] = useState<string>("");
+  const [memberPermissions, setMemberPermissions] = useState<string[]>([]);
+  const [memberPreset, setMemberPreset] = useState<string>("CUSTOM");
   const [memberIsActive, setMemberIsActive] = useState<boolean>(true);
   const [showPassword, setShowPassword] = useState(false);
 
@@ -123,6 +133,24 @@ export default function TeamMembersPage() {
   }, [members, selectedRoleFilter, selectedDeptFilter, selectedStatusFilter, searchQuery]);
 
   // --- Handlers ---
+  const handleApplyPreset = (presetKey: string) => {
+    setMemberPreset(presetKey);
+    if (presetKey === "SUPER_ADMIN") {
+      setMemberRole("SUPER_ADMIN");
+      setMemberPermissions(ALL_PERMISSIONS.map((p) => p.key));
+    } else if (DESIGNATION_PRESETS[presetKey]) {
+      setMemberRole(DESIGNATION_PRESETS[presetKey].role);
+      setMemberPermissions(DESIGNATION_PRESETS[presetKey].permissions);
+    }
+  };
+
+  const handleTogglePermission = (key: string) => {
+    setMemberPreset("CUSTOM");
+    setMemberPermissions((prev) =>
+      prev.includes(key) ? prev.filter((p) => p !== key) : [...prev, key]
+    );
+  };
+
   const handleOpenAddModal = () => {
     setMemberName("");
     setMemberUsername("");
@@ -131,6 +159,8 @@ export default function TeamMembersPage() {
     setMemberRole("MEMBER");
     setMemberDeptId("");
     setMemberDesignation("");
+    setMemberPreset("GENERAL_MEMBER");
+    setMemberPermissions(DESIGNATION_PRESETS.GENERAL_MEMBER.permissions);
     setMemberIsActive(true);
     setShowPassword(false);
     setIsAddModalOpen(true);
@@ -144,6 +174,12 @@ export default function TeamMembersPage() {
     setMemberRole(member.role || "MEMBER");
     setMemberDeptId(member.departmentId || "");
     setMemberDesignation(member.designation || "");
+    const initialPerms =
+      member.permissions && member.permissions.length > 0
+        ? member.permissions
+        : getDefaultPermissionsForUser(member);
+    setMemberPermissions(initialPerms);
+    setMemberPreset("CUSTOM");
     setMemberIsActive(member.isActive !== false);
     setIsEditModalOpen(true);
   };
@@ -175,6 +211,7 @@ export default function TeamMembersPage() {
           role: memberRole,
           departmentId: memberDeptId || null,
           designation: memberDesignation.trim() || null,
+          permissions: memberPermissions,
           isActive: memberIsActive,
         },
       }).unwrap();
@@ -203,6 +240,7 @@ export default function TeamMembersPage() {
           role: memberRole,
           departmentId: memberDeptId || null,
           designation: memberDesignation.trim() || null,
+          permissions: memberPermissions,
           isActive: memberIsActive,
         },
       }).unwrap();
@@ -437,7 +475,8 @@ export default function TeamMembersPage() {
                   <th className="py-3.5 px-5">Staff Member</th>
                   <th className="py-3.5 px-4">Role Access</th>
                   <th className="py-3.5 px-4">Department & Title</th>
-                  <th className="py-3.5 px-4">Base Phone</th>
+                  <th className="py-3.5 px-4">Assigned Workload</th>
+                  <th className="py-3.5 px-4">Capabilities & Perms</th>
                   <th className="py-3.5 px-4">Account Status</th>
                   <th className="py-3.5 px-5 text-right">Actions</th>
                 </tr>
@@ -446,6 +485,9 @@ export default function TeamMembersPage() {
                 {filteredMembers.map((m: any) => {
                   const isSuper = m.role === "SUPER_ADMIN";
                   const isAdmin = m.role === "ADMIN";
+                  const effectivePerms = m.permissions && m.permissions.length > 0
+                    ? m.permissions
+                    : getDefaultPermissionsForUser(m);
 
                   return (
                     <tr
@@ -474,6 +516,11 @@ export default function TeamMembersPage() {
                               <span className="font-mono font-bold text-indigo-600 dark:text-indigo-400">
                                 @{m.username || "staff"}
                               </span>
+                              {m.phone && (
+                                <span className="text-[10px] text-zinc-400">
+                                  • +91 {m.phone}
+                                </span>
+                              )}
                             </div>
                           </div>
                         </div>
@@ -512,9 +559,33 @@ export default function TeamMembersPage() {
                         </div>
                       </td>
 
-                      {/* Base Phone */}
-                      <td className="py-4 px-4 font-mono text-zinc-600 dark:text-zinc-400 text-xs">
-                        +91 {m.phone || "0000000000"}
+                      {/* Assigned Workload */}
+                      <td className="py-4 px-4">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-lg border border-indigo-200/60 dark:border-indigo-800/60">
+                            <span>{m.activeTasksCount || 0}</span> Tasks
+                          </span>
+                          <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-lg border border-emerald-200/60 dark:border-emerald-800/60">
+                            <span>{m.assignedLeadsCount || 0}</span> Leads
+                          </span>
+                        </div>
+                      </td>
+
+                      {/* Capabilities & Permissions */}
+                      <td className="py-4 px-4">
+                        {isSuper ? (
+                          <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-700 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/60 px-2 py-1 rounded-lg border border-amber-200 dark:border-amber-800">
+                            <Sparkles className="w-3 h-3 text-amber-500" />
+                            Universal Access
+                          </span>
+                        ) : (
+                          <div className="flex items-center gap-1">
+                            <span className="inline-flex items-center gap-1 text-[10px] font-bold text-zinc-700 dark:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 px-2 py-1 rounded-lg">
+                              <Shield className="w-3 h-3 text-indigo-500" />
+                              {effectivePerms.length} Capabilities
+                            </span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Account Status */}
@@ -548,14 +619,14 @@ export default function TeamMembersPage() {
                             title="Change Member Password"
                           />
 
-                          {/* Edit Member Profile */}
+                          {/* Edit Member Profile & Permissions */}
                           <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => handleOpenEditModal(m)}
                             icon={Edit2}
                             className="text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 p-2 rounded-xl"
-                            title="Edit Member Profile"
+                            title="Edit Member Profile & Permissions"
                           />
 
                           {/* Delete Member */}
@@ -819,6 +890,87 @@ export default function TeamMembersPage() {
                 </div>
               </div>
 
+              {/* Granular Permissions & Capabilities */}
+              <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-zinc-800 dark:text-zinc-200">
+                    Granular Access Capabilities
+                  </label>
+                  <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded-full">
+                    {memberPermissions.length} / {ALL_PERMISSIONS.length} Enabled
+                  </span>
+                </div>
+
+                {/* Quick Presets */}
+                <div>
+                  <span className="text-[11px] text-zinc-500 block mb-1">
+                    ⚡ Apply Designation Preset:
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {Object.entries(DESIGNATION_PRESETS).map(([key, preset]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => handleApplyPreset(key)}
+                        className={`text-left p-1.5 rounded-xl border text-[10px] font-semibold transition-all ${
+                          memberPreset === key
+                            ? "bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-950/60 dark:border-indigo-700 dark:text-indigo-400 font-bold"
+                            : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Granular Checkboxes by Category */}
+                <div className="space-y-2 pt-1 max-h-48 overflow-y-auto pr-1">
+                  {["Workspace", "Admissions & CRM", "Campus & Ops", "Curriculum & Academic", "Finance & Team"].map((category) => {
+                    const permsInCategory = ALL_PERMISSIONS.filter((p) => p.category === category);
+                    if (permsInCategory.length === 0) return null;
+
+                    return (
+                      <div key={category} className="p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 block mb-1.5">
+                          {category}
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {permsInCategory.map((perm) => {
+                            const isChecked = memberPermissions.includes(perm.key);
+                            return (
+                              <label
+                                key={perm.key}
+                                className={`flex items-start gap-2 p-1.5 rounded-xl border transition-all cursor-pointer select-none ${
+                                  isChecked
+                                    ? "bg-white dark:bg-zinc-900 border-indigo-200 dark:border-indigo-800/60 text-zinc-900 dark:text-zinc-100"
+                                    : "border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900/60"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => handleTogglePermission(perm.key)}
+                                  className="mt-0.5 w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <span className="font-bold text-[11px] block leading-tight">
+                                    {perm.label}
+                                  </span>
+                                  <span className="text-[9px] text-zinc-400 line-clamp-1">
+                                    {perm.description}
+                                  </span>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
               <div className="flex items-center gap-2 pt-1">
                 <input
                   type="checkbox"
@@ -860,7 +1012,7 @@ export default function TeamMembersPage() {
       {/* MODAL 3: Edit Team Member Modal */}
       {isEditModalOpen && activeMember && (
         <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-center justify-center p-4 animate-fade-in">
-          <div className="w-full max-w-md bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
+          <div className="w-full max-w-xl bg-white dark:bg-zinc-900 rounded-3xl border border-zinc-200 dark:border-zinc-800 p-6 shadow-2xl max-h-[90vh] overflow-y-auto space-y-4">
             <div className="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950 text-indigo-600 dark:text-indigo-400">
@@ -868,10 +1020,10 @@ export default function TeamMembersPage() {
                 </div>
                 <div>
                   <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100">
-                    Edit Member Profile
+                    Edit Member Profile & Capabilities
                   </h3>
                   <p className="text-[11px] text-zinc-500">
-                    Update profile, role, and department assignment
+                    Configure role, module permissions, and department assignment
                   </p>
                 </div>
               </div>
@@ -954,7 +1106,7 @@ export default function TeamMembersPage() {
                   </label>
                   <input
                     type="text"
-                    placeholder="e.g. Operations Coordinator"
+                    placeholder="e.g. Admissions Counselor"
                     value={memberDesignation}
                     onChange={(e) => setMemberDesignation(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 focus:bg-white dark:focus:bg-zinc-900 focus:outline-hidden focus:border-indigo-500"
@@ -971,6 +1123,87 @@ export default function TeamMembersPage() {
                     onChange={(e) => setMemberPhone(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-mono focus:outline-hidden focus:border-indigo-500"
                   />
+                </div>
+              </div>
+
+              {/* Granular Permissions & Capabilities */}
+              <div className="pt-2 border-t border-zinc-100 dark:border-zinc-800 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="font-bold text-zinc-800 dark:text-zinc-200">
+                    Granular Access Capabilities
+                  </label>
+                  <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded-full">
+                    {memberPermissions.length} / {ALL_PERMISSIONS.length} Enabled
+                  </span>
+                </div>
+
+                {/* Quick Presets */}
+                <div>
+                  <span className="text-[11px] text-zinc-500 block mb-1">
+                    ⚡ Apply Designation Preset:
+                  </span>
+                  <div className="grid grid-cols-2 sm:grid-cols-3 gap-1.5">
+                    {Object.entries(DESIGNATION_PRESETS).map(([key, preset]) => (
+                      <button
+                        key={key}
+                        type="button"
+                        onClick={() => handleApplyPreset(key)}
+                        className={`text-left p-1.5 rounded-xl border text-[10px] font-semibold transition-all ${
+                          memberPreset === key
+                            ? "bg-indigo-50 border-indigo-300 text-indigo-700 dark:bg-indigo-950/60 dark:border-indigo-700 dark:text-indigo-400 font-bold"
+                            : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800/50"
+                        }`}
+                      >
+                        {preset.label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Granular Checkboxes by Category */}
+                <div className="space-y-2 pt-1 max-h-48 overflow-y-auto pr-1">
+                  {["Workspace", "Admissions & CRM", "Campus & Ops", "Curriculum & Academic", "Finance & Team"].map((category) => {
+                    const permsInCategory = ALL_PERMISSIONS.filter((p) => p.category === category);
+                    if (permsInCategory.length === 0) return null;
+
+                    return (
+                      <div key={category} className="p-2.5 rounded-2xl bg-zinc-50 dark:bg-zinc-950 border border-zinc-200/80 dark:border-zinc-800">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 block mb-1.5">
+                          {category}
+                        </span>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                          {permsInCategory.map((perm) => {
+                            const isChecked = memberPermissions.includes(perm.key);
+                            return (
+                              <label
+                                key={perm.key}
+                                className={`flex items-start gap-2 p-1.5 rounded-xl border transition-all cursor-pointer select-none ${
+                                  isChecked
+                                    ? "bg-white dark:bg-zinc-900 border-indigo-200 dark:border-indigo-800/60 text-zinc-900 dark:text-zinc-100"
+                                    : "border-transparent text-zinc-500 hover:bg-zinc-100 dark:hover:bg-zinc-900/60"
+                                }`}
+                              >
+                                <input
+                                  type="checkbox"
+                                  checked={isChecked}
+                                  onChange={() => handleTogglePermission(perm.key)}
+                                  className="mt-0.5 w-3.5 h-3.5 rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                                />
+                                <div className="flex-1 min-w-0">
+                                  <span className="font-bold text-[11px] block leading-tight">
+                                    {perm.label}
+                                  </span>
+                                  <span className="text-[9px] text-zinc-400 line-clamp-1">
+                                    {perm.description}
+                                  </span>
+                                </div>
+                              </label>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
