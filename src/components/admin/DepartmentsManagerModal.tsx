@@ -12,6 +12,7 @@ import {
 import Modal from "../ui/Modal";
 import Button from "../ui/Button";
 import { DepartmentModal } from "./DepartmentModal";
+import { useSelector } from "react-redux";
 import {
   useGetDepartmentsQuery,
   useDeleteDepartmentMutation,
@@ -30,6 +31,9 @@ export const DepartmentsManagerModal: React.FC<DepartmentsManagerModalProps> = (
   onClose,
   baseUrl,
 }) => {
+  const currentUser = useSelector((s: any) => s.auth.user);
+  const isAdmin = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
+
   const { data: deptRes, refetch: refetchDepts, isLoading } = useGetDepartmentsQuery(baseUrl);
   const departments: any[] = deptRes?.data || [];
 
@@ -53,16 +57,28 @@ export const DepartmentsManagerModal: React.FC<DepartmentsManagerModalProps> = (
   });
 
   const handleOpenCreate = () => {
+    if (!isAdmin) {
+      alert("Only Admins and Super Admins can add new departments.");
+      return;
+    }
     setSelectedDeptForEdit(null);
     setIsEditModalOpen(true);
   };
 
   const handleOpenEdit = (dept: any) => {
+    if (!isAdmin) {
+      alert("Only Admins and Super Admins can edit departments.");
+      return;
+    }
     setSelectedDeptForEdit(dept);
     setIsEditModalOpen(true);
   };
 
   const handleDelete = async (id: string, name: string) => {
+    if (!isAdmin) {
+      alert("Only Admins and Super Admins can remove departments.");
+      return;
+    }
     if (!window.confirm(`Are you sure you want to delete the "${name}" department?`)) return;
     try {
       await deleteDepartment({ baseUrl, id }).unwrap();
@@ -94,15 +110,17 @@ export const DepartmentsManagerModal: React.FC<DepartmentsManagerModalProps> = (
               />
             </div>
 
-            <Button
-              onClick={handleOpenCreate}
-              variant="primary"
-              size="sm"
-              className="text-xs font-bold"
-            >
-              <Plus className="w-3.5 h-3.5 mr-1" />
-              New Department
-            </Button>
+            {isAdmin && (
+              <Button
+                onClick={handleOpenCreate}
+                variant="primary"
+                size="sm"
+                className="text-xs font-bold"
+              >
+                <Plus className="w-3.5 h-3.5 mr-1" />
+                New Department
+              </Button>
+            )}
           </div>
 
           {/* Departments Grid */}
@@ -115,13 +133,15 @@ export const DepartmentsManagerModal: React.FC<DepartmentsManagerModalProps> = (
                 <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
                   {search ? "No departments matching search." : "No departments created yet."}
                 </p>
-                <button
-                  type="button"
-                  onClick={handleOpenCreate}
-                  className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline"
-                >
-                  + Create First Department
-                </button>
+                {isAdmin && (
+                  <button
+                    type="button"
+                    onClick={handleOpenCreate}
+                    className="mt-2 text-xs text-indigo-600 dark:text-indigo-400 font-bold hover:underline cursor-pointer"
+                  >
+                    + Create First Department
+                  </button>
+                )}
               </div>
             ) : (
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -147,24 +167,26 @@ export const DepartmentsManagerModal: React.FC<DepartmentsManagerModalProps> = (
                             </span>
                           </div>
 
-                          <div className="flex items-center gap-1">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEdit(dept)}
-                              className="p-1.5 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
-                              title="Edit Department"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(dept.id, dept.name)}
-                              className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
-                              title="Delete Department"
-                            >
-                              <Trash2 className="w-3.5 h-3.5" />
-                            </button>
-                          </div>
+                          {isAdmin && (
+                            <div className="flex items-center gap-1">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(dept)}
+                                className="p-1.5 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                                title="Edit Department"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(dept.id, dept.name)}
+                                className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/30 rounded-lg transition-colors cursor-pointer"
+                                title="Delete Department"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Department Name */}

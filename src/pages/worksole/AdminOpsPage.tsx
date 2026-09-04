@@ -38,6 +38,7 @@ interface AdminOpsPageProps {
 
 export const AdminOpsPage: React.FC<AdminOpsPageProps> = ({ baseUrl }) => {
   const currentUser = useSelector((s: any) => s.auth.user);
+  const isAdmin = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
   const [activeTab, setActiveTab] = useState<"radar" | "sop" | "departments">("radar");
   const [selectedTaskForDrawer, setSelectedTaskForDrawer] = useState<TaskItem | null>(null);
 
