@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import Button from "../ui/Button";
 import { DatePicker, QuickDateBadge } from "../ui/DatePicker";
+import { AssigneeBadge } from "../ui/AssigneeBadge";
 
 interface TaskDrawerProps {
   task: any | null;
@@ -498,9 +499,24 @@ export default function TaskDrawer({
                   <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
                     Assignee
                   </span>
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                    {task.assigneeName || "Unassigned"}
-                  </span>
+                  <AssigneeBadge
+                    variant="assignee"
+                    user={task.assignee}
+                    userId={task.assigneeId}
+                    userName={task.assigneeName}
+                    userRole={task.assigneeRole}
+                    teamMembers={teamMembers}
+                    disabled={!isLeader || !onEditTask}
+                    size="sm"
+                    placeholder="+ Assign Member"
+                    onSelect={(newAssigneeId) => {
+                      if (onEditTask) {
+                        onEditTask(task.id, {
+                          assigneeId: newAssigneeId || null,
+                        });
+                      }
+                    }}
+                  />
                 </div>
 
                 <div>

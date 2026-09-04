@@ -17,16 +17,21 @@ import {
 import {
   useGetProjectsQuery,
   useGetProjectHierarchyQuery,
+  useUpdateProjectMutation,
+  useUpdateSubProjectMutation,
   useUpdateTaskMutation,
   useToggleSubtaskMutation,
   useAddSubtaskMutation,
   useDeleteSubtaskMutation,
   useGetDepartmentsQuery,
+  useGetTeamMembersQuery,
 } from "../../store";
 import { Project, SubProject, TaskItem, TaskSubtask, TaskStatus } from "../../types";
 import { cn } from "../../lib/utils";
 import confetti from "canvas-confetti";
 import { QuickDateBadge } from "../ui/DatePicker";
+import { AssigneeBadge, TeamMemberOption } from "../ui/AssigneeBadge";
+import { useSelector } from "react-redux";
 
 interface UnifiedWorkSoleProps {
   baseUrl: string;
@@ -117,8 +122,13 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
   });
 
   const { data: deptsData } = useGetDepartmentsQuery(baseUrl);
+  const { data: teamData } = useGetTeamMembersQuery(baseUrl);
+  const currentUser = useSelector((s: any) => s.auth.user);
+  const isLeader = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
+
   const projects: Project[] = projectsData?.data || [];
   const departments = deptsData?.data || [];
+  const teamMembers = teamData?.data || [];
 
   // Toggle Project Accordion
   const toggleProject = (projectId: string) => {
@@ -219,6 +229,8 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
               isExpanded={!!expandedProjects[project.id]}
               onToggle={() => toggleProject(project.id)}
               baseUrl={baseUrl}
+              teamMembers={teamMembers}
+              isLeader={isLeader}
               onOpenCreateSubProject={onOpenCreateSubProject}
               onOpenCreateTask={onOpenCreateTask}
             />
@@ -237,6 +249,8 @@ interface ProjectAccordionItemProps {
   isExpanded: boolean;
   onToggle: () => void;
   baseUrl: string;
+  teamMembers?: TeamMemberOption[];
+  isLeader?: boolean;
   onOpenCreateSubProject: (projectId: string) => void;
   onOpenCreateTask: (projectId: string, subProjectId?: string) => void;
 }
@@ -246,6 +260,8 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
   isExpanded,
   onToggle,
   baseUrl,
+  teamMembers = [],
+  isLeader = false,
   onOpenCreateSubProject,
   onOpenCreateTask,
 }) => {
@@ -255,6 +271,7 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
     { skip: !isExpanded }
   );
 
+  const [updateProject] = useUpdateProjectMutation();
   const [expandedSubProjects, setExpandedSubProjects] = useState<Record<string, boolean>>({});
 
   const hierarchy = hierarchyData?.data;
@@ -325,10 +342,35 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
           </div>
         </div>
 
-        {/* Project Metrics & Actions */}
-        <div className="flex items-center gap-4 sm:ml-auto flex-wrap">
+        {/* Project Owner, Metrics & Actions */}
+        <div className="flex items-center gap-3 sm:ml-auto flex-wrap">
+          {/* Project Owner / Lead Badge upfront */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <AssigneeBadge
+              variant="owner"
+              label="Lead"
+              user={project.lead || project.createdBy}
+              userId={project.leadId}
+              teamMembers={teamMembers}
+              disabled={!isLeader}
+              size="sm"
+              placeholder="+ Assign Owner"
+              onSelect={async (newLeadId) => {
+                try {
+                  await updateProject({
+                    baseUrl,
+                    id: project.id,
+                    body: { leadId: newLeadId || null },
+                  }).unwrap();
+                } catch (err) {
+                  console.error("Update project lead error:", err);
+                }
+              }}
+            />
+          </div>
+
           <div className="flex items-center gap-2">
-            <div className="w-24 bg-zinc-200 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
+            <div className="w-20 bg-zinc-200 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
               <div
                 className="bg-indigo-600 h-full rounded-full transition-all"
                 style={{ width: `${project.progressPercentage || 0}%` }}
@@ -433,6 +475,8 @@ interface SubProjectAccordionItemProps {
   isExpanded: boolean;
   onToggle: () => void;
   baseUrl: string;
+  teamMembers?: TeamMemberOption[];
+  isLeader?: boolean;
   onOpenCreateTask: (projectId: string, subProjectId?: string) => void;
 }
 
@@ -442,8 +486,11 @@ const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
   isExpanded,
   onToggle,
   baseUrl,
+  teamMembers = [],
+  isLeader = false,
   onOpenCreateTask,
 }) => {
+  const [updateSubProject] = useUpdateSubProjectMutation();
   const tasks = subProject.tasks || [];
 
   return (
@@ -488,8 +535,33 @@ const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
           </div>
         </div>
 
-        {/* Milestone Meta & Add Task Button */}
-        <div className="flex items-center gap-3 sm:ml-auto">
+        {/* Milestone Lead, Meta & Add Task Button */}
+        <div className="flex items-center gap-3 sm:ml-auto flex-wrap">
+          {/* Subproject Lead Badge upfront */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <AssigneeBadge
+              variant="lead"
+              label="Milestone Lead"
+              user={subProject.lead}
+              userId={subProject.leadId}
+              teamMembers={teamMembers}
+              disabled={!isLeader}
+              size="xs"
+              placeholder="+ Assign Lead"
+              onSelect={async (newLeadId) => {
+                try {
+                  await updateSubProject({
+                    baseUrl,
+                    id: subProject.id,
+                    body: { leadId: newLeadId || null },
+                  }).unwrap();
+                } catch (err) {
+                  console.error("Update subproject lead error:", err);
+                }
+              }}
+            />
+          </div>
+
           <div className="flex items-center gap-1.5 text-xs text-zinc-400 font-medium">
             <span>{subProject.completedTasks || 0}/{subProject.totalTasks || 0} tasks</span>
             <span>({subProject.progressPercentage || 0}%)</span>
@@ -510,7 +582,12 @@ const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
       {/* Tier 3: Embedded Horizontal Kanban Board */}
       {isExpanded && (
         <div className="p-3 sm:p-4 bg-zinc-50/40 dark:bg-zinc-950/40 overflow-x-auto">
-          <TaskKanbanBoard tasks={tasks} baseUrl={baseUrl} />
+          <TaskKanbanBoard
+            tasks={tasks}
+            baseUrl={baseUrl}
+            teamMembers={teamMembers}
+            isLeader={isLeader}
+          />
         </div>
       )}
     </div>
@@ -523,9 +600,16 @@ const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
 interface TaskKanbanBoardProps {
   tasks: TaskItem[];
   baseUrl: string;
+  teamMembers?: TeamMemberOption[];
+  isLeader?: boolean;
 }
 
-const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ tasks, baseUrl }) => {
+const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({
+  tasks,
+  baseUrl,
+  teamMembers = [],
+  isLeader = false,
+}) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-5 gap-3 min-w-[850px] md:min-w-0">
       {KANBAN_COLUMNS.map((col) => {
@@ -562,7 +646,13 @@ const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ tasks, baseUrl }) => 
                 </div>
               ) : (
                 columnTasks.map((task) => (
-                  <KanbanTaskCard key={task.id} task={task} baseUrl={baseUrl} />
+                  <KanbanTaskCard
+                    key={task.id}
+                    task={task}
+                    baseUrl={baseUrl}
+                    teamMembers={teamMembers}
+                    isLeader={isLeader}
+                  />
                 ))
               )}
             </div>
@@ -579,9 +669,16 @@ const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({ tasks, baseUrl }) => 
 interface KanbanTaskCardProps {
   task: TaskItem;
   baseUrl: string;
+  teamMembers?: TeamMemberOption[];
+  isLeader?: boolean;
 }
 
-const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, baseUrl }) => {
+const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
+  task,
+  baseUrl,
+  teamMembers = [],
+  isLeader = false,
+}) => {
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
 
@@ -663,8 +760,8 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, baseUrl }) => {
           : "border-zinc-200 dark:border-zinc-800"
       )}
     >
-      {/* Priority & Meta */}
-      <div className="flex items-center justify-between gap-1 mb-1.5">
+      {/* Priority, Date & Assignee Upfront */}
+      <div className="flex items-center justify-between gap-1 mb-1.5 flex-wrap">
         <span
           className={cn(
             "text-[9px] font-bold px-1.5 py-0.2 rounded-full",
@@ -691,6 +788,32 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, baseUrl }) => {
               }).unwrap();
             } catch (err) {
               console.error("Update due date error:", err);
+            }
+          }}
+        />
+      </div>
+
+      {/* Task Assignee upfront badge */}
+      <div className="mb-2">
+        <AssigneeBadge
+          variant="assignee"
+          user={task.assignee}
+          userId={task.assigneeId}
+          userName={task.assigneeName}
+          userRole={task.assigneeRole}
+          teamMembers={teamMembers}
+          disabled={!isLeader}
+          size="xs"
+          placeholder="+ Assignee"
+          onSelect={async (newAssigneeId) => {
+            try {
+              await updateTask({
+                baseUrl,
+                id: task.id,
+                body: { assigneeId: newAssigneeId || null },
+              }).unwrap();
+            } catch (err) {
+              console.error("Update task assignee error:", err);
             }
           }}
         />

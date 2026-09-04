@@ -18,9 +18,18 @@ import {
   Trash2,
 } from "lucide-react";
 import { ProjectHierarchy, SubProject, TaskItem, TaskSubtask } from "../../types";
-import { useToggleSubtaskMutation, useUpdateTaskMutation, useDeleteTaskMutation } from "../../store";
+import {
+  useToggleSubtaskMutation,
+  useUpdateTaskMutation,
+  useDeleteTaskMutation,
+  useUpdateProjectMutation,
+  useUpdateSubProjectMutation,
+  useGetTeamMembersQuery,
+} from "../../store";
 import { cn } from "../../lib/utils";
 import { QuickDateBadge } from "../ui/DatePicker";
+import { AssigneeBadge, TeamMemberOption } from "../ui/AssigneeBadge";
+import { useSelector } from "react-redux";
 
 interface ProjectHierarchyTreeProps {
   hierarchy: ProjectHierarchy;
@@ -40,6 +49,14 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
   onEditProject,
 }) => {
   const { project, subProjects = [], unassignedTasks = [] } = hierarchy;
+
+  const { data: teamData } = useGetTeamMembersQuery(baseUrl);
+  const teamMembers = teamData?.data || [];
+  const currentUser = useSelector((s: any) => s.auth.user);
+  const isLeader = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
+
+  const [updateProject] = useUpdateProjectMutation();
+  const [updateSubProject] = useUpdateSubProjectMutation();
 
   const [expandedSubProjects, setExpandedSubProjects] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
@@ -151,7 +168,32 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
         </div>
 
         {/* Project Meta Actions */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Project Owner / Lead Badge upfront */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <AssigneeBadge
+              variant="owner"
+              label="Owner"
+              user={project.lead || project.createdBy}
+              userId={project.leadId}
+              teamMembers={teamMembers}
+              disabled={!isLeader}
+              size="sm"
+              placeholder="+ Assign Owner"
+              onSelect={async (newLeadId) => {
+                try {
+                  await updateProject({
+                    baseUrl,
+                    id: project.id,
+                    body: { leadId: newLeadId || null },
+                  }).unwrap();
+                } catch (err) {
+                  console.error("Update project lead error:", err);
+                }
+              }}
+            />
+          </div>
+
           <div className="text-right mr-3 hidden md:block">
             <div className="text-xs text-zinc-400 font-medium">Overall Progress</div>
             <div className="text-sm font-bold text-zinc-900 dark:text-white">
@@ -281,12 +323,30 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
                     </span>
                   </div>
 
-                  {sp.lead && (
-                    <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-                      <User className="w-3.5 h-3.5 text-zinc-400" />
-                      <span className="font-medium">{sp.lead.name || sp.lead.phone}</span>
-                    </div>
-                  )}
+                  {/* Sub-Project Milestone Lead upfront */}
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <AssigneeBadge
+                      variant="lead"
+                      label="Lead"
+                      user={sp.lead}
+                      userId={sp.leadId}
+                      teamMembers={teamMembers}
+                      disabled={!isLeader}
+                      size="xs"
+                      placeholder="+ Lead"
+                      onSelect={async (newLeadId) => {
+                        try {
+                          await updateSubProject({
+                            baseUrl,
+                            id: sp.id,
+                            body: { leadId: newLeadId || null },
+                          }).unwrap();
+                        } catch (err) {
+                          console.error("Update sub-project lead error:", err);
+                        }
+                      }}
+                    />
+                  </div>
 
                   {onOpenCreateTask && (
                     <button
@@ -411,12 +471,31 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
           <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
             {getStatusBadge(task.status)}
 
-            {task.assignee && (
-              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                <User className="w-3 h-3 text-zinc-400" />
-                {task.assignee.name || task.assignee.phone}
-              </span>
-            )}
+            {/* Assignee Badge upfront & editable */}
+            <div onClick={(e) => e.stopPropagation()}>
+              <AssigneeBadge
+                variant="assignee"
+                user={task.assignee}
+                userId={task.assigneeId}
+                userName={task.assigneeName}
+                userRole={task.assigneeRole}
+                teamMembers={teamMembers}
+                disabled={!isLeader}
+                size="xs"
+                placeholder="+ Assign"
+                onSelect={async (newAssigneeId) => {
+                  try {
+                    await updateTask({
+                      baseUrl,
+                      id: task.id,
+                      body: { assigneeId: newAssigneeId || null },
+                    }).unwrap();
+                  } catch (err) {
+                    console.error("Task assignee change error:", err);
+                  }
+                }}
+              />
+            </div>
 
             <QuickDateBadge
               value={task.dueDate}
