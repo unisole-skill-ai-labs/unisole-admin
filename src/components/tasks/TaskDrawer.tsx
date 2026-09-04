@@ -24,6 +24,7 @@ import {
   Layers,
 } from "lucide-react";
 import Button from "../ui/Button";
+import { DatePicker, QuickDateBadge } from "../ui/DatePicker";
 
 interface TaskDrawerProps {
   task: any | null;
@@ -367,7 +368,7 @@ export default function TaskDrawer({
                 </div>
               </div>
 
-              <div className="grid grid-cols-3 gap-3">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div>
                   <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
                     Priority
@@ -385,14 +386,13 @@ export default function TaskDrawer({
                 </div>
 
                 <div>
-                  <label className="block font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                    Due Date
-                  </label>
-                  <input
-                    type="datetime-local"
+                  <DatePicker
+                    label="Due Date"
                     value={editDueDate}
-                    onChange={(e) => setEditDueDate(e.target.value)}
-                    className="w-full px-2 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800"
+                    onChange={(val) => setEditDueDate(val)}
+                    placeholder="Pick due date & time..."
+                    includeTime={true}
+                    size="md"
                   />
                 </div>
 
@@ -507,15 +507,22 @@ export default function TaskDrawer({
                   <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
                     Due Date
                   </span>
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                    {task.dueDate
-                      ? new Date(task.dueDate).toLocaleDateString("en-IN", {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      : "No deadline"}
-                  </span>
+                  <div>
+                    <QuickDateBadge
+                      value={task.dueDate}
+                      includeTime={true}
+                      placeholder="+ Set Due Date"
+                      size="sm"
+                      disabled={!onEditTask}
+                      onChange={(newVal) => {
+                        if (onEditTask) {
+                          onEditTask(task.id, {
+                            dueDate: newVal ? new Date(newVal).toISOString() : null,
+                          });
+                        }
+                      }}
+                    />
+                  </div>
                 </div>
 
                 <div>

@@ -11,6 +11,7 @@ import {
   Layers,
 } from "lucide-react";
 import Button from "../ui/Button";
+import { DatePicker } from "../ui/DatePicker";
 
 interface TaskCreateModalProps {
   isOpen: boolean;
@@ -273,7 +274,7 @@ export default function TaskCreateModal({
           </div>
 
           {/* Priority, Due Date & Estimated Hours */}
-          <div className="grid grid-cols-3 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
                 Priority
@@ -291,14 +292,13 @@ export default function TaskCreateModal({
             </div>
 
             <div>
-              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                Due Date
-              </label>
-              <input
-                type="datetime-local"
+              <DatePicker
+                label="Due Date"
                 value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                onChange={(val) => setDueDate(val)}
+                placeholder="Pick due date & time..."
+                includeTime={true}
+                size="md"
               />
             </div>
 

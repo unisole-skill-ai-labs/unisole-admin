@@ -26,6 +26,7 @@ import {
 import { Project, SubProject, TaskItem, TaskSubtask, TaskStatus } from "../../types";
 import { cn } from "../../lib/utils";
 import confetti from "canvas-confetti";
+import { QuickDateBadge } from "../ui/DatePicker";
 
 interface UnifiedWorkSoleProps {
   baseUrl: string;
@@ -677,12 +678,22 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({ task, baseUrl }) => {
           {task.priority}
         </span>
 
-        {task.dueDate && (
-          <span className="text-[10px] text-zinc-400 flex items-center gap-1 font-mono">
-            <Calendar className="w-2.5 h-2.5" />
-            {new Date(task.dueDate).toLocaleDateString("en-US", { month: "short", day: "numeric" })}
-          </span>
-        )}
+        <QuickDateBadge
+          value={task.dueDate}
+          includeTime={true}
+          placeholder="+ Due Date"
+          onChange={async (newVal) => {
+            try {
+              await updateTask({
+                baseUrl,
+                id: task.id,
+                body: { dueDate: newVal ? new Date(newVal).toISOString() : null },
+              }).unwrap();
+            } catch (err) {
+              console.error("Update due date error:", err);
+            }
+          }}
+        />
       </div>
 
       {/* Title */}

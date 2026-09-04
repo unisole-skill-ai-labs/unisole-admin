@@ -2,6 +2,7 @@ import React, { useState } from "react";
 import Modal from "../ui/Modal";
 import { useCreateProjectMutation, useGetDepartmentsQuery, useGetTeamMembersQuery } from "../../store";
 import { Folder, Plus, Trash2, Palette } from "lucide-react";
+import { DatePicker } from "../ui/DatePicker";
 
 interface ProjectCreateModalProps {
   isOpen: boolean;
@@ -194,26 +195,20 @@ export const ProjectCreateModal: React.FC<ProjectCreateModalProps> = ({
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 mb-1">
-              Start Date
-            </label>
-            <input
-              type="date"
+            <DatePicker
+              label="Start Date"
               value={startDate}
-              onChange={(e) => setStartDate(e.target.value)}
-              className="w-full px-3.5 py-2 text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              onChange={(val) => setStartDate(val)}
+              placeholder="Select project kickoff date..."
             />
           </div>
 
           <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 mb-1">
-              Target Deadline
-            </label>
-            <input
-              type="date"
+            <DatePicker
+              label="Target Deadline"
               value={targetEndDate}
-              onChange={(e) => setTargetEndDate(e.target.value)}
-              className="w-full px-3.5 py-2 text-sm rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              onChange={(val) => setTargetEndDate(val)}
+              placeholder="Select target completion date..."
             />
           </div>
         </div>
