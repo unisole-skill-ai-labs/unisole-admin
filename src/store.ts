@@ -87,6 +87,7 @@ export const adminApi = createApi({
     "SubProjects",
     "LeadAnalytics",
     "LeadMeta",
+    "MyWork",
   ],
   endpoints: (build) => ({
     // Students
@@ -868,6 +869,17 @@ export const adminApi = createApi({
       }),
       providesTags: ["LeaderRadar"],
     }),
+    getMyWorkSummary: build.query({
+      query: (arg) => {
+        const baseUrl = typeof arg === "string" ? arg : arg?.baseUrl;
+        const userId = typeof arg === "object" ? arg?.userId : undefined;
+        return {
+          url: `${baseUrl}/api/admin/my-work/summary`,
+          params: userId ? { userId } : undefined,
+        };
+      },
+      providesTags: ["MyWork", "Tasks", "Leads", "DailyLogs"],
+    }),
     getTeamMembers: build.query({
       query: (arg: any) => {
         const baseUrl = typeof arg === "string" ? arg : arg?.baseUrl;
@@ -893,7 +905,15 @@ export const adminApi = createApi({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["TeamMembers", "LeaderRadar", "Departments"],
+      invalidatesTags: ["TeamMembers", "LeaderRadar", "Departments", "MyWork"],
+    }),
+    updateTeamMemberPermissions: build.mutation({
+      query: ({ baseUrl, id, permissions }: { baseUrl?: string; id: string; permissions: string[] }) => ({
+        url: `${baseUrl}/api/admin/team/members/${id}/permissions`,
+        method: "PATCH",
+        body: { permissions },
+      }),
+      invalidatesTags: ["TeamMembers", "LeaderRadar", "Departments", "MyWork"],
     }),
     deleteTeamMember: build.mutation({
       query: ({ baseUrl, id }) => ({
@@ -1126,9 +1146,11 @@ export const {
   useReviewTaskMutation,
   useAddTaskCommentMutation,
   useGetLeaderRadarQuery,
+  useGetMyWorkSummaryQuery,
   useGetTeamMembersQuery,
   useCreateTeamMemberMutation,
   useUpdateTeamMemberMutation,
+  useUpdateTeamMemberPermissionsMutation,
   useDeleteTeamMemberMutation,
   useGetDepartmentsQuery,
   useCreateDepartmentMutation,

@@ -4,6 +4,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { logout } from "../../store/auth-slice";
 import { useTheme } from "../../context/ThemeContext";
 import { useGetLeaderRadarQuery } from "../../store";
+import { hasPermission } from "../../utils/permissions";
 import {
   LayoutDashboard,
   Compass,
@@ -28,6 +29,8 @@ import {
   Clock,
   TrendingUp,
   PhoneCall,
+  Briefcase,
+  ListTodo,
 } from "lucide-react";
 
 export default function AdminShell() {
@@ -49,6 +52,19 @@ export default function AdminShell() {
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const isAdmin = user?.role === "ADMIN" || isSuperAdmin;
   const isMember = user?.role === "MEMBER";
+
+  // Permission Checks
+  const canViewMyWork = hasPermission(user, "my_work:view") || true; // All staff have personal workspace
+  const canViewWorkSole = hasPermission(user, "worksole:manage") || isSuperAdmin;
+  const canViewTeam = hasPermission(user, "team:view") || hasPermission(user, "team:manage") || isSuperAdmin;
+  const canViewLeads = hasPermission(user, "leads:view") || hasPermission(user, "leads:manage") || isSuperAdmin;
+  const canViewDashboard = hasPermission(user, "analytics:view") || isSuperAdmin || isAdmin;
+  const canViewPathways = hasPermission(user, "curriculum:view") || hasPermission(user, "curriculum:manage") || isSuperAdmin;
+  const canViewCurriculum = hasPermission(user, "curriculum:view") || hasPermission(user, "curriculum:manage") || isSuperAdmin;
+  const canViewColleges = hasPermission(user, "colleges:view") || hasPermission(user, "colleges:manage") || isSuperAdmin;
+  const canViewPresentations = hasPermission(user, "presentations:manage") || isSuperAdmin;
+  const canViewStudents = hasPermission(user, "students:manage") || isSuperAdmin;
+  const canViewPayments = hasPermission(user, "payments:view");
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -133,7 +149,7 @@ export default function AdminShell() {
                 {(user?.name || user?.phone || "A").charAt(0).toUpperCase()}
               </div>
               <div className="hidden sm:flex flex-col text-left">
-                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 max-w-[100px] truncate leading-tight">
+                <span className="text-xs font-bold text-zinc-800 dark:text-zinc-200 max-w-[120px] truncate leading-tight">
                   {user?.name || "Team Member"}
                 </span>
                 <span
@@ -145,7 +161,7 @@ export default function AdminShell() {
                       : "text-indigo-500"
                   }`}
                 >
-                  {user?.role || "MEMBER"}
+                  {user?.designation || user?.role || "MEMBER"}
                 </span>
               </div>
               <ChevronDown className="w-3.5 h-3.5 text-zinc-400" />
@@ -171,6 +187,8 @@ export default function AdminShell() {
                   >
                     {isSuperAdmin
                       ? "SUPER ADMIN"
+                      : user?.designation
+                      ? user.designation.toUpperCase()
                       : isMember
                       ? "TEAM MEMBER"
                       : "TEAM LEAD"}
@@ -200,31 +218,36 @@ export default function AdminShell() {
             mobileSidebarOpen ? "translate-x-0 shadow-2xl" : "-translate-x-full lg:translate-x-0"
           }`}
         >
-          {/* WorkSole Operational Suite */}
+          {/* 1. Core Workspace Hub */}
           <div className="space-y-1">
             <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2 flex items-center justify-between">
-              <span>WorkSole Suite</span>
+              <span>Personal Workspace</span>
               {radar?.blockedCount ? (
                 <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
               ) : null}
             </div>
 
-            {/* 1. WorkSole All-in-One Canvas */}
+            {/* My Assigned Work (Top Priority for all staff) */}
             <NavLink
-              to="/worksole"
+              to="/my-work"
               className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive || location.pathname.startsWith("/worksole")
+                `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                  isActive || location.pathname === "/my-work"
                     ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
                     : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
                 }`
               }
             >
-              <Folder className="w-4 h-4 text-indigo-500" />
-              <span>WorkSole</span>
+              <div className="flex items-center gap-3">
+                <ListTodo className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                <span>My Assigned Work</span>
+              </div>
+              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                ACTIVE
+              </span>
             </NavLink>
 
-            {/* 2. Calendar */}
+            {/* Calendar & Timeline */}
             <NavLink
               to="/calendar"
               className={({ isActive }) =>
@@ -239,156 +262,191 @@ export default function AdminShell() {
               <span>Calendar</span>
             </NavLink>
 
-            {/* 3. Team */}
-            <NavLink
-              to="/team"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <UsersRound className="w-4 h-4 text-teal-500" />
-              <span>Team</span>
-            </NavLink>
+            {/* WorkSole Project Suite */}
+            {canViewWorkSole && (
+              <NavLink
+                to="/worksole"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    isActive || location.pathname.startsWith("/worksole")
+                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                  }`
+                }
+              >
+                <Folder className="w-4 h-4 text-indigo-500" />
+                <span>WorkSole Projects</span>
+              </NavLink>
+            )}
+
+            {/* Team Directory */}
+            {canViewTeam && (
+              <NavLink
+                to="/team"
+                className={({ isActive }) =>
+                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    isActive
+                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                  }`
+                }
+              >
+                <UsersRound className="w-4 h-4 text-teal-500" />
+                <span>Team & Roles</span>
+              </NavLink>
+            )}
           </div>
 
-          {/* Admissions & CRM */}
-          <div className="space-y-1">
-            <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
-              Admissions & Growth
-            </div>
-
-            <NavLink
-              to="/leads"
-              className={({ isActive }) =>
-                `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive || location.pathname.startsWith("/leads")
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <div className="flex items-center gap-3">
-                <PhoneCall className="w-4 h-4 text-emerald-500" />
-                <span>Lead Management</span>
-              </div>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
-                CRM
-              </span>
-            </NavLink>
-          </div>
-
-          {/* Platform Operations */}
-          <div className="space-y-1">
-            <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
-              Platform & Content
-            </div>
-
-            <NavLink
-              to="/dashboard"
-              end
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <LayoutDashboard className="w-4 h-4" />
-              <span>Dashboard Overview</span>
-            </NavLink>
-
-            <NavLink
-              to="/pathways"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <Compass className="w-4 h-4" />
-              <span>Pathways Manager</span>
-            </NavLink>
-
-            <NavLink
-              to="/curriculum"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <BookOpen className="w-4 h-4" />
-              <span>Curriculum & Content</span>
-            </NavLink>
-          </div>
-
-          {/* Campus Ecosystem & Entities */}
-          {!isMember && (
+          {/* 2. Admissions & CRM */}
+          {canViewLeads && (
             <div className="space-y-1">
               <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
-                Campus Ecosystem
+                Admissions & Growth
               </div>
 
               <NavLink
-                to="/colleges"
+                to="/leads"
                 className={({ isActive }) =>
                   `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    isActive || location.pathname.startsWith("/colleges")
-                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                    isActive || location.pathname.startsWith("/leads")
+                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
                       : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
                   }`
                 }
               >
                 <div className="flex items-center gap-3">
-                  <GraduationCap className="w-4 h-4 text-indigo-500" />
-                  <span>Colleges & Campuses</span>
+                  <PhoneCall className="w-4 h-4 text-emerald-500" />
+                  <span>Lead Management</span>
                 </div>
-                <span className="text-[10px] font-mono text-zinc-400 font-semibold">
-                  HUB
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20">
+                  CRM
                 </span>
-              </NavLink>
-
-              <NavLink
-                to="/presentations"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    isActive || location.pathname.startsWith("/presentations/analytics")
-                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                  }`
-                }
-              >
-                <Sparkles className="w-4 h-4 text-amber-500" />
-                <span>Roadshow Decks</span>
-              </NavLink>
-
-              <NavLink
-                to="/students"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    isActive
-                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                  }`
-                }
-              >
-                <Users className="w-4 h-4" />
-                <span>Learners & Enrollments</span>
               </NavLink>
             </div>
           )}
 
-          {/* Finance & Ledger (Super Admin & Admin Only) */}
-          {isAdmin && (
+          {/* 3. Platform & Curriculum Operations */}
+          {(canViewDashboard || canViewPathways || canViewCurriculum) && (
+            <div className="space-y-1">
+              <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
+                Platform & Content
+              </div>
+
+              {canViewDashboard && (
+                <NavLink
+                  to="/dashboard"
+                  end
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      isActive
+                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    }`
+                  }
+                >
+                  <LayoutDashboard className="w-4 h-4" />
+                  <span>Dashboard Overview</span>
+                </NavLink>
+              )}
+
+              {canViewPathways && (
+                <NavLink
+                  to="/pathways"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      isActive
+                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    }`
+                  }
+                >
+                  <Compass className="w-4 h-4" />
+                  <span>Pathways Manager</span>
+                </NavLink>
+              )}
+
+              {canViewCurriculum && (
+                <NavLink
+                  to="/curriculum"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      isActive
+                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    }`
+                  }
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Curriculum & Content</span>
+                </NavLink>
+              )}
+            </div>
+          )}
+
+          {/* 4. Campus Ecosystem & Roadshows */}
+          {(canViewColleges || canViewPresentations || canViewStudents) && (
+            <div className="space-y-1">
+              <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
+                Campus Ecosystem
+              </div>
+
+              {canViewColleges && (
+                <NavLink
+                  to="/colleges"
+                  className={({ isActive }) =>
+                    `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      isActive || location.pathname.startsWith("/colleges")
+                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    }`
+                  }
+                >
+                  <div className="flex items-center gap-3">
+                    <GraduationCap className="w-4 h-4 text-indigo-500" />
+                    <span>Colleges & Campuses</span>
+                  </div>
+                  <span className="text-[10px] font-mono text-zinc-400 font-semibold">
+                    HUB
+                  </span>
+                </NavLink>
+              )}
+
+              {canViewPresentations && (
+                <NavLink
+                  to="/presentations"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      isActive || location.pathname.startsWith("/presentations/analytics")
+                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    }`
+                  }
+                >
+                  <Sparkles className="w-4 h-4 text-amber-500" />
+                  <span>Roadshow Decks</span>
+                </NavLink>
+              )}
+
+              {canViewStudents && (
+                <NavLink
+                  to="/students"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      isActive
+                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    }`
+                  }
+                >
+                  <Users className="w-4 h-4" />
+                  <span>Learners & Enrollments</span>
+                </NavLink>
+              )}
+            </div>
+          )}
+
+          {/* 5. Finance & Billing (Super Admin Only / Restricted) */}
+          {canViewPayments && (
             <div className="space-y-1">
               <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
                 Finance & Ledger
