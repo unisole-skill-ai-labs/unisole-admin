@@ -18,6 +18,7 @@ import {
   Check,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
+import { DatePicker } from "../../components/ui/DatePicker";
 import DailyEodModal from "../../components/tasks/DailyEodModal";
 
 export default function DailyStandupPage() {
@@ -108,11 +109,12 @@ export default function DailyStandupPage() {
           >
             Yesterday
           </button>
-          <input
-            type="date"
+          <DatePicker
             value={selectedDate}
-            onChange={(e) => setSelectedDate(e.target.value)}
-            className="px-3 py-1.5 text-xs font-bold rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100"
+            onChange={(val) => setSelectedDate(val)}
+            placeholder="Pick date..."
+            size="sm"
+            className="w-44"
           />
         </div>
 

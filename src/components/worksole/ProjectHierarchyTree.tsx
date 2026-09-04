@@ -20,6 +20,7 @@ import {
 import { ProjectHierarchy, SubProject, TaskItem, TaskSubtask } from "../../types";
 import { useToggleSubtaskMutation, useUpdateTaskMutation, useDeleteTaskMutation } from "../../store";
 import { cn } from "../../lib/utils";
+import { QuickDateBadge } from "../ui/DatePicker";
 
 interface ProjectHierarchyTreeProps {
   hierarchy: ProjectHierarchy;
@@ -417,15 +418,23 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
               </span>
             )}
 
-            {task.dueDate && (
-              <span className="text-xs text-zinc-400 flex items-center gap-1">
-                <Calendar className="w-3 h-3" />
-                {new Date(task.dueDate).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                })}
-              </span>
-            )}
+            <QuickDateBadge
+              value={task.dueDate}
+              includeTime={true}
+              placeholder="+ Due Date"
+              size="xs"
+              onChange={async (newVal) => {
+                try {
+                  await updateTask({
+                    baseUrl,
+                    id: task.id,
+                    body: { dueDate: newVal ? new Date(newVal).toISOString() : null },
+                  }).unwrap();
+                } catch (err) {
+                  console.error("Task due date change error:", err);
+                }
+              }}
+            />
 
             {hasSubtasks && (
               <span className="text-xs font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300">

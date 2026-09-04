@@ -475,6 +475,7 @@ export default function TasksPage() {
           tasks={filteredTasks}
           onSelectTask={(t) => setSelectedTask(t)}
           onUpdateStatus={handleUpdateStatus}
+          onEditTask={handleEditTask}
         />
       ) : (
         <TaskCalendarView

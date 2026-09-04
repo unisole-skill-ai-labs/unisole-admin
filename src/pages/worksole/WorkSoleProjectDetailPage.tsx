@@ -19,6 +19,7 @@ import {
   useGetProjectHierarchyQuery,
   useGetDepartmentsQuery,
   useCreateTaskMutation,
+  useUpdateTaskMutation,
   useDeleteProjectMutation,
   useUpdateProjectMutation,
 } from "../../store";
@@ -50,11 +51,28 @@ export const WorkSoleProjectDetailPage: React.FC<WorkSoleProjectDetailPageProps>
 
   const { data: deptsData } = useGetDepartmentsQuery(baseUrl);
   const [createTask] = useCreateTaskMutation();
+  const [updateTask] = useUpdateTaskMutation();
   const [deleteProject] = useDeleteProjectMutation();
 
   const hierarchy = hierarchyData?.data;
   const project = hierarchy?.project;
   const departments = deptsData?.data || [];
+
+  const handleEditTask = async (taskId: string, updates: any) => {
+    try {
+      const res = await updateTask({
+        baseUrl,
+        id: taskId,
+        body: updates,
+      }).unwrap();
+      if (selectedTaskForDrawer?.id === taskId) {
+        setSelectedTaskForDrawer(res.data);
+      }
+      refetch();
+    } catch (err) {
+      console.error("Update task error:", err);
+    }
+  };
 
   const handleOpenCreateTask = (projId: string, subProjId?: string) => {
     setActiveSubProjectIdForTask(subProjId || "");
@@ -181,6 +199,7 @@ export const WorkSoleProjectDetailPage: React.FC<WorkSoleProjectDetailPageProps>
           onReviewTask={() => refetch()}
           onAddComment={() => refetch()}
           onDeleteTask={() => refetch()}
+          onEditTask={handleEditTask}
         />
       )}
     </div>

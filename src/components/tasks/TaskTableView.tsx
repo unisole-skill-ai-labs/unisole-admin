@@ -12,17 +12,20 @@ import {
   ChevronDown,
   ExternalLink,
 } from "lucide-react";
+import { QuickDateBadge } from "../ui/DatePicker";
 
 interface TaskTableViewProps {
   tasks: any[];
   onSelectTask: (task: any) => void;
   onUpdateStatus: (taskId: string, newStatus: string) => void;
+  onEditTask?: (taskId: string, updates: any) => void;
 }
 
 export default function TaskTableView({
   tasks,
   onSelectTask,
   onUpdateStatus,
+  onEditTask,
 }: TaskTableViewProps) {
   const [sortField, setSortField] = useState<string>("dueDate");
   const [sortAsc, setSortAsc] = useState<boolean>(true);
@@ -223,24 +226,21 @@ export default function TaskTableView({
                     </td>
 
                     {/* Due Date */}
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      {task.dueDate ? (
-                        <span
-                          className={`font-semibold ${
-                            isOverdue
-                              ? "text-rose-600 dark:text-rose-400 font-bold"
-                              : "text-zinc-600 dark:text-zinc-400"
-                          }`}
-                        >
-                          {new Date(task.dueDate).toLocaleDateString("en-IN", {
-                            month: "short",
-                            day: "numeric",
-                          })}
-                          {isOverdue && " ⚠️"}
-                        </span>
-                      ) : (
-                        <span className="text-zinc-400 text-[10px]">No deadline</span>
-                      )}
+                    <td className="px-4 py-3.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <QuickDateBadge
+                        value={task.dueDate}
+                        includeTime={true}
+                        placeholder="+ Due Date"
+                        size="xs"
+                        disabled={!onEditTask}
+                        onChange={(newVal) => {
+                          if (onEditTask) {
+                            onEditTask(task.id, {
+                              dueDate: newVal ? new Date(newVal).toISOString() : null,
+                            });
+                          }
+                        }}
+                      />
                     </td>
 
                     {/* Subtasks Progress */}
