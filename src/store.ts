@@ -809,10 +809,10 @@ export const adminApi = createApi({
       invalidatesTags: ["Tasks", "LeaderRadar", "TeamMembers", "Projects", "SubProjects"],
     }),
     toggleSubtask: build.mutation({
-      query: ({ baseUrl, taskId, subtaskId, isCompleted }) => ({
+      query: ({ baseUrl, taskId, subtaskId, isCompleted, title }) => ({
         url: `${baseUrl}/api/admin/tasks/${taskId}/subtasks/${subtaskId}`,
         method: "PATCH",
-        body: { isCompleted },
+        body: { isCompleted, title },
       }),
       invalidatesTags: ["Tasks", "Projects", "SubProjects"],
     }),

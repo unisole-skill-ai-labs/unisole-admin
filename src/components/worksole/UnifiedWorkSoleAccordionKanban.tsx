@@ -13,6 +13,9 @@ import {
   CheckSquare,
   Send,
   Trash2,
+  Edit2,
+  Check,
+  X,
 } from "lucide-react";
 import {
   useGetProjectsQuery,
@@ -38,6 +41,9 @@ interface UnifiedWorkSoleProps {
   onOpenCreateProject: () => void;
   onOpenCreateSubProject: (projectId: string) => void;
   onOpenCreateTask: (projectId: string, subProjectId?: string) => void;
+  onEditProject?: (project: Project) => void;
+  onEditSubProject?: (subProject: SubProject) => void;
+  onOpenTask?: (task: TaskItem) => void;
 }
 
 const KANBAN_COLUMNS: Array<{
@@ -107,6 +113,9 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
   onOpenCreateProject,
   onOpenCreateSubProject,
   onOpenCreateTask,
+  onEditProject,
+  onEditSubProject,
+  onOpenTask,
 }) => {
   // State for expanded projects (Tier 1 Accordion)
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
@@ -233,6 +242,9 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
               isLeader={isLeader}
               onOpenCreateSubProject={onOpenCreateSubProject}
               onOpenCreateTask={onOpenCreateTask}
+              onEditProject={onEditProject}
+              onEditSubProject={onEditSubProject}
+              onOpenTask={onOpenTask}
             />
           ))}
         </div>
@@ -253,6 +265,9 @@ interface ProjectAccordionItemProps {
   isLeader?: boolean;
   onOpenCreateSubProject: (projectId: string) => void;
   onOpenCreateTask: (projectId: string, subProjectId?: string) => void;
+  onEditProject?: (project: Project) => void;
+  onEditSubProject?: (subProject: SubProject) => void;
+  onOpenTask?: (task: TaskItem) => void;
 }
 
 const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
@@ -264,6 +279,9 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
   isLeader = false,
   onOpenCreateSubProject,
   onOpenCreateTask,
+  onEditProject,
+  onEditSubProject,
+  onOpenTask,
 }) => {
   // Query hierarchy for this project when expanded
   const { data: hierarchyData, isLoading } = useGetProjectHierarchyQuery(
@@ -386,6 +404,18 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
           </span>
 
           <div className="flex items-center gap-1.5">
+            {isLeader && onEditProject && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditProject(project);
+                }}
+                className="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                title="Edit Project Name & Details"
+              >
+                <Edit2 className="w-3.5 h-3.5" />
+              </button>
+            )}
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -440,7 +470,11 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
                   isExpanded={!!expandedSubProjects[subProject.id]}
                   onToggle={() => toggleSubProject(subProject.id)}
                   baseUrl={baseUrl}
+                  teamMembers={teamMembers}
+                  isLeader={isLeader}
                   onOpenCreateTask={onOpenCreateTask}
+                  onEditSubProject={onEditSubProject}
+                  onOpenTask={onOpenTask}
                 />
               ))}
 
@@ -455,7 +489,13 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
                       </span>
                     </h4>
                   </div>
-                  <TaskKanbanBoard tasks={unassignedTasks} baseUrl={baseUrl} />
+                  <TaskKanbanBoard
+                    tasks={unassignedTasks}
+                    baseUrl={baseUrl}
+                    teamMembers={teamMembers}
+                    isLeader={isLeader}
+                    onOpenTask={onOpenTask}
+                  />
                 </div>
               )}
             </>
@@ -478,6 +518,8 @@ interface SubProjectAccordionItemProps {
   teamMembers?: TeamMemberOption[];
   isLeader?: boolean;
   onOpenCreateTask: (projectId: string, subProjectId?: string) => void;
+  onEditSubProject?: (subProject: SubProject) => void;
+  onOpenTask?: (task: TaskItem) => void;
 }
 
 const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
@@ -489,6 +531,8 @@ const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
   teamMembers = [],
   isLeader = false,
   onOpenCreateTask,
+  onEditSubProject,
+  onOpenTask,
 }) => {
   const [updateSubProject] = useUpdateSubProjectMutation();
   const tasks = subProject.tasks || [];
@@ -567,15 +611,30 @@ const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
             <span>({subProject.progressPercentage || 0}%)</span>
           </div>
 
-          <button
-            onClick={(e) => {
-              e.stopPropagation();
-              onOpenCreateTask(projectId, subProject.id);
-            }}
-            className="px-2 py-1 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 transition-colors flex items-center gap-1"
-          >
-            <Plus className="w-3 h-3" /> Task
-          </button>
+          <div className="flex items-center gap-1.5">
+            {isLeader && onEditSubProject && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onEditSubProject(subProject);
+                }}
+                className="p-1 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                title="Edit Sub-Project Milestone"
+              >
+                <Edit2 className="w-3 h-3" />
+              </button>
+            )}
+
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onOpenCreateTask(projectId, subProject.id);
+              }}
+              className="px-2 py-1 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 transition-colors flex items-center gap-1"
+            >
+              <Plus className="w-3 h-3" /> Task
+            </button>
+          </div>
         </div>
       </div>
 
@@ -587,6 +646,7 @@ const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
             baseUrl={baseUrl}
             teamMembers={teamMembers}
             isLeader={isLeader}
+            onOpenTask={onOpenTask}
           />
         </div>
       )}
@@ -602,6 +662,7 @@ interface TaskKanbanBoardProps {
   baseUrl: string;
   teamMembers?: TeamMemberOption[];
   isLeader?: boolean;
+  onOpenTask?: (task: TaskItem) => void;
 }
 
 const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({
@@ -609,6 +670,7 @@ const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({
   baseUrl,
   teamMembers = [],
   isLeader = false,
+  onOpenTask,
 }) => {
   return (
     <div className="grid grid-cols-1 md:grid-cols-5 gap-3 min-w-[850px] md:min-w-0">
@@ -652,6 +714,7 @@ const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({
                     baseUrl={baseUrl}
                     teamMembers={teamMembers}
                     isLeader={isLeader}
+                    onOpenTask={onOpenTask}
                   />
                 ))
               )}
@@ -671,6 +734,7 @@ interface KanbanTaskCardProps {
   baseUrl: string;
   teamMembers?: TeamMemberOption[];
   isLeader?: boolean;
+  onOpenTask?: (task: TaskItem) => void;
 }
 
 const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
@@ -678,9 +742,12 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
   baseUrl,
   teamMembers = [],
   isLeader = false,
+  onOpenTask,
 }) => {
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
 
   const [updateTask] = useUpdateTaskMutation();
   const [toggleSubtask] = useToggleSubtaskMutation();
@@ -720,6 +787,22 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
       }
     } catch (err) {
       console.error("Toggle subtask error:", err);
+    }
+  };
+
+  const handleSaveSubtaskTitle = async (st: TaskSubtask) => {
+    if (!editingSubtaskTitle.trim()) return;
+    try {
+      await toggleSubtask({
+        baseUrl,
+        taskId: task.id,
+        subtaskId: st.id,
+        isCompleted: st.isCompleted,
+        title: editingSubtaskTitle.trim(),
+      }).unwrap();
+      setEditingSubtaskId(null);
+    } catch (err) {
+      console.error("Save subtask title error:", err);
     }
   };
 
@@ -819,13 +902,38 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
         />
       </div>
 
-      {/* Title */}
-      <h5 className="text-xs font-bold text-zinc-900 dark:text-white leading-tight mb-1">
-        {task.title}
-      </h5>
+      {/* Title & Edit Trigger */}
+      <div className="flex items-start justify-between gap-1 group/title mb-1">
+        <h5
+          onClick={() => onOpenTask?.(task)}
+          className={cn(
+            "text-xs font-bold text-zinc-900 dark:text-white leading-tight flex-1",
+            onOpenTask && "cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors"
+          )}
+        >
+          {task.title}
+        </h5>
+        {onOpenTask && (
+          <button
+            onClick={() => onOpenTask(task)}
+            className="opacity-0 group-hover/title:opacity-100 p-0.5 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all"
+            title="Edit Task Details"
+          >
+            <Edit2 className="w-3 h-3" />
+          </button>
+        )}
+      </div>
 
       {task.description && (
-        <p className="text-[11px] text-zinc-400 line-clamp-2 mb-2">{task.description}</p>
+        <p
+          onClick={() => onOpenTask?.(task)}
+          className={cn(
+            "text-[11px] text-zinc-400 line-clamp-2 mb-2",
+            onOpenTask && "cursor-pointer hover:text-zinc-600 dark:hover:text-zinc-300"
+          )}
+        >
+          {task.description}
+        </p>
       )}
 
       {task.blockedReason && (
@@ -886,22 +994,78 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
                   todoSubtasks.map((st) => (
                     <div
                       key={st.id}
-                      onClick={() => handleToggleSubtask(st)}
-                      className="text-[10px] p-1 rounded bg-zinc-50 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 flex items-center justify-between hover:bg-indigo-50 dark:hover:bg-indigo-950/40 cursor-pointer group"
+                      className="text-[10px] p-1 rounded bg-zinc-50 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 flex items-center justify-between hover:bg-indigo-50 dark:hover:bg-indigo-950/40 group"
                     >
-                      <div className="flex items-center gap-1 min-w-0">
-                        <Circle className="w-2.5 h-2.5 text-zinc-400 flex-shrink-0" />
-                        <span className="truncate">{st.title}</span>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteSubtask(st.id);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-500 p-0.5"
-                      >
-                        <Trash2 className="w-2.5 h-2.5" />
-                      </button>
+                      {editingSubtaskId === st.id ? (
+                        <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            value={editingSubtaskTitle}
+                            onChange={(e) => setEditingSubtaskTitle(e.target.value)}
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleSaveSubtaskTitle(st);
+                              } else if (e.key === "Escape") {
+                                setEditingSubtaskId(null);
+                              }
+                            }}
+                            className="flex-1 text-[10px] px-1 py-0.5 rounded border border-indigo-400 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSaveSubtaskTitle(st)}
+                            className="text-emerald-600 hover:text-emerald-700 p-0.5"
+                          >
+                            <Check className="w-2.5 h-2.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingSubtaskId(null)}
+                            className="text-zinc-400 hover:text-zinc-600 p-0.5"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div
+                            onClick={() => handleToggleSubtask(st)}
+                            className="flex items-center gap-1 min-w-0 flex-1 cursor-pointer"
+                          >
+                            <Circle className="w-2.5 h-2.5 text-zinc-400 flex-shrink-0" />
+                            <span className="truncate">{st.title}</span>
+                          </div>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                            {isLeader && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingSubtaskId(st.id);
+                                  setEditingSubtaskTitle(st.title);
+                                }}
+                                className="text-zinc-400 hover:text-indigo-600 p-0.5"
+                                title="Edit Title"
+                              >
+                                <Edit2 className="w-2.5 h-2.5" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSubtask(st.id);
+                              }}
+                              className="text-zinc-400 hover:text-rose-500 p-0.5"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))
                 )}
@@ -920,22 +1084,78 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
                   doneSubtasks.map((st) => (
                     <div
                       key={st.id}
-                      onClick={() => handleToggleSubtask(st)}
-                      className="text-[10px] p-1 rounded bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-between hover:bg-emerald-100/60 cursor-pointer group"
+                      className="text-[10px] p-1 rounded bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-between hover:bg-emerald-100/60 group"
                     >
-                      <div className="flex items-center gap-1 min-w-0">
-                        <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500 flex-shrink-0" />
-                        <span className="truncate line-through opacity-80">{st.title}</span>
-                      </div>
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleDeleteSubtask(st.id);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 text-zinc-400 hover:text-rose-500 p-0.5"
-                      >
-                        <Trash2 className="w-2.5 h-2.5" />
-                      </button>
+                      {editingSubtaskId === st.id ? (
+                        <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
+                          <input
+                            type="text"
+                            value={editingSubtaskTitle}
+                            onChange={(e) => setEditingSubtaskTitle(e.target.value)}
+                            autoFocus
+                            onKeyDown={(e) => {
+                              if (e.key === "Enter") {
+                                e.preventDefault();
+                                handleSaveSubtaskTitle(st);
+                              } else if (e.key === "Escape") {
+                                setEditingSubtaskId(null);
+                              }
+                            }}
+                            className="flex-1 text-[10px] px-1 py-0.5 rounded border border-indigo-400 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => handleSaveSubtaskTitle(st)}
+                            className="text-emerald-600 hover:text-emerald-700 p-0.5"
+                          >
+                            <Check className="w-2.5 h-2.5" />
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setEditingSubtaskId(null)}
+                            className="text-zinc-400 hover:text-zinc-600 p-0.5"
+                          >
+                            <X className="w-2.5 h-2.5" />
+                          </button>
+                        </div>
+                      ) : (
+                        <>
+                          <div
+                            onClick={() => handleToggleSubtask(st)}
+                            className="flex items-center gap-1 min-w-0 flex-1 cursor-pointer"
+                          >
+                            <CheckCircle2 className="w-2.5 h-2.5 text-emerald-500 flex-shrink-0" />
+                            <span className="truncate line-through opacity-80">{st.title}</span>
+                          </div>
+                          <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                            {isLeader && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setEditingSubtaskId(st.id);
+                                  setEditingSubtaskTitle(st.title);
+                                }}
+                                className="text-zinc-400 hover:text-indigo-600 p-0.5"
+                                title="Edit Title"
+                              >
+                                <Edit2 className="w-2.5 h-2.5" />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteSubtask(st.id);
+                              }}
+                              className="text-zinc-400 hover:text-rose-500 p-0.5"
+                              title="Delete"
+                            >
+                              <Trash2 className="w-2.5 h-2.5" />
+                            </button>
+                          </div>
+                        </>
+                      )}
                     </div>
                   ))
                 )}
