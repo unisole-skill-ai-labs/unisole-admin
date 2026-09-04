@@ -831,6 +831,64 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Tasks", "Projects", "SubProjects"],
     }),
+
+    // ==================== HIERARCHY LEVEL SHIFTS & RE-PARENTING ====================
+    upgradeSubtask: build.mutation({
+      query: ({ baseUrl, taskId, subtaskId }) => ({
+        url: `${baseUrl}/api/admin/hierarchy/upgrade-subtask`,
+        method: "POST",
+        body: { taskId, subtaskId },
+      }),
+      invalidatesTags: ["Tasks", "Projects", "SubProjects"],
+    }),
+    downgradeTask: build.mutation({
+      query: ({ baseUrl, taskId, targetTaskId }) => ({
+        url: `${baseUrl}/api/admin/hierarchy/downgrade-task`,
+        method: "POST",
+        body: { taskId, targetTaskId },
+      }),
+      invalidatesTags: ["Tasks", "Projects", "SubProjects"],
+    }),
+    upgradeTask: build.mutation({
+      query: ({ baseUrl, taskId, targetProjectId }) => ({
+        url: `${baseUrl}/api/admin/hierarchy/upgrade-task`,
+        method: "POST",
+        body: { taskId, targetProjectId },
+      }),
+      invalidatesTags: ["Tasks", "Projects", "SubProjects"],
+    }),
+    downgradeSubProject: build.mutation({
+      query: ({ baseUrl, subProjectId, targetProjectId, targetSubProjectId }) => ({
+        url: `${baseUrl}/api/admin/hierarchy/downgrade-subproject`,
+        method: "POST",
+        body: { subProjectId, targetProjectId, targetSubProjectId },
+      }),
+      invalidatesTags: ["Tasks", "Projects", "SubProjects"],
+    }),
+    upgradeSubProject: build.mutation({
+      query: ({ baseUrl, subProjectId, code }) => ({
+        url: `${baseUrl}/api/admin/hierarchy/upgrade-subproject`,
+        method: "POST",
+        body: { subProjectId, code },
+      }),
+      invalidatesTags: ["Tasks", "Projects", "SubProjects"],
+    }),
+    downgradeProject: build.mutation({
+      query: ({ baseUrl, projectId, targetProjectId }) => ({
+        url: `${baseUrl}/api/admin/hierarchy/downgrade-project`,
+        method: "POST",
+        body: { projectId, targetProjectId },
+      }),
+      invalidatesTags: ["Tasks", "Projects", "SubProjects"],
+    }),
+    moveHierarchyItem: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/hierarchy/move-item`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Tasks", "Projects", "SubProjects"],
+    }),
     submitTaskProof: build.mutation({
       query: ({ baseUrl, taskId, body }) => ({
         url: `${baseUrl}/api/admin/tasks/${taskId}/submit`,
@@ -1141,6 +1199,14 @@ export const {
   useToggleSubtaskMutation,
   useAddSubtaskMutation,
   useDeleteSubtaskMutation,
+  // Hierarchy Shifts & Re-parenting
+  useUpgradeSubtaskMutation,
+  useDowngradeTaskMutation,
+  useUpgradeTaskMutation,
+  useDowngradeSubProjectMutation,
+  useUpgradeSubProjectMutation,
+  useDowngradeProjectMutation,
+  useMoveHierarchyItemMutation,
   useSubmitTaskProofMutation,
   useFlagTaskBlockedMutation,
   useReviewTaskMutation,

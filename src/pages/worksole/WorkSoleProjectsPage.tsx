@@ -23,12 +23,13 @@ import {
   useAddTaskCommentMutation,
   useDeleteTaskMutation,
 } from "../../store";
-import { Project, SubProject, TaskItem } from "../../types";
+import { Project, SubProject, TaskItem, HierarchyItemType } from "../../types";
 import { UnifiedWorkSoleAccordionKanban } from "../../components/worksole/UnifiedWorkSoleAccordionKanban";
 import { ProjectCreateModal } from "../../components/worksole/ProjectCreateModal";
 import { ProjectEditModal } from "../../components/worksole/ProjectEditModal";
 import { SubProjectCreateModal } from "../../components/worksole/SubProjectCreateModal";
 import { SubProjectEditModal } from "../../components/worksole/SubProjectEditModal";
+import { HierarchyShiftModal } from "../../components/worksole/HierarchyShiftModal";
 import TaskCreateModal from "../../components/tasks/TaskCreateModal";
 import TaskDrawer from "../../components/tasks/TaskDrawer";
 import { useSelector } from "react-redux";
@@ -47,6 +48,18 @@ export const WorkSoleProjectsPage: React.FC<WorkSoleProjectsPageProps> = ({ base
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [activeProjectIdForTask, setActiveProjectIdForTask] = useState<string>("");
   const [activeSubProjectIdForTask, setActiveSubProjectIdForTask] = useState<string>("");
+
+  // Hierarchy Shift Modal state
+  const [shiftModalState, setShiftModalState] = useState<{
+    isOpen: boolean;
+    itemType: HierarchyItemType;
+    item: any;
+    parentItem?: any;
+  }>({
+    isOpen: false,
+    itemType: "TASK",
+    item: null,
+  });
 
   // Edit Modals state
   const [selectedProjectForEdit, setSelectedProjectForEdit] = useState<Project | null>(null);
@@ -226,7 +239,21 @@ export const WorkSoleProjectsPage: React.FC<WorkSoleProjectsPageProps> = ({ base
         onEditProject={handleOpenEditProject}
         onEditSubProject={handleOpenEditSubProject}
         onOpenTask={(task) => setSelectedTaskForDrawer(task)}
+        onShiftHierarchy={(params) => setShiftModalState({ isOpen: true, ...params })}
       />
+
+      {/* Hierarchy Shift / Promotion / Demotion Modal */}
+      {shiftModalState.isOpen && (
+        <HierarchyShiftModal
+          isOpen={shiftModalState.isOpen}
+          onClose={() => setShiftModalState((prev) => ({ ...prev, isOpen: false }))}
+          baseUrl={baseUrl}
+          itemType={shiftModalState.itemType}
+          item={shiftModalState.item}
+          parentItem={shiftModalState.parentItem}
+          onSuccess={() => refetchProjects()}
+        />
+      )}
 
       {/* Modals */}
       <ProjectCreateModal
@@ -372,6 +399,7 @@ export const WorkSoleProjectsPage: React.FC<WorkSoleProjectsPageProps> = ({ base
             }
           }}
           onEditTask={handleEditTask}
+          onShiftHierarchy={(params) => setShiftModalState({ isOpen: true, ...params })}
         />
       )}
     </div>

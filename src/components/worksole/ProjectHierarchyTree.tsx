@@ -18,8 +18,10 @@ import {
   Trash2,
   Check,
   X,
+  Sparkles,
+  ArrowUpRight,
 } from "lucide-react";
-import { ProjectHierarchy, SubProject, TaskItem, TaskSubtask } from "../../types";
+import { HierarchyItemType, ProjectHierarchy, SubProject, TaskItem, TaskSubtask } from "../../types";
 import {
   useToggleSubtaskMutation,
   useUpdateTaskMutation,
@@ -27,6 +29,9 @@ import {
   useUpdateProjectMutation,
   useUpdateSubProjectMutation,
   useGetTeamMembersQuery,
+  useMoveHierarchyItemMutation,
+  useUpgradeSubtaskMutation,
+  useDowngradeTaskMutation,
 } from "../../store";
 import { cn } from "../../lib/utils";
 import { QuickDateBadge } from "../ui/DatePicker";
@@ -41,6 +46,7 @@ interface ProjectHierarchyTreeProps {
   onOpenCreateTask?: (projectId: string, subProjectId?: string) => void;
   onEditProject?: () => void;
   onEditSubProject?: (subProject: SubProject) => void;
+  onShiftHierarchy?: (params: { itemType: HierarchyItemType; item: any; parentItem?: any }) => void;
 }
 
 export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
@@ -51,6 +57,7 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
   onOpenCreateTask,
   onEditProject,
   onEditSubProject,
+  onShiftHierarchy,
 }) => {
   const { project, subProjects = [], unassignedTasks = [] } = hierarchy;
 
@@ -207,6 +214,16 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
             </div>
           </div>
 
+          {isLeader && onShiftHierarchy && (
+            <button
+              onClick={() => onShiftHierarchy({ itemType: "PROJECT", item: project })}
+              className="p-1.5 rounded-xl border border-purple-200 dark:border-purple-900/60 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+              title="Shift Project Hierarchy Level"
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
+          )}
+
           {onOpenCreateSubProject && (
             <button
               onClick={() => onOpenCreateSubProject(project.id)}
@@ -355,6 +372,19 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
                   </div>
 
                   <div className="flex items-center gap-1.5">
+                    {isLeader && onShiftHierarchy && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onShiftHierarchy({ itemType: "SUB_PROJECT", item: sp, parentItem: { id: project.id } });
+                        }}
+                        className="p-1 rounded-lg border border-purple-200 dark:border-purple-900/60 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+                        title="Shift Milestone Level (Promote to Project / Demote to Task)"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
                     {isLeader && onEditSubProject && (
                       <button
                         onClick={(e) => {
@@ -542,6 +572,19 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
               </span>
             )}
 
+            {isLeader && onShiftHierarchy && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShiftHierarchy({ itemType: "TASK", item: task, parentItem: { id: project.id } });
+                }}
+                className="p-1 rounded text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+                title="Shift Task Level (Upgrade to Milestone / Downgrade to Subtask / Move)"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -650,18 +693,33 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
                     </div>
 
                     {isLeader && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          setEditingSubtaskId(subtask.id);
-                          setEditingSubtaskTitle(subtask.title);
-                        }}
-                        className="opacity-0 group-hover:opacity-100 p-0.5 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-opacity"
-                        title="Edit Title"
-                      >
-                        <Edit2 className="w-3 h-3" />
-                      </button>
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {onShiftHierarchy && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onShiftHierarchy({ itemType: "SUBTASK", item: subtask, parentItem: task });
+                            }}
+                            className="p-0.5 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 rounded"
+                            title="Promote Subtask to Task"
+                          >
+                            <ArrowUpRight className="w-3 h-3" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingSubtaskId(subtask.id);
+                            setEditingSubtaskTitle(subtask.title);
+                          }}
+                          className="p-0.5 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                          title="Edit Title"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                      </div>
                     )}
                   </>
                 )}

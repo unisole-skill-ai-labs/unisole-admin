@@ -271,3 +271,6 @@ export interface ProjectHierarchy {
   subProjects: SubProject[];
   unassignedTasks: TaskItem[];
 }
+
+export type HierarchyItemType = "PROJECT" | "SUB_PROJECT" | "TASK" | "SUBTASK";
+

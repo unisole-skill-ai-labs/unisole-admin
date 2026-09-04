@@ -22,6 +22,7 @@ import {
   Check,
   Calendar,
   Layers,
+  ArrowUpRight,
 } from "lucide-react";
 import Button from "../ui/Button";
 import { DatePicker, QuickDateBadge } from "../ui/DatePicker";
@@ -43,6 +44,7 @@ interface TaskDrawerProps {
   onAddComment: (taskId: string, content: string) => void;
   onDeleteTask: (taskId: string) => void;
   onEditTask?: (taskId: string, updates: any) => void;
+  onShiftHierarchy?: (params: { itemType: any; item: any; parentItem?: any }) => void;
 }
 
 export default function TaskDrawer({
@@ -61,6 +63,7 @@ export default function TaskDrawer({
   onAddComment,
   onDeleteTask,
   onEditTask,
+  onShiftHierarchy,
 }: TaskDrawerProps) {
   if (!task) return null;
 
@@ -208,6 +211,16 @@ export default function TaskDrawer({
           </div>
 
           <div className="flex items-center gap-2">
+            {isLeader && onShiftHierarchy && (
+              <button
+                onClick={() => onShiftHierarchy({ itemType: "TASK", item: task, parentItem: { id: task.projectId } })}
+                className="p-2 rounded-xl text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 transition-colors cursor-pointer"
+                title="Shift Task Level (Upgrade to Milestone / Downgrade to Subtask / Move)"
+              >
+                <Sparkles className="w-4 h-4" />
+              </button>
+            )}
+
             {isLeader && (
               <button
                 onClick={() => setIsEditing(!isEditing)}
@@ -681,6 +694,20 @@ export default function TaskDrawer({
                             </button>
 
                             <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {isLeader && onShiftHierarchy && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onShiftHierarchy({ itemType: "SUBTASK", item: st, parentItem: task });
+                                  }}
+                                  className="p-1 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 rounded transition-colors cursor-pointer"
+                                  title="Promote Sub-Task to Full Task / Move"
+                                >
+                                  <ArrowUpRight className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
                               {isLeader && (
                                 <button
                                   type="button"

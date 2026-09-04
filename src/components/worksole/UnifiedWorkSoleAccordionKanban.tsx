@@ -16,6 +16,10 @@ import {
   Edit2,
   Check,
   X,
+  Sparkles,
+  GripVertical,
+  ArrowUpRight,
+  ArrowDownRight,
 } from "lucide-react";
 import {
   useGetProjectsQuery,
@@ -28,6 +32,11 @@ import {
   useDeleteSubtaskMutation,
   useGetDepartmentsQuery,
   useGetTeamMembersQuery,
+  useUpgradeSubtaskMutation,
+  useDowngradeTaskMutation,
+  useUpgradeTaskMutation,
+  useDowngradeSubProjectMutation,
+  useMoveHierarchyItemMutation,
 } from "../../store";
 import { Project, SubProject, TaskItem, TaskSubtask, TaskStatus } from "../../types";
 import { cn } from "../../lib/utils";
@@ -35,6 +44,7 @@ import confetti from "canvas-confetti";
 import { QuickDateBadge } from "../ui/DatePicker";
 import { AssigneeBadge, TeamMemberOption } from "../ui/AssigneeBadge";
 import { useSelector } from "react-redux";
+import { HierarchyItemType } from "./HierarchyShiftModal";
 
 interface UnifiedWorkSoleProps {
   baseUrl: string;
@@ -44,6 +54,7 @@ interface UnifiedWorkSoleProps {
   onEditProject?: (project: Project) => void;
   onEditSubProject?: (subProject: SubProject) => void;
   onOpenTask?: (task: TaskItem) => void;
+  onShiftHierarchy?: (params: { itemType: HierarchyItemType; item: any; parentItem?: any }) => void;
 }
 
 const KANBAN_COLUMNS: Array<{
@@ -116,6 +127,7 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
   onEditProject,
   onEditSubProject,
   onOpenTask,
+  onShiftHierarchy,
 }) => {
   // State for expanded projects (Tier 1 Accordion)
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
@@ -245,6 +257,7 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
               onEditProject={onEditProject}
               onEditSubProject={onEditSubProject}
               onOpenTask={onOpenTask}
+              onShiftHierarchy={onShiftHierarchy}
             />
           ))}
         </div>
@@ -268,6 +281,7 @@ interface ProjectAccordionItemProps {
   onEditProject?: (project: Project) => void;
   onEditSubProject?: (subProject: SubProject) => void;
   onOpenTask?: (task: TaskItem) => void;
+  onShiftHierarchy?: (params: { itemType: HierarchyItemType; item: any; parentItem?: any }) => void;
 }
 
 const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
@@ -282,6 +296,7 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
   onEditProject,
   onEditSubProject,
   onOpenTask,
+  onShiftHierarchy,
 }) => {
   // Query hierarchy for this project when expanded
   const { data: hierarchyData, isLoading } = useGetProjectHierarchyQuery(
@@ -290,7 +305,9 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
   );
 
   const [updateProject] = useUpdateProjectMutation();
+  const [moveHierarchyItem] = useMoveHierarchyItemMutation();
   const [expandedSubProjects, setExpandedSubProjects] = useState<Record<string, boolean>>({});
+  const [isDragOver, setIsDragOver] = useState(false);
 
   const hierarchy = hierarchyData?.data;
   const subProjects: SubProject[] = hierarchy?.subProjects || [];
@@ -310,8 +327,47 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
     }));
   };
 
+  const handleProjectDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    try {
+      const raw = e.dataTransfer.getData("application/json");
+      if (!raw) return;
+      const data = JSON.parse(raw);
+
+      if (data.itemType === "SUB_PROJECT" && data.subProjectId) {
+        await moveHierarchyItem({
+          baseUrl,
+          body: { itemType: "SUB_PROJECT", itemId: data.subProjectId, targetProjectId: project.id },
+        }).unwrap();
+      } else if (data.itemType === "TASK" && data.taskId) {
+        await moveHierarchyItem({
+          baseUrl,
+          body: { itemType: "TASK", itemId: data.taskId, targetProjectId: project.id, targetSubProjectId: null },
+        }).unwrap();
+      }
+    } catch (err) {
+      console.error("Project drop error:", err);
+    }
+  };
+
   return (
-    <div className="border border-zinc-200 dark:border-zinc-800 rounded-2xl bg-white dark:bg-zinc-900 shadow-xs overflow-hidden transition-all">
+    <div
+      onDragOver={(e) => {
+        if (isLeader) {
+          e.preventDefault();
+          setIsDragOver(true);
+        }
+      }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={handleProjectDrop}
+      className={cn(
+        "border rounded-2xl bg-white dark:bg-zinc-900 shadow-xs overflow-hidden transition-all",
+        isDragOver
+          ? "border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/10"
+          : "border-zinc-200 dark:border-zinc-800"
+      )}
+    >
       {/* Tier 1 Accordion Header */}
       <div
         onClick={onToggle}
@@ -404,6 +460,19 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
           </span>
 
           <div className="flex items-center gap-1.5">
+            {isLeader && onShiftHierarchy && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShiftHierarchy({ itemType: "PROJECT", item: project });
+                }}
+                className="p-1.5 rounded-lg border border-purple-200 dark:border-purple-900/60 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+                title="Shift Project Hierarchy Level / Demote"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             {isLeader && onEditProject && (
               <button
                 onClick={(e) => {
@@ -475,6 +544,7 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
                   onOpenCreateTask={onOpenCreateTask}
                   onEditSubProject={onEditSubProject}
                   onOpenTask={onOpenTask}
+                  onShiftHierarchy={onShiftHierarchy}
                 />
               ))}
 
@@ -491,10 +561,12 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
                   </div>
                   <TaskKanbanBoard
                     tasks={unassignedTasks}
+                    projectId={project.id}
                     baseUrl={baseUrl}
                     teamMembers={teamMembers}
                     isLeader={isLeader}
                     onOpenTask={onOpenTask}
+                    onShiftHierarchy={onShiftHierarchy}
                   />
                 </div>
               )}
@@ -520,6 +592,7 @@ interface SubProjectAccordionItemProps {
   onOpenCreateTask: (projectId: string, subProjectId?: string) => void;
   onEditSubProject?: (subProject: SubProject) => void;
   onOpenTask?: (task: TaskItem) => void;
+  onShiftHierarchy?: (params: { itemType: HierarchyItemType; item: any; parentItem?: any }) => void;
 }
 
 const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
@@ -533,12 +606,59 @@ const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
   onOpenCreateTask,
   onEditSubProject,
   onOpenTask,
+  onShiftHierarchy,
 }) => {
   const [updateSubProject] = useUpdateSubProjectMutation();
+  const [moveHierarchyItem] = useMoveHierarchyItemMutation();
+  const [upgradeSubtask] = useUpgradeSubtaskMutation();
+  const [isDragOver, setIsDragOver] = useState(false);
   const tasks = subProject.tasks || [];
 
+  const handleSubProjectDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOver(false);
+    try {
+      const raw = e.dataTransfer.getData("application/json");
+      if (!raw) return;
+      const data = JSON.parse(raw);
+
+      if (data.itemType === "TASK" && data.taskId) {
+        await moveHierarchyItem({
+          baseUrl,
+          body: { itemType: "TASK", itemId: data.taskId, targetProjectId: projectId, targetSubProjectId: subProject.id },
+        }).unwrap();
+      } else if (data.itemType === "SUBTASK" && data.subtaskId && data.taskId) {
+        await upgradeSubtask({
+          baseUrl,
+          taskId: data.taskId,
+          subtaskId: data.subtaskId,
+          targetSubProjectId: subProject.id,
+          targetProjectId: projectId,
+        }).unwrap();
+      }
+    } catch (err) {
+      console.error("Subproject drop error:", err);
+    }
+  };
+
   return (
-    <div className="border border-zinc-200 dark:border-zinc-800/90 rounded-xl bg-white dark:bg-zinc-900 overflow-hidden shadow-xs">
+    <div
+      onDragOver={(e) => {
+        if (isLeader) {
+          e.preventDefault();
+          setIsDragOver(true);
+        }
+      }}
+      onDragLeave={() => setIsDragOver(false)}
+      onDrop={handleSubProjectDrop}
+      className={cn(
+        "border rounded-xl bg-white dark:bg-zinc-900 overflow-hidden shadow-xs transition-all",
+        isDragOver
+          ? "border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-50/20"
+          : "border-zinc-200 dark:border-zinc-800/90"
+      )}
+    >
       {/* Tier 2 Accordion Header */}
       <div
         onClick={onToggle}
@@ -612,6 +732,19 @@ const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
           </div>
 
           <div className="flex items-center gap-1.5">
+            {isLeader && onShiftHierarchy && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShiftHierarchy({ itemType: "SUB_PROJECT", item: subProject, parentItem: { id: projectId } });
+                }}
+                className="p-1 rounded-lg border border-purple-200 dark:border-purple-900/60 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+                title="Shift Milestone Level (Promote to Project / Demote to Task)"
+              >
+                <Sparkles className="w-3 h-3" />
+              </button>
+            )}
+
             {isLeader && onEditSubProject && (
               <button
                 onClick={(e) => {
@@ -643,10 +776,13 @@ const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
         <div className="p-3 sm:p-4 bg-zinc-50/40 dark:bg-zinc-950/40 overflow-x-auto">
           <TaskKanbanBoard
             tasks={tasks}
+            projectId={projectId}
+            subProjectId={subProject.id}
             baseUrl={baseUrl}
             teamMembers={teamMembers}
             isLeader={isLeader}
             onOpenTask={onOpenTask}
+            onShiftHierarchy={onShiftHierarchy}
           />
         </div>
       )}
@@ -659,32 +795,84 @@ const SubProjectAccordionItem: React.FC<SubProjectAccordionItemProps> = ({
 // ============================================================
 interface TaskKanbanBoardProps {
   tasks: TaskItem[];
+  projectId?: string;
+  subProjectId?: string;
   baseUrl: string;
   teamMembers?: TeamMemberOption[];
   isLeader?: boolean;
   onOpenTask?: (task: TaskItem) => void;
+  onShiftHierarchy?: (params: { itemType: HierarchyItemType; item: any; parentItem?: any }) => void;
 }
 
 const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({
   tasks,
+  projectId,
+  subProjectId,
   baseUrl,
   teamMembers = [],
   isLeader = false,
   onOpenTask,
+  onShiftHierarchy,
 }) => {
+  const [updateTask] = useUpdateTaskMutation();
+  const [upgradeSubtask] = useUpgradeSubtaskMutation();
+  const [dragOverCol, setDragOverCol] = useState<string | null>(null);
+
+  const handleColumnDrop = async (e: React.DragEvent, colStatus: TaskStatus) => {
+    e.preventDefault();
+    setDragOverCol(null);
+    try {
+      const raw = e.dataTransfer.getData("application/json");
+      if (!raw) return;
+      const data = JSON.parse(raw);
+
+      if (data.itemType === "TASK" && data.taskId) {
+        await updateTask({
+          baseUrl,
+          id: data.taskId,
+          body: {
+            status: colStatus,
+            projectId: projectId || undefined,
+            subProjectId: subProjectId || null,
+          },
+        }).unwrap();
+      } else if (data.itemType === "SUBTASK" && data.subtaskId && data.taskId) {
+        // Drop subtask into column -> promote to Task directly!
+        await upgradeSubtask({
+          baseUrl,
+          taskId: data.taskId,
+          subtaskId: data.subtaskId,
+          targetProjectId: projectId,
+          targetSubProjectId: subProjectId,
+          initialStatus: colStatus,
+        }).unwrap();
+      }
+    } catch (err) {
+      console.error("Column drop error:", err);
+    }
+  };
+
   return (
     <div className="grid grid-cols-1 md:grid-cols-5 gap-3 min-w-[850px] md:min-w-0">
       {KANBAN_COLUMNS.map((col) => {
         const columnTasks = tasks.filter((t) => t.status === col.id);
         const ColIcon = col.icon;
+        const isTarget = dragOverCol === col.id;
 
         return (
           <div
             key={col.id}
+            onDragOver={(e) => {
+              if (isLeader) {
+                e.preventDefault();
+                setDragOverCol(col.id);
+              }
+            }}
+            onDragLeave={() => setDragOverCol(null)}
+            onDrop={(e) => handleColumnDrop(e, col.id as TaskStatus)}
             className={cn(
-              "rounded-xl border p-2.5 flex flex-col justify-start min-h-[200px]",
-              col.bgLight,
-              col.bgDark,
+              "rounded-xl border p-2.5 flex flex-col justify-start min-h-[200px] transition-all",
+              isTarget ? "ring-2 ring-indigo-500 bg-indigo-50/30" : cn(col.bgLight, col.bgDark),
               col.borderLight,
               col.borderDark
             )}
@@ -715,6 +903,7 @@ const TaskKanbanBoard: React.FC<TaskKanbanBoardProps> = ({
                     teamMembers={teamMembers}
                     isLeader={isLeader}
                     onOpenTask={onOpenTask}
+                    onShiftHierarchy={onShiftHierarchy}
                   />
                 ))
               )}
@@ -735,6 +924,7 @@ interface KanbanTaskCardProps {
   teamMembers?: TeamMemberOption[];
   isLeader?: boolean;
   onOpenTask?: (task: TaskItem) => void;
+  onShiftHierarchy?: (params: { itemType: HierarchyItemType; item: any; parentItem?: any }) => void;
 }
 
 const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
@@ -743,16 +933,21 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
   teamMembers = [],
   isLeader = false,
   onOpenTask,
+  onShiftHierarchy,
 }) => {
   const [isSubtasksExpanded, setIsSubtasksExpanded] = useState(false);
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
   const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
   const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
+  const [isDragOverCard, setIsDragOverCard] = useState(false);
 
   const [updateTask] = useUpdateTaskMutation();
   const [toggleSubtask] = useToggleSubtaskMutation();
   const [addSubtask] = useAddSubtaskMutation();
   const [deleteSubtask] = useDeleteSubtaskMutation();
+  const [downgradeTask] = useDowngradeTaskMutation();
+  const [moveHierarchyItem] = useMoveHierarchyItemMutation();
+  const [upgradeSubtask] = useUpgradeSubtaskMutation();
 
   const subtasks = task.subtasks || [];
   const todoSubtasks = subtasks.filter((st) => !st.isCompleted);
@@ -767,6 +962,38 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
       }).unwrap();
     } catch (err) {
       console.error("Status shift error:", err);
+    }
+  };
+
+  const handleTaskCardDrop = async (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragOverCard(false);
+    try {
+      const raw = e.dataTransfer.getData("application/json");
+      if (!raw) return;
+      const data = JSON.parse(raw);
+
+      // If another task is dropped onto this task, downgrade the dropped task into a subtask of this task!
+      if (data.itemType === "TASK" && data.taskId && data.taskId !== task.id) {
+        await downgradeTask({
+          baseUrl,
+          taskId: data.taskId,
+          targetTaskId: task.id,
+        }).unwrap();
+      } else if (data.itemType === "SUBTASK" && data.subtaskId && data.taskId !== task.id) {
+        // Move subtask from another task to this task
+        await moveHierarchyItem({
+          baseUrl,
+          body: {
+            itemType: "SUBTASK",
+            itemId: data.subtaskId,
+            targetTaskId: task.id,
+          },
+        }).unwrap();
+      }
+    } catch (err) {
+      console.error("Task card drop error:", err);
     }
   };
 
@@ -836,9 +1063,26 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
 
   return (
     <div
+      draggable={isLeader}
+      onDragStart={(e) => {
+        e.dataTransfer.setData(
+          "application/json",
+          JSON.stringify({ itemType: "TASK", taskId: task.id, projectId: task.projectId, subProjectId: task.subProjectId })
+        );
+      }}
+      onDragOver={(e) => {
+        if (isLeader) {
+          e.preventDefault();
+          setIsDragOverCard(true);
+        }
+      }}
+      onDragLeave={() => setIsDragOverCard(false)}
+      onDrop={handleTaskCardDrop}
       className={cn(
-        "bg-white dark:bg-zinc-900 border rounded-xl p-2.5 shadow-xs hover:border-indigo-400 dark:hover:border-indigo-600 transition-all",
-        task.status === "BLOCKED"
+        "bg-white dark:bg-zinc-900 border rounded-xl p-2.5 shadow-xs hover:border-indigo-400 dark:hover:border-indigo-600 transition-all cursor-grab active:cursor-grabbing",
+        isDragOverCard
+          ? "border-purple-500 ring-2 ring-purple-500/30 bg-purple-50/20"
+          : task.status === "BLOCKED"
           ? "border-rose-300 dark:border-rose-900 bg-rose-50/20"
           : "border-zinc-200 dark:border-zinc-800"
       )}
@@ -902,7 +1146,7 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
         />
       </div>
 
-      {/* Title & Edit Trigger */}
+      {/* Title, Shift Hierarchy & Edit Triggers */}
       <div className="flex items-start justify-between gap-1 group/title mb-1">
         <h5
           onClick={() => onOpenTask?.(task)}
@@ -913,15 +1157,29 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
         >
           {task.title}
         </h5>
-        {onOpenTask && (
-          <button
-            onClick={() => onOpenTask(task)}
-            className="opacity-0 group-hover/title:opacity-100 p-0.5 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all"
-            title="Edit Task Details"
-          >
-            <Edit2 className="w-3 h-3" />
-          </button>
-        )}
+        <div className="flex items-center gap-0.5">
+          {isLeader && onShiftHierarchy && (
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                onShiftHierarchy({ itemType: "TASK", item: task, parentItem: { id: task.projectId } });
+              }}
+              className="p-1 rounded text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+              title="Shift Task Level (Upgrade to Milestone / Downgrade to Subtask / Move)"
+            >
+              <Sparkles className="w-3 h-3" />
+            </button>
+          )}
+          {onOpenTask && (
+            <button
+              onClick={() => onOpenTask(task)}
+              className="opacity-0 group-hover/title:opacity-100 p-0.5 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-all"
+              title="Edit Task Details"
+            >
+              <Edit2 className="w-3 h-3" />
+            </button>
+          )}
+        </div>
       </div>
 
       {task.description && (
@@ -994,7 +1252,15 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
                   todoSubtasks.map((st) => (
                     <div
                       key={st.id}
-                      className="text-[10px] p-1 rounded bg-zinc-50 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 flex items-center justify-between hover:bg-indigo-50 dark:hover:bg-indigo-950/40 group"
+                      draggable={isLeader}
+                      onDragStart={(e) => {
+                        e.stopPropagation();
+                        e.dataTransfer.setData(
+                          "application/json",
+                          JSON.stringify({ itemType: "SUBTASK", subtaskId: st.id, taskId: task.id, title: st.title })
+                        );
+                      }}
+                      className="text-[10px] p-1 rounded bg-zinc-50 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 flex items-center justify-between hover:bg-indigo-50 dark:hover:bg-indigo-950/40 group cursor-grab active:cursor-grabbing"
                     >
                       {editingSubtaskId === st.id ? (
                         <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
@@ -1038,6 +1304,19 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
                             <span className="truncate">{st.title}</span>
                           </div>
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                            {isLeader && onShiftHierarchy && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onShiftHierarchy({ itemType: "SUBTASK", item: st, parentItem: task });
+                                }}
+                                className="text-purple-500 hover:text-purple-700 p-0.5"
+                                title="Promote to Full Task / Move"
+                              >
+                                <ArrowUpRight className="w-2.5 h-2.5" />
+                              </button>
+                            )}
                             {isLeader && (
                               <button
                                 type="button"
@@ -1084,7 +1363,15 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
                   doneSubtasks.map((st) => (
                     <div
                       key={st.id}
-                      className="text-[10px] p-1 rounded bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-between hover:bg-emerald-100/60 group"
+                      draggable={isLeader}
+                      onDragStart={(e) => {
+                        e.stopPropagation();
+                        e.dataTransfer.setData(
+                          "application/json",
+                          JSON.stringify({ itemType: "SUBTASK", subtaskId: st.id, taskId: task.id, title: st.title })
+                        );
+                      }}
+                      className="text-[10px] p-1 rounded bg-emerald-50/50 dark:bg-emerald-950/20 text-emerald-700 dark:text-emerald-300 flex items-center justify-between hover:bg-emerald-100/60 group cursor-grab active:cursor-grabbing"
                     >
                       {editingSubtaskId === st.id ? (
                         <div className="flex items-center gap-1 w-full" onClick={(e) => e.stopPropagation()}>
@@ -1128,6 +1415,19 @@ const KanbanTaskCard: React.FC<KanbanTaskCardProps> = ({
                             <span className="truncate line-through opacity-80">{st.title}</span>
                           </div>
                           <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100">
+                            {isLeader && onShiftHierarchy && (
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  onShiftHierarchy({ itemType: "SUBTASK", item: st, parentItem: task });
+                                }}
+                                className="text-purple-500 hover:text-purple-700 p-0.5"
+                                title="Promote to Full Task / Move"
+                              >
+                                <ArrowUpRight className="w-2.5 h-2.5" />
+                              </button>
+                            )}
                             {isLeader && (
                               <button
                                 type="button"
