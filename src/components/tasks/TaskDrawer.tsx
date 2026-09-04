@@ -22,9 +22,11 @@ import {
   Check,
   Calendar,
   Layers,
+  ArrowUpRight,
 } from "lucide-react";
 import Button from "../ui/Button";
 import { DatePicker, QuickDateBadge } from "../ui/DatePicker";
+import { AssigneeBadge } from "../ui/AssigneeBadge";
 
 interface TaskDrawerProps {
   task: any | null;
@@ -33,7 +35,7 @@ interface TaskDrawerProps {
   teamMembers: any[];
   onClose: () => void;
   onUpdateStatus: (taskId: string, status: string, note?: string) => void;
-  onToggleSubtask: (taskId: string, subtaskId: string, isCompleted: boolean) => void;
+  onToggleSubtask: (taskId: string, subtaskId: string, isCompleted: boolean, title?: string) => void;
   onAddSubtask: (taskId: string, title: string) => void;
   onDeleteSubtask: (taskId: string, subtaskId: string) => void;
   onSubmitProof: (taskId: string, proofUrl: string, notes?: string) => void;
@@ -42,6 +44,7 @@ interface TaskDrawerProps {
   onAddComment: (taskId: string, content: string) => void;
   onDeleteTask: (taskId: string) => void;
   onEditTask?: (taskId: string, updates: any) => void;
+  onShiftHierarchy?: (params: { itemType: any; item: any; parentItem?: any }) => void;
 }
 
 export default function TaskDrawer({
@@ -60,6 +63,7 @@ export default function TaskDrawer({
   onAddComment,
   onDeleteTask,
   onEditTask,
+  onShiftHierarchy,
 }: TaskDrawerProps) {
   if (!task) return null;
 
@@ -86,6 +90,8 @@ export default function TaskDrawer({
 
   // Interactive inputs state
   const [newSubtaskTitle, setNewSubtaskTitle] = useState("");
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
   const [commentText, setCommentText] = useState("");
   const [proofInput, setProofInput] = useState(task.submissionProofUrl || "");
   const [proofNotes, setProofNotes] = useState(task.submissionNotes || "");
@@ -205,6 +211,16 @@ export default function TaskDrawer({
           </div>
 
           <div className="flex items-center gap-2">
+            {isLeader && onShiftHierarchy && (
+              <button
+                onClick={() => onShiftHierarchy({ itemType: "TASK", item: task, parentItem: { id: task.projectId } })}
+                className="p-2 rounded-xl text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 border border-purple-200 dark:border-purple-900/60 transition-colors cursor-pointer"
+                title="Shift Task Level (Upgrade to Milestone / Downgrade to Subtask / Move)"
+              >
+                <Sparkles className="w-4 h-4" />
+              </button>
+            )}
+
             {isLeader && (
               <button
                 onClick={() => setIsEditing(!isEditing)}
@@ -498,9 +514,24 @@ export default function TaskDrawer({
                   <span className="text-[10px] uppercase font-mono text-zinc-400 font-bold block mb-1">
                     Assignee
                   </span>
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                    {task.assigneeName || "Unassigned"}
-                  </span>
+                  <AssigneeBadge
+                    variant="assignee"
+                    user={task.assignee}
+                    userId={task.assigneeId}
+                    userName={task.assigneeName}
+                    userRole={task.assigneeRole}
+                    teamMembers={teamMembers}
+                    disabled={!isLeader || !onEditTask}
+                    size="sm"
+                    placeholder="+ Assign Member"
+                    onSelect={(newAssigneeId) => {
+                      if (onEditTask) {
+                        onEditTask(task.id, {
+                          assigneeId: newAssigneeId || null,
+                        });
+                      }
+                    }}
+                  />
                 </div>
 
                 <div>
@@ -598,32 +629,109 @@ export default function TaskDrawer({
                         key={st.id}
                         className="flex items-center justify-between p-3 rounded-2xl bg-zinc-50/80 dark:bg-zinc-950/60 border border-zinc-200/80 dark:border-zinc-800/80 group hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
                       >
-                        <button
-                          onClick={() => handleToggleSubtaskWithConfetti(st.id, !st.isCompleted)}
-                          className="flex items-center gap-3 text-left flex-1 cursor-pointer"
-                        >
-                          {st.isCompleted ? (
-                            <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                          ) : (
-                            <Circle className="w-4 h-4 text-zinc-400 shrink-0 group-hover:text-indigo-500 transition-colors" />
-                          )}
-                          <span
-                            className={`text-xs ${
-                              st.isCompleted
-                                ? "line-through text-zinc-400 font-medium"
-                                : "text-zinc-800 dark:text-zinc-200 font-medium"
-                            }`}
-                          >
-                            {st.title}
-                          </span>
-                        </button>
+                        {editingSubtaskId === st.id ? (
+                          <div className="flex items-center gap-2 flex-1">
+                            <input
+                              type="text"
+                              value={editingSubtaskTitle}
+                              onChange={(e) => setEditingSubtaskTitle(e.target.value)}
+                              autoFocus
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  if (editingSubtaskTitle.trim()) {
+                                    onToggleSubtask(task.id, st.id, st.isCompleted, editingSubtaskTitle.trim());
+                                    setEditingSubtaskId(null);
+                                  }
+                                } else if (e.key === "Escape") {
+                                  setEditingSubtaskId(null);
+                                }
+                              }}
+                              className="flex-1 px-2.5 py-1 text-xs rounded-lg border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                            />
+                            <button
+                              type="button"
+                              onClick={() => {
+                                if (editingSubtaskTitle.trim()) {
+                                  onToggleSubtask(task.id, st.id, st.isCompleted, editingSubtaskTitle.trim());
+                                  setEditingSubtaskId(null);
+                                }
+                              }}
+                              className="p-1 rounded bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                              title="Save Title"
+                            >
+                              <Check className="w-3.5 h-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setEditingSubtaskId(null)}
+                              className="p-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 transition-colors"
+                              title="Cancel"
+                            >
+                              <X className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        ) : (
+                          <>
+                            <button
+                              onClick={() => handleToggleSubtaskWithConfetti(st.id, !st.isCompleted)}
+                              className="flex items-center gap-3 text-left flex-1 cursor-pointer"
+                            >
+                              {st.isCompleted ? (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
+                              ) : (
+                                <Circle className="w-4 h-4 text-zinc-400 shrink-0 group-hover:text-indigo-500 transition-colors" />
+                              )}
+                              <span
+                                className={`text-xs ${
+                                  st.isCompleted
+                                    ? "line-through text-zinc-400 font-medium"
+                                    : "text-zinc-800 dark:text-zinc-200 font-medium"
+                                }`}
+                              >
+                                {st.title}
+                              </span>
+                            </button>
 
-                        <button
-                          onClick={() => onDeleteSubtask(task.id, st.id)}
-                          className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-rose-500 transition-all cursor-pointer"
-                        >
-                          <X className="w-3.5 h-3.5" />
-                        </button>
+                            <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {isLeader && onShiftHierarchy && (
+                                <button
+                                  type="button"
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    onShiftHierarchy({ itemType: "SUBTASK", item: st, parentItem: task });
+                                  }}
+                                  className="p-1 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 rounded transition-colors cursor-pointer"
+                                  title="Promote Sub-Task to Full Task / Move"
+                                >
+                                  <ArrowUpRight className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              {isLeader && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setEditingSubtaskId(st.id);
+                                    setEditingSubtaskTitle(st.title);
+                                  }}
+                                  className="p-1 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors cursor-pointer"
+                                  title="Edit Sub-Task Title"
+                                >
+                                  <Edit2 className="w-3.5 h-3.5" />
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => onDeleteSubtask(task.id, st.id)}
+                                className="p-1 text-zinc-400 hover:text-rose-500 transition-colors cursor-pointer"
+                                title="Delete Sub-Task"
+                              >
+                                <Trash2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </>
+                        )}
                       </div>
                     ))}
                   </div>

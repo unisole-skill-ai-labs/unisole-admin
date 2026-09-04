@@ -13,12 +13,15 @@ import {
   ExternalLink,
 } from "lucide-react";
 import { QuickDateBadge } from "../ui/DatePicker";
+import { AssigneeBadge, TeamMemberOption } from "../ui/AssigneeBadge";
 
 interface TaskTableViewProps {
   tasks: any[];
   onSelectTask: (task: any) => void;
   onUpdateStatus: (taskId: string, newStatus: string) => void;
   onEditTask?: (taskId: string, updates: any) => void;
+  teamMembers?: TeamMemberOption[];
+  isLeader?: boolean;
 }
 
 export default function TaskTableView({
@@ -26,6 +29,8 @@ export default function TaskTableView({
   onSelectTask,
   onUpdateStatus,
   onEditTask,
+  teamMembers = [],
+  isLeader = false,
 }: TaskTableViewProps) {
   const [sortField, setSortField] = useState<string>("dueDate");
   const [sortAsc, setSortAsc] = useState<boolean>(true);
@@ -193,19 +198,25 @@ export default function TaskTableView({
                     </td>
 
                     {/* Assignee */}
-                    <td className="px-4 py-3.5 whitespace-nowrap">
-                      {task.assigneeName ? (
-                        <div className="flex items-center gap-2">
-                          <div className="w-5 h-5 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 text-white flex items-center justify-center text-[9px] font-black shadow-2xs">
-                            {task.assigneeName.charAt(0).toUpperCase()}
-                          </div>
-                          <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                            {task.assigneeName}
-                          </span>
-                        </div>
-                      ) : (
-                        <span className="text-zinc-400 text-[11px] italic">Unassigned</span>
-                      )}
+                    <td className="px-4 py-3.5 whitespace-nowrap" onClick={(e) => e.stopPropagation()}>
+                      <AssigneeBadge
+                        variant="assignee"
+                        user={task.assignee}
+                        userId={task.assigneeId}
+                        userName={task.assigneeName}
+                        userRole={task.assigneeRole}
+                        teamMembers={teamMembers}
+                        disabled={!isLeader || !onEditTask}
+                        size="xs"
+                        placeholder="+ Assign"
+                        onSelect={(newAssigneeId) => {
+                          if (onEditTask) {
+                            onEditTask(task.id, {
+                              assigneeId: newAssigneeId || null,
+                            });
+                          }
+                        }}
+                      />
                     </td>
 
                     {/* Department */}

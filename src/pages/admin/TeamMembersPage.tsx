@@ -43,6 +43,7 @@ import {
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
+import { DepartmentsManagerModal } from "../../components/admin/DepartmentsManagerModal";
 import {
   ALL_PERMISSIONS,
   DESIGNATION_PRESETS,
@@ -71,6 +72,7 @@ export default function TeamMembersPage() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isCapabilitiesModalOpen, setIsCapabilitiesModalOpen] = useState(false);
+  const [isDepartmentsManagerOpen, setIsDepartmentsManagerOpen] = useState(false);
 
   // Active Member State for Modals
   const [activeMember, setActiveMember] = useState<any | null>(null);
@@ -512,6 +514,16 @@ export default function TeamMembersPage() {
               <span>Capabilities Matrix</span>
             </button>
           </div>
+
+          <Button
+            onClick={() => setIsDepartmentsManagerOpen(true)}
+            variant="outline"
+            size="md"
+            icon={Building2}
+            className="font-bold shrink-0 cursor-pointer"
+          >
+            Manage Departments ({departments.length})
+          </Button>
 
           <Button
             onClick={handleOpenAddModal}
@@ -1892,6 +1904,13 @@ export default function TeamMembersPage() {
           </div>
         </div>
       )}
+
+      {/* ─── 8. Departments Manager Modal ─────────────────────────────────── */}
+      <DepartmentsManagerModal
+        isOpen={isDepartmentsManagerOpen}
+        onClose={() => setIsDepartmentsManagerOpen(false)}
+        baseUrl={baseUrl}
+      />
     </div>
   );
 }

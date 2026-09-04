@@ -16,11 +16,27 @@ import {
   ExternalLink,
   Edit2,
   Trash2,
+  Check,
+  X,
+  Sparkles,
+  ArrowUpRight,
 } from "lucide-react";
-import { ProjectHierarchy, SubProject, TaskItem, TaskSubtask } from "../../types";
-import { useToggleSubtaskMutation, useUpdateTaskMutation, useDeleteTaskMutation } from "../../store";
+import { HierarchyItemType, ProjectHierarchy, SubProject, TaskItem, TaskSubtask } from "../../types";
+import {
+  useToggleSubtaskMutation,
+  useUpdateTaskMutation,
+  useDeleteTaskMutation,
+  useUpdateProjectMutation,
+  useUpdateSubProjectMutation,
+  useGetTeamMembersQuery,
+  useMoveHierarchyItemMutation,
+  useUpgradeSubtaskMutation,
+  useDowngradeTaskMutation,
+} from "../../store";
 import { cn } from "../../lib/utils";
 import { QuickDateBadge } from "../ui/DatePicker";
+import { AssigneeBadge, TeamMemberOption } from "../ui/AssigneeBadge";
+import { useSelector } from "react-redux";
 
 interface ProjectHierarchyTreeProps {
   hierarchy: ProjectHierarchy;
@@ -29,6 +45,8 @@ interface ProjectHierarchyTreeProps {
   onOpenCreateSubProject?: (projectId: string) => void;
   onOpenCreateTask?: (projectId: string, subProjectId?: string) => void;
   onEditProject?: () => void;
+  onEditSubProject?: (subProject: SubProject) => void;
+  onShiftHierarchy?: (params: { itemType: HierarchyItemType; item: any; parentItem?: any }) => void;
 }
 
 export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
@@ -38,8 +56,18 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
   onOpenCreateSubProject,
   onOpenCreateTask,
   onEditProject,
+  onEditSubProject,
+  onShiftHierarchy,
 }) => {
   const { project, subProjects = [], unassignedTasks = [] } = hierarchy;
+
+  const { data: teamData } = useGetTeamMembersQuery(baseUrl);
+  const teamMembers = teamData?.data || [];
+  const currentUser = useSelector((s: any) => s.auth.user);
+  const isLeader = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
+
+  const [updateProject] = useUpdateProjectMutation();
+  const [updateSubProject] = useUpdateSubProjectMutation();
 
   const [expandedSubProjects, setExpandedSubProjects] = useState<Record<string, boolean>>(() => {
     const init: Record<string, boolean> = {};
@@ -50,6 +78,8 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
   });
 
   const [expandedTasks, setExpandedTasks] = useState<Record<string, boolean>>({});
+  const [editingSubtaskId, setEditingSubtaskId] = useState<string | null>(null);
+  const [editingSubtaskTitle, setEditingSubtaskTitle] = useState("");
 
   const [toggleSubtask] = useToggleSubtaskMutation();
   const [updateTask] = useUpdateTaskMutation();
@@ -151,13 +181,48 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
         </div>
 
         {/* Project Meta Actions */}
-        <div className="flex items-center gap-2 flex-wrap">
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Project Owner / Lead Badge upfront */}
+          <div onClick={(e) => e.stopPropagation()}>
+            <AssigneeBadge
+              variant="owner"
+              label="Owner"
+              user={project.lead || project.createdBy}
+              userId={project.leadId}
+              teamMembers={teamMembers}
+              disabled={!isLeader}
+              size="sm"
+              placeholder="+ Assign Owner"
+              onSelect={async (newLeadId) => {
+                try {
+                  await updateProject({
+                    baseUrl,
+                    id: project.id,
+                    body: { leadId: newLeadId || null },
+                  }).unwrap();
+                } catch (err) {
+                  console.error("Update project lead error:", err);
+                }
+              }}
+            />
+          </div>
+
           <div className="text-right mr-3 hidden md:block">
             <div className="text-xs text-zinc-400 font-medium">Overall Progress</div>
             <div className="text-sm font-bold text-zinc-900 dark:text-white">
               {project.progressPercentage || 0}% ({project.completedTasks || 0}/{project.totalTasks || 0} tasks)
             </div>
           </div>
+
+          {isLeader && onShiftHierarchy && (
+            <button
+              onClick={() => onShiftHierarchy({ itemType: "PROJECT", item: project })}
+              className="p-1.5 rounded-xl border border-purple-200 dark:border-purple-900/60 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+              title="Shift Project Hierarchy Level"
+            >
+              <Sparkles className="w-4 h-4" />
+            </button>
+          )}
 
           {onOpenCreateSubProject && (
             <button
@@ -281,24 +346,70 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
                     </span>
                   </div>
 
-                  {sp.lead && (
-                    <div className="flex items-center gap-1.5 text-xs text-zinc-500 dark:text-zinc-400">
-                      <User className="w-3.5 h-3.5 text-zinc-400" />
-                      <span className="font-medium">{sp.lead.name || sp.lead.phone}</span>
-                    </div>
-                  )}
-
-                  {onOpenCreateTask && (
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        onOpenCreateTask(project.id, sp.id);
+                  {/* Sub-Project Milestone Lead upfront */}
+                  <div onClick={(e) => e.stopPropagation()}>
+                    <AssigneeBadge
+                      variant="lead"
+                      label="Lead"
+                      user={sp.lead}
+                      userId={sp.leadId}
+                      teamMembers={teamMembers}
+                      disabled={!isLeader}
+                      size="xs"
+                      placeholder="+ Lead"
+                      onSelect={async (newLeadId) => {
+                        try {
+                          await updateSubProject({
+                            baseUrl,
+                            id: sp.id,
+                            body: { leadId: newLeadId || null },
+                          }).unwrap();
+                        } catch (err) {
+                          console.error("Update sub-project lead error:", err);
+                        }
                       }}
-                      className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors flex items-center gap-1"
-                    >
-                      <Plus className="w-3 h-3" /> Task
-                    </button>
-                  )}
+                    />
+                  </div>
+
+                  <div className="flex items-center gap-1.5">
+                    {isLeader && onShiftHierarchy && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onShiftHierarchy({ itemType: "SUB_PROJECT", item: sp, parentItem: { id: project.id } });
+                        }}
+                        className="p-1 rounded-lg border border-purple-200 dark:border-purple-900/60 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+                        title="Shift Milestone Level (Promote to Project / Demote to Task)"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    {isLeader && onEditSubProject && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onEditSubProject(sp);
+                        }}
+                        className="p-1 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                        title="Edit Sub-Project Milestone"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                    )}
+
+                    {onOpenCreateTask && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          onOpenCreateTask(project.id, sp.id);
+                        }}
+                        className="px-2.5 py-1 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-700 transition-colors flex items-center gap-1"
+                      >
+                        <Plus className="w-3 h-3" /> Task
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
 
@@ -411,12 +522,31 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
           <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
             {getStatusBadge(task.status)}
 
-            {task.assignee && (
-              <span className="text-xs font-medium text-zinc-500 dark:text-zinc-400 flex items-center gap-1">
-                <User className="w-3 h-3 text-zinc-400" />
-                {task.assignee.name || task.assignee.phone}
-              </span>
-            )}
+            {/* Assignee Badge upfront & editable */}
+            <div onClick={(e) => e.stopPropagation()}>
+              <AssigneeBadge
+                variant="assignee"
+                user={task.assignee}
+                userId={task.assigneeId}
+                userName={task.assigneeName}
+                userRole={task.assigneeRole}
+                teamMembers={teamMembers}
+                disabled={!isLeader}
+                size="xs"
+                placeholder="+ Assign"
+                onSelect={async (newAssigneeId) => {
+                  try {
+                    await updateTask({
+                      baseUrl,
+                      id: task.id,
+                      body: { assigneeId: newAssigneeId || null },
+                    }).unwrap();
+                  } catch (err) {
+                    console.error("Task assignee change error:", err);
+                  }
+                }}
+              />
+            </div>
 
             <QuickDateBadge
               value={task.dueDate}
@@ -442,6 +572,19 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
               </span>
             )}
 
+            {isLeader && onShiftHierarchy && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onShiftHierarchy({ itemType: "TASK", item: task, parentItem: { id: project.id } });
+                }}
+                className="p-1 rounded text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 transition-colors"
+                title="Shift Task Level (Upgrade to Milestone / Downgrade to Subtask / Move)"
+              >
+                <Sparkles className="w-3.5 h-3.5" />
+              </button>
+            )}
+
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -464,24 +607,122 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
             {subtasks.map((subtask: TaskSubtask) => (
               <div
                 key={subtask.id}
-                onClick={(e) => handleSubtaskCheck(e, task.id, subtask)}
-                className="flex items-center gap-2 text-xs py-1 px-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer select-none"
+                className="flex items-center gap-2 text-xs py-1 px-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 group select-none"
               >
-                {subtask.isCompleted ? (
-                  <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                {editingSubtaskId === subtask.id ? (
+                  <div className="flex items-center gap-1.5 flex-1" onClick={(e) => e.stopPropagation()}>
+                    <input
+                      type="text"
+                      value={editingSubtaskTitle}
+                      onChange={(e) => setEditingSubtaskTitle(e.target.value)}
+                      autoFocus
+                      onKeyDown={async (e) => {
+                        if (e.key === "Enter") {
+                          e.preventDefault();
+                          if (editingSubtaskTitle.trim()) {
+                            try {
+                              await toggleSubtask({
+                                baseUrl,
+                                taskId: task.id,
+                                subtaskId: subtask.id,
+                                isCompleted: subtask.isCompleted,
+                                title: editingSubtaskTitle.trim(),
+                              }).unwrap();
+                              setEditingSubtaskId(null);
+                            } catch (err) {
+                              console.error("Update subtask title error:", err);
+                            }
+                          }
+                        } else if (e.key === "Escape") {
+                          setEditingSubtaskId(null);
+                        }
+                      }}
+                      className="flex-1 text-xs px-2 py-0.5 rounded border border-indigo-400 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white"
+                    />
+                    <button
+                      type="button"
+                      onClick={async () => {
+                        if (editingSubtaskTitle.trim()) {
+                          try {
+                            await toggleSubtask({
+                              baseUrl,
+                              taskId: task.id,
+                              subtaskId: subtask.id,
+                              isCompleted: subtask.isCompleted,
+                              title: editingSubtaskTitle.trim(),
+                            }).unwrap();
+                            setEditingSubtaskId(null);
+                          } catch (err) {
+                            console.error("Update subtask title error:", err);
+                          }
+                        }
+                      }}
+                      className="p-1 rounded bg-emerald-500 text-white hover:bg-emerald-600 transition-colors"
+                    >
+                      <Check className="w-3 h-3" />
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditingSubtaskId(null)}
+                      className="p-1 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-300 transition-colors"
+                    >
+                      <X className="w-3 h-3" />
+                    </button>
+                  </div>
                 ) : (
-                  <Circle className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
+                  <>
+                    <div
+                      onClick={(e) => handleSubtaskCheck(e, task.id, subtask)}
+                      className="flex items-center gap-2 flex-1 cursor-pointer"
+                    >
+                      {subtask.isCompleted ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                      ) : (
+                        <Circle className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
+                      )}
+                      <span
+                        className={cn(
+                          "flex-1",
+                          subtask.isCompleted
+                            ? "line-through text-zinc-400 dark:text-zinc-500"
+                            : "text-zinc-700 dark:text-zinc-300"
+                        )}
+                      >
+                        {subtask.title}
+                      </span>
+                    </div>
+
+                    {isLeader && (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                        {onShiftHierarchy && (
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              onShiftHierarchy({ itemType: "SUBTASK", item: subtask, parentItem: task });
+                            }}
+                            className="p-0.5 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/40 rounded"
+                            title="Promote Subtask to Task"
+                          >
+                            <ArrowUpRight className="w-3 h-3" />
+                          </button>
+                        )}
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setEditingSubtaskId(subtask.id);
+                            setEditingSubtaskTitle(subtask.title);
+                          }}
+                          className="p-0.5 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400"
+                          title="Edit Title"
+                        >
+                          <Edit2 className="w-3 h-3" />
+                        </button>
+                      </div>
+                    )}
+                  </>
                 )}
-                <span
-                  className={cn(
-                    "flex-1",
-                    subtask.isCompleted
-                      ? "line-through text-zinc-400 dark:text-zinc-500"
-                      : "text-zinc-700 dark:text-zinc-300"
-                  )}
-                >
-                  {subtask.title}
-                </span>
               </div>
             ))}
           </div>

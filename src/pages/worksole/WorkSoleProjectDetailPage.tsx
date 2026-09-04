@@ -18,17 +18,21 @@ import {
 import {
   useGetProjectHierarchyQuery,
   useGetDepartmentsQuery,
+  useGetTeamMembersQuery,
   useCreateTaskMutation,
   useUpdateTaskMutation,
   useDeleteProjectMutation,
   useUpdateProjectMutation,
 } from "../../store";
 import { ProjectHierarchyTree } from "../../components/worksole/ProjectHierarchyTree";
+import { ProjectEditModal } from "../../components/worksole/ProjectEditModal";
 import { SubProjectCreateModal } from "../../components/worksole/SubProjectCreateModal";
+import { SubProjectEditModal } from "../../components/worksole/SubProjectEditModal";
+import { HierarchyShiftModal } from "../../components/worksole/HierarchyShiftModal";
 import TaskCreateModal from "../../components/tasks/TaskCreateModal";
 import TaskDrawer from "../../components/tasks/TaskDrawer";
 import { useSelector } from "react-redux";
-import { TaskItem } from "../../types";
+import { SubProject, TaskItem, HierarchyItemType } from "../../types";
 
 interface WorkSoleProjectDetailPageProps {
   baseUrl: string;
@@ -40,9 +44,23 @@ export const WorkSoleProjectDetailPage: React.FC<WorkSoleProjectDetailPageProps>
   const currentUser = useSelector((s: any) => s.auth.user);
 
   const [isCreateSubProjectOpen, setIsCreateSubProjectOpen] = useState(false);
+  const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
+  const [isEditSubProjectOpen, setIsEditSubProjectOpen] = useState(false);
+  const [selectedSubProjectForEdit, setSelectedSubProjectForEdit] = useState<SubProject | null>(null);
   const [isCreateTaskOpen, setIsCreateTaskOpen] = useState(false);
   const [activeSubProjectIdForTask, setActiveSubProjectIdForTask] = useState<string>("");
   const [selectedTaskForDrawer, setSelectedTaskForDrawer] = useState<TaskItem | null>(null);
+
+  const [shiftModalState, setShiftModalState] = useState<{
+    isOpen: boolean;
+    itemType: HierarchyItemType;
+    item: any;
+    parentItem?: any;
+  }>({
+    isOpen: false,
+    itemType: "TASK",
+    item: null,
+  });
 
   const { data: hierarchyData, isLoading, refetch } = useGetProjectHierarchyQuery(
     { baseUrl, id: id || "" },
@@ -50,6 +68,7 @@ export const WorkSoleProjectDetailPage: React.FC<WorkSoleProjectDetailPageProps>
   );
 
   const { data: deptsData } = useGetDepartmentsQuery(baseUrl);
+  const { data: teamData } = useGetTeamMembersQuery(baseUrl);
   const [createTask] = useCreateTaskMutation();
   const [updateTask] = useUpdateTaskMutation();
   const [deleteProject] = useDeleteProjectMutation();
@@ -57,6 +76,7 @@ export const WorkSoleProjectDetailPage: React.FC<WorkSoleProjectDetailPageProps>
   const hierarchy = hierarchyData?.data;
   const project = hierarchy?.project;
   const departments = deptsData?.data || [];
+  const teamMembers = teamData?.data || [];
 
   const handleEditTask = async (taskId: string, updates: any) => {
     try {
@@ -154,6 +174,36 @@ export const WorkSoleProjectDetailPage: React.FC<WorkSoleProjectDetailPageProps>
           onOpenTask={(task) => setSelectedTaskForDrawer(task)}
           onOpenCreateSubProject={() => setIsCreateSubProjectOpen(true)}
           onOpenCreateTask={handleOpenCreateTask}
+          onEditProject={() => setIsEditProjectOpen(true)}
+          onEditSubProject={(sp) => {
+            setSelectedSubProjectForEdit(sp);
+            setIsEditSubProjectOpen(true);
+          }}
+          onShiftHierarchy={(params) => setShiftModalState({ isOpen: true, ...params })}
+        />
+      )}
+
+      {/* Hierarchy Shift / Promotion / Demotion Modal */}
+      {shiftModalState.isOpen && (
+        <HierarchyShiftModal
+          isOpen={shiftModalState.isOpen}
+          onClose={() => setShiftModalState((prev) => ({ ...prev, isOpen: false }))}
+          baseUrl={baseUrl}
+          itemType={shiftModalState.itemType}
+          item={shiftModalState.item}
+          parentItem={shiftModalState.parentItem}
+          onSuccess={() => refetch()}
+        />
+      )}
+
+      {/* Project Edit Modal */}
+      {project && (
+        <ProjectEditModal
+          isOpen={isEditProjectOpen}
+          onClose={() => setIsEditProjectOpen(false)}
+          baseUrl={baseUrl}
+          project={project}
+          onSuccess={() => refetch()}
         />
       )}
 
@@ -161,11 +211,26 @@ export const WorkSoleProjectDetailPage: React.FC<WorkSoleProjectDetailPageProps>
       {id && (
         <SubProjectCreateModal
           isOpen={isCreateSubProjectOpen}
-          onClose={() => setIsCreateSubProjectOpen(false)}
+          onClose={() => {
+            setIsCreateSubProjectOpen(false);
+            refetch();
+          }}
           baseUrl={baseUrl}
           projectId={id}
         />
       )}
+
+      {/* SubProject Edit Modal */}
+      <SubProjectEditModal
+        isOpen={isEditSubProjectOpen}
+        onClose={() => {
+          setIsEditSubProjectOpen(false);
+          setSelectedSubProjectForEdit(null);
+        }}
+        baseUrl={baseUrl}
+        subProject={selectedSubProjectForEdit}
+        onSuccess={() => refetch()}
+      />
 
       {/* Task Create Modal */}
       {id && (
@@ -174,7 +239,7 @@ export const WorkSoleProjectDetailPage: React.FC<WorkSoleProjectDetailPageProps>
           onClose={() => setIsCreateTaskOpen(false)}
           onSubmit={handleTaskSubmit}
           departments={departments}
-          teamMembers={[]}
+          teamMembers={teamMembers}
           templates={[]}
           projects={project ? [project] : []}
           defaultProjectId={id}
@@ -188,7 +253,7 @@ export const WorkSoleProjectDetailPage: React.FC<WorkSoleProjectDetailPageProps>
           task={selectedTaskForDrawer}
           currentUser={currentUser}
           departments={departments}
-          teamMembers={[]}
+          teamMembers={teamMembers}
           onClose={() => setSelectedTaskForDrawer(null)}
           onUpdateStatus={() => refetch()}
           onToggleSubtask={() => refetch()}
@@ -200,6 +265,7 @@ export const WorkSoleProjectDetailPage: React.FC<WorkSoleProjectDetailPageProps>
           onAddComment={() => refetch()}
           onDeleteTask={() => refetch()}
           onEditTask={handleEditTask}
+          onShiftHierarchy={(params) => setShiftModalState({ isOpen: true, ...params })}
         />
       )}
     </div>

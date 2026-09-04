@@ -13,12 +13,25 @@ import {
   useGetTeamMembersQuery,
   useGetTemplatesQuery,
   useCreateTaskMutation,
+  useUpdateTaskMutation,
+  useToggleSubtaskMutation,
+  useAddSubtaskMutation,
+  useDeleteSubtaskMutation,
+  useSubmitTaskProofMutation,
+  useFlagTaskBlockedMutation,
+  useReviewTaskMutation,
+  useAddTaskCommentMutation,
+  useDeleteTaskMutation,
 } from "../../store";
-import { Project, TaskItem } from "../../types";
+import { Project, SubProject, TaskItem, HierarchyItemType } from "../../types";
 import { UnifiedWorkSoleAccordionKanban } from "../../components/worksole/UnifiedWorkSoleAccordionKanban";
 import { ProjectCreateModal } from "../../components/worksole/ProjectCreateModal";
+import { ProjectEditModal } from "../../components/worksole/ProjectEditModal";
 import { SubProjectCreateModal } from "../../components/worksole/SubProjectCreateModal";
+import { SubProjectEditModal } from "../../components/worksole/SubProjectEditModal";
+import { HierarchyShiftModal } from "../../components/worksole/HierarchyShiftModal";
 import TaskCreateModal from "../../components/tasks/TaskCreateModal";
+import TaskDrawer from "../../components/tasks/TaskDrawer";
 import { useSelector } from "react-redux";
 
 interface WorkSoleProjectsPageProps {
@@ -36,11 +49,40 @@ export const WorkSoleProjectsPage: React.FC<WorkSoleProjectsPageProps> = ({ base
   const [activeProjectIdForTask, setActiveProjectIdForTask] = useState<string>("");
   const [activeSubProjectIdForTask, setActiveSubProjectIdForTask] = useState<string>("");
 
+  // Hierarchy Shift Modal state
+  const [shiftModalState, setShiftModalState] = useState<{
+    isOpen: boolean;
+    itemType: HierarchyItemType;
+    item: any;
+    parentItem?: any;
+  }>({
+    isOpen: false,
+    itemType: "TASK",
+    item: null,
+  });
+
+  // Edit Modals state
+  const [selectedProjectForEdit, setSelectedProjectForEdit] = useState<Project | null>(null);
+  const [isEditProjectOpen, setIsEditProjectOpen] = useState(false);
+  const [selectedSubProjectForEdit, setSelectedSubProjectForEdit] = useState<SubProject | null>(null);
+  const [isEditSubProjectOpen, setIsEditSubProjectOpen] = useState(false);
+  const [selectedTaskForDrawer, setSelectedTaskForDrawer] = useState<TaskItem | null>(null);
+
   const { data: projectsData, refetch: refetchProjects } = useGetProjectsQuery(baseUrl);
   const { data: deptsData } = useGetDepartmentsQuery(baseUrl);
   const { data: teamData } = useGetTeamMembersQuery(baseUrl);
   const { data: templatesData } = useGetTemplatesQuery(baseUrl);
+
   const [createTask] = useCreateTaskMutation();
+  const [updateTask] = useUpdateTaskMutation();
+  const [toggleSubtask] = useToggleSubtaskMutation();
+  const [addSubtask] = useAddSubtaskMutation();
+  const [deleteSubtask] = useDeleteSubtaskMutation();
+  const [submitTaskProof] = useSubmitTaskProofMutation();
+  const [flagTaskBlocked] = useFlagTaskBlockedMutation();
+  const [reviewTask] = useReviewTaskMutation();
+  const [addTaskComment] = useAddTaskCommentMutation();
+  const [deleteTask] = useDeleteTaskMutation();
 
   const projects: Project[] = projectsData?.data || [];
   const departments = deptsData?.data || [];
@@ -58,6 +100,16 @@ export const WorkSoleProjectsPage: React.FC<WorkSoleProjectsPageProps> = ({ base
     setIsCreateSubProjectOpen(true);
   };
 
+  const handleOpenEditProject = (proj: Project) => {
+    setSelectedProjectForEdit(proj);
+    setIsEditProjectOpen(true);
+  };
+
+  const handleOpenEditSubProject = (subProj: SubProject) => {
+    setSelectedSubProjectForEdit(subProj);
+    setIsEditSubProjectOpen(true);
+  };
+
   const handleTaskSubmit = async (taskData: any) => {
     try {
       await createTask({
@@ -68,6 +120,22 @@ export const WorkSoleProjectsPage: React.FC<WorkSoleProjectsPageProps> = ({ base
       refetchProjects();
     } catch (err) {
       console.error("Create task error:", err);
+    }
+  };
+
+  const handleEditTask = async (taskId: string, updates: any) => {
+    try {
+      const res = await updateTask({
+        baseUrl,
+        id: taskId,
+        body: updates,
+      }).unwrap();
+      if (selectedTaskForDrawer?.id === taskId) {
+        setSelectedTaskForDrawer(res.data);
+      }
+      refetchProjects();
+    } catch (err) {
+      console.error("Update task error:", err);
     }
   };
 
@@ -168,7 +236,24 @@ export const WorkSoleProjectsPage: React.FC<WorkSoleProjectsPageProps> = ({ base
         onOpenCreateProject={() => setIsCreateProjectOpen(true)}
         onOpenCreateSubProject={handleOpenCreateSubProject}
         onOpenCreateTask={handleOpenCreateTask}
+        onEditProject={handleOpenEditProject}
+        onEditSubProject={handleOpenEditSubProject}
+        onOpenTask={(task) => setSelectedTaskForDrawer(task)}
+        onShiftHierarchy={(params) => setShiftModalState({ isOpen: true, ...params })}
       />
+
+      {/* Hierarchy Shift / Promotion / Demotion Modal */}
+      {shiftModalState.isOpen && (
+        <HierarchyShiftModal
+          isOpen={shiftModalState.isOpen}
+          onClose={() => setShiftModalState((prev) => ({ ...prev, isOpen: false }))}
+          baseUrl={baseUrl}
+          itemType={shiftModalState.itemType}
+          item={shiftModalState.item}
+          parentItem={shiftModalState.parentItem}
+          onSuccess={() => refetchProjects()}
+        />
+      )}
 
       {/* Modals */}
       <ProjectCreateModal
@@ -180,6 +265,17 @@ export const WorkSoleProjectsPage: React.FC<WorkSoleProjectsPageProps> = ({ base
         baseUrl={baseUrl}
       />
 
+      <ProjectEditModal
+        isOpen={isEditProjectOpen}
+        onClose={() => {
+          setIsEditProjectOpen(false);
+          setSelectedProjectForEdit(null);
+        }}
+        baseUrl={baseUrl}
+        project={selectedProjectForEdit}
+        onSuccess={() => refetchProjects()}
+      />
+
       <SubProjectCreateModal
         isOpen={isCreateSubProjectOpen}
         onClose={() => {
@@ -188,6 +284,17 @@ export const WorkSoleProjectsPage: React.FC<WorkSoleProjectsPageProps> = ({ base
         }}
         baseUrl={baseUrl}
         projectId={activeProjectIdForSubProject}
+      />
+
+      <SubProjectEditModal
+        isOpen={isEditSubProjectOpen}
+        onClose={() => {
+          setIsEditSubProjectOpen(false);
+          setSelectedSubProjectForEdit(null);
+        }}
+        baseUrl={baseUrl}
+        subProject={selectedSubProjectForEdit}
+        onSuccess={() => refetchProjects()}
       />
 
       <TaskCreateModal
@@ -201,6 +308,100 @@ export const WorkSoleProjectsPage: React.FC<WorkSoleProjectsPageProps> = ({ base
         defaultProjectId={activeProjectIdForTask}
         defaultSubProjectId={activeSubProjectIdForTask}
       />
+
+      {/* Task Details & Edit Drawer */}
+      {selectedTaskForDrawer && (
+        <TaskDrawer
+          task={selectedTaskForDrawer}
+          currentUser={currentUser}
+          departments={departments}
+          teamMembers={teamMembers}
+          onClose={() => setSelectedTaskForDrawer(null)}
+          onUpdateStatus={async (taskId, status, note) => {
+            try {
+              const res = await updateTask({ baseUrl, id: taskId, body: { status, statusNote: note } }).unwrap();
+              if (selectedTaskForDrawer?.id === taskId) setSelectedTaskForDrawer(res.data);
+              refetchProjects();
+            } catch (err) {
+              console.error(err);
+            }
+          }}
+          onToggleSubtask={async (taskId, subtaskId, isCompleted, title) => {
+            try {
+              const res = await toggleSubtask({ baseUrl, taskId, subtaskId, isCompleted, title }).unwrap();
+              if (selectedTaskForDrawer?.id === taskId) setSelectedTaskForDrawer(res.data);
+              refetchProjects();
+            } catch (err) {
+              console.error(err);
+            }
+          }}
+          onAddSubtask={async (taskId, title) => {
+            try {
+              const res = await addSubtask({ baseUrl, taskId, title }).unwrap();
+              if (selectedTaskForDrawer?.id === taskId) setSelectedTaskForDrawer(res.data);
+              refetchProjects();
+            } catch (err) {
+              console.error(err);
+            }
+          }}
+          onDeleteSubtask={async (taskId, subtaskId) => {
+            try {
+              const res = await deleteSubtask({ baseUrl, taskId, subtaskId }).unwrap();
+              if (selectedTaskForDrawer?.id === taskId) setSelectedTaskForDrawer(res.data);
+              refetchProjects();
+            } catch (err) {
+              console.error(err);
+            }
+          }}
+          onSubmitProof={async (taskId, proofUrl, notes) => {
+            try {
+              const res = await submitTaskProof({ baseUrl, taskId, body: { submissionProofUrl: proofUrl, submissionNotes: notes } }).unwrap();
+              if (selectedTaskForDrawer?.id === taskId) setSelectedTaskForDrawer(res.data);
+              refetchProjects();
+            } catch (err) {
+              console.error(err);
+            }
+          }}
+          onFlagBlocked={async (taskId, reason) => {
+            try {
+              const res = await flagTaskBlocked({ baseUrl, taskId, body: { blockedReason: reason } }).unwrap();
+              if (selectedTaskForDrawer?.id === taskId) setSelectedTaskForDrawer(res.data);
+              refetchProjects();
+            } catch (err) {
+              console.error(err);
+            }
+          }}
+          onReviewTask={async (taskId, decision, notes) => {
+            try {
+              const res = await reviewTask({ baseUrl, taskId, body: { decision, reviewNotes: notes } }).unwrap();
+              if (selectedTaskForDrawer?.id === taskId) setSelectedTaskForDrawer(res.data);
+              refetchProjects();
+            } catch (err) {
+              console.error(err);
+            }
+          }}
+          onAddComment={async (taskId, content) => {
+            try {
+              const res = await addTaskComment({ baseUrl, taskId, content }).unwrap();
+              if (selectedTaskForDrawer?.id === taskId) setSelectedTaskForDrawer(res.data);
+              refetchProjects();
+            } catch (err) {
+              console.error(err);
+            }
+          }}
+          onDeleteTask={async (taskId) => {
+            try {
+              await deleteTask({ baseUrl, id: taskId }).unwrap();
+              setSelectedTaskForDrawer(null);
+              refetchProjects();
+            } catch (err) {
+              console.error(err);
+            }
+          }}
+          onEditTask={handleEditTask}
+          onShiftHierarchy={(params) => setShiftModalState({ isOpen: true, ...params })}
+        />
+      )}
     </div>
   );
 };

@@ -28,6 +28,7 @@ import {
 import { useSelector } from "react-redux";
 import Modal from "../../components/ui/Modal";
 import TaskDrawer from "../../components/tasks/TaskDrawer";
+import { DepartmentModal } from "../../components/admin/DepartmentModal";
 import { TaskItem } from "../../types";
 import { cn } from "../../lib/utils";
 
@@ -37,6 +38,7 @@ interface AdminOpsPageProps {
 
 export const AdminOpsPage: React.FC<AdminOpsPageProps> = ({ baseUrl }) => {
   const currentUser = useSelector((s: any) => s.auth.user);
+  const isAdmin = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
   const [activeTab, setActiveTab] = useState<"radar" | "sop" | "departments">("radar");
   const [selectedTaskForDrawer, setSelectedTaskForDrawer] = useState<TaskItem | null>(null);
 
@@ -50,9 +52,7 @@ export const AdminOpsPage: React.FC<AdminOpsPageProps> = ({ baseUrl }) => {
 
   // Dept Modal state
   const [isDeptModalOpen, setIsDeptModalOpen] = useState(false);
-  const [deptName, setDeptName] = useState("");
-  const [deptCode, setDeptCode] = useState("");
-  const [deptColor, setDeptColor] = useState("#6366f1");
+  const [selectedDeptForEdit, setSelectedDeptForEdit] = useState<any | null>(null);
 
   // Queries
   const { data: radarData, isLoading: isRadarLoading, refetch: refetchRadar } = useGetLeaderRadarQuery(baseUrl);
@@ -118,29 +118,6 @@ export const AdminOpsPage: React.FC<AdminOpsPageProps> = ({ baseUrl }) => {
       refetchTemplates();
     } catch (err) {
       console.error("Delete SOP error:", err);
-    }
-  };
-
-  const handleCreateDept = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!deptName.trim() || !deptCode.trim()) return;
-
-    try {
-      await createDepartment({
-        baseUrl,
-        body: {
-          name: deptName.trim(),
-          code: deptCode.trim().toUpperCase(),
-          color: deptColor,
-        },
-      }).unwrap();
-
-      setIsDeptModalOpen(false);
-      setDeptName("");
-      setDeptCode("");
-      refetchDepts();
-    } catch (err) {
-      console.error("Create dept error:", err);
     }
   };
 
@@ -425,8 +402,11 @@ export const AdminOpsPage: React.FC<AdminOpsPageProps> = ({ baseUrl }) => {
               </p>
             </div>
             <button
-              onClick={() => setIsDeptModalOpen(true)}
-              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors"
+              onClick={() => {
+                setSelectedDeptForEdit(null);
+                setIsDeptModalOpen(true);
+              }}
+              className="inline-flex items-center gap-1.5 px-3.5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-colors cursor-pointer"
             >
               <Plus className="w-3.5 h-3.5" /> New Department
             </button>
@@ -436,29 +416,59 @@ export const AdminOpsPage: React.FC<AdminOpsPageProps> = ({ baseUrl }) => {
             {departments.map((dept: any) => (
               <div
                 key={dept.id}
-                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-xs"
+                className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-xs flex flex-col justify-between hover:border-zinc-300 dark:hover:border-zinc-700 transition-all"
               >
-                <div className="flex items-center justify-between mb-3">
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="w-3.5 h-3.5 rounded-full"
-                      style={{ backgroundColor: dept.color || "#6366f1" }}
-                    />
-                    <span className="text-xs font-mono font-bold uppercase text-zinc-500">
-                      {dept.code}
-                    </span>
+                <div>
+                  <div className="flex items-center justify-between mb-2.5">
+                    <div className="flex items-center gap-2">
+                      <span
+                        className="w-3.5 h-3.5 rounded-full"
+                        style={{ backgroundColor: dept.color || "#6366f1" }}
+                      />
+                      <span className="text-xs font-mono font-bold uppercase text-zinc-400">
+                        {dept.code}
+                      </span>
+                    </div>
+                    <div className="flex items-center gap-1">
+                      <button
+                        onClick={() => {
+                          setSelectedDeptForEdit(dept);
+                          setIsDeptModalOpen(true);
+                        }}
+                        className="text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                        title="Edit Department"
+                      >
+                        <Edit2 className="w-3.5 h-3.5" />
+                      </button>
+                      <button
+                        onClick={() => handleDeleteDept(dept.id)}
+                        className="text-zinc-400 hover:text-rose-500 p-1.5 rounded-lg hover:bg-rose-50 dark:hover:bg-rose-950/30 transition-colors cursor-pointer"
+                        title="Delete Department"
+                      >
+                        <Trash2 className="w-3.5 h-3.5" />
+                      </button>
+                    </div>
                   </div>
-                  <button
-                    onClick={() => handleDeleteDept(dept.id)}
-                    className="text-zinc-400 hover:text-rose-500 p-1"
-                  >
-                    <Trash2 className="w-3.5 h-3.5" />
-                  </button>
+
+                  <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
+                    {dept.name}
+                  </h4>
+
+                  {dept.description && (
+                    <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                      {dept.description}
+                    </p>
+                  )}
                 </div>
 
-                <h4 className="text-sm font-bold text-zinc-900 dark:text-white">
-                  {dept.name}
-                </h4>
+                {dept.lead && (
+                  <div className="mt-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 text-[11px] text-zinc-500 flex items-center gap-1.5">
+                    <span className="text-zinc-400">Lead:</span>
+                    <span className="font-semibold text-zinc-700 dark:text-zinc-300 truncate">
+                      {dept.lead.name || dept.lead.phone}
+                    </span>
+                  </div>
+                )}
               </div>
             ))}
           </div>
@@ -585,59 +595,17 @@ export const AdminOpsPage: React.FC<AdminOpsPageProps> = ({ baseUrl }) => {
         </form>
       </Modal>
 
-      {/* Create Department Modal */}
-      <Modal
+      {/* Department Create / Edit Modal */}
+      <DepartmentModal
         isOpen={isDeptModalOpen}
-        onClose={() => setIsDeptModalOpen(false)}
-        title="Create Department Squad"
-        size="sm"
-      >
-        <form onSubmit={handleCreateDept} className="space-y-4">
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 mb-1">
-              Department Name *
-            </label>
-            <input
-              type="text"
-              required
-              value={deptName}
-              onChange={(e) => setDeptName(e.target.value)}
-              placeholder="e.g. Growth & Marketing"
-              className="w-full px-3.5 py-2 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white"
-            />
-          </div>
-
-          <div>
-            <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 mb-1">
-              Code *
-            </label>
-            <input
-              type="text"
-              required
-              value={deptCode}
-              onChange={(e) => setDeptCode(e.target.value.toUpperCase())}
-              placeholder="e.g. GROWTH"
-              className="w-full px-3.5 py-2 text-xs font-mono uppercase rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white"
-            />
-          </div>
-
-          <div className="flex items-center justify-end gap-2.5 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-            <button
-              type="button"
-              onClick={() => setIsDeptModalOpen(false)}
-              className="px-4 py-2 text-xs font-bold rounded-xl text-zinc-600 dark:text-zinc-400"
-            >
-              Cancel
-            </button>
-            <button
-              type="submit"
-              className="px-5 py-2 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm"
-            >
-              Create Department
-            </button>
-          </div>
-        </form>
-      </Modal>
+        onClose={() => {
+          setIsDeptModalOpen(false);
+          setSelectedDeptForEdit(null);
+        }}
+        department={selectedDeptForEdit}
+        baseUrl={baseUrl}
+        onSuccess={() => refetchDepts()}
+      />
     </div>
   );
 };

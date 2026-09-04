@@ -476,6 +476,8 @@ export default function TasksPage() {
           onSelectTask={(t) => setSelectedTask(t)}
           onUpdateStatus={handleUpdateStatus}
           onEditTask={handleEditTask}
+          teamMembers={teamMembers}
+          isLeader={isLeader}
         />
       ) : (
         <TaskCalendarView
