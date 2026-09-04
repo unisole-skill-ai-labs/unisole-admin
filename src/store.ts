@@ -905,7 +905,15 @@ export const adminApi = createApi({
         method: "PATCH",
         body,
       }),
-      invalidatesTags: ["TeamMembers", "LeaderRadar", "Departments"],
+      invalidatesTags: ["TeamMembers", "LeaderRadar", "Departments", "MyWork"],
+    }),
+    updateTeamMemberPermissions: build.mutation({
+      query: ({ baseUrl, id, permissions }: { baseUrl?: string; id: string; permissions: string[] }) => ({
+        url: `${baseUrl}/api/admin/team/members/${id}/permissions`,
+        method: "PATCH",
+        body: { permissions },
+      }),
+      invalidatesTags: ["TeamMembers", "LeaderRadar", "Departments", "MyWork"],
     }),
     deleteTeamMember: build.mutation({
       query: ({ baseUrl, id }) => ({
@@ -1142,6 +1150,7 @@ export const {
   useGetTeamMembersQuery,
   useCreateTeamMemberMutation,
   useUpdateTeamMemberMutation,
+  useUpdateTeamMemberPermissionsMutation,
   useDeleteTeamMemberMutation,
   useGetDepartmentsQuery,
   useCreateDepartmentMutation,

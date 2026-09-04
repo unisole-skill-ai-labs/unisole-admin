@@ -1,8 +1,11 @@
 export interface PermissionDefinition {
   key: string;
   label: string;
+  shortLabel: string;
   category: "Workspace" | "Admissions & CRM" | "Curriculum & Academic" | "Campus & Ops" | "Finance & Team";
   description: string;
+  color: string;
+  iconName?: string;
 }
 
 export const ALL_PERMISSIONS: PermissionDefinition[] = [
@@ -10,102 +13,136 @@ export const ALL_PERMISSIONS: PermissionDefinition[] = [
   {
     key: "my_work:view",
     label: "My Assigned Work",
+    shortLabel: "My Work",
     category: "Workspace",
     description: "Access personal tasks, CRM callbacks, and submit daily EOD standup logs",
+    color: "#6366f1",
   },
   {
     key: "worksole:manage",
     label: "WorkSole Projects & Canvas",
+    shortLabel: "Projects",
     category: "Workspace",
     description: "Manage projects, milestones, sub-projects, and task boards",
+    color: "#8b5cf6",
   },
   {
     key: "tasks:manage",
     label: "Task Operations & Radar",
+    shortLabel: "Tasks Radar",
     category: "Workspace",
     description: "Create, assign, review deliverables, and view team task radar",
+    color: "#a855f7",
   },
 
   // Admissions & CRM
   {
     key: "leads:view",
     label: "View CRM Leads",
+    shortLabel: "CRM View",
     category: "Admissions & CRM",
     description: "View lead database, filter pipelines, and view analytics",
+    color: "#10b981",
   },
   {
     key: "leads:manage",
     label: "Manage & Call Leads",
+    shortLabel: "CRM Manage",
     category: "Admissions & CRM",
     description: "Log phone calls, change lead status, assign leads, and import CSVs",
+    color: "#059669",
   },
 
   // Campus & Operations
   {
     key: "colleges:view",
     label: "View Colleges & Campuses",
+    shortLabel: "Colleges View",
     category: "Campus & Ops",
     description: "View affiliated colleges, campuses, and branch student directories",
+    color: "#06b6d4",
   },
   {
     key: "colleges:manage",
     label: "Manage Colleges & Campuses",
+    shortLabel: "Colleges Manage",
     category: "Campus & Ops",
     description: "Create, edit, and configure colleges, branches, and point of contacts",
+    color: "#0891b2",
   },
   {
     key: "presentations:manage",
     label: "Roadshow Decks & Sessions",
+    shortLabel: "Roadshows",
     category: "Campus & Ops",
     description: "Build live presentations, run audience sessions, and view engagement metrics",
+    color: "#3b82f6",
   },
   {
     key: "students:manage",
     label: "Learners & Enrollments",
+    shortLabel: "Students",
     category: "Campus & Ops",
     description: "View registered students and manage course enrollments",
+    color: "#2563eb",
   },
 
   // Curriculum & Academic
   {
     key: "curriculum:view",
     label: "View Pathways & Curriculum",
+    shortLabel: "Curriculum View",
     category: "Curriculum & Academic",
     description: "Browse pathways, course syllabi, modules, and lessons",
+    color: "#f59e0b",
   },
   {
     key: "curriculum:manage",
     label: "Author & Edit Curriculum",
+    shortLabel: "Curriculum Edit",
     category: "Curriculum & Academic",
     description: "Create/edit pathways, courses, interactive modules, and lesson content",
+    color: "#d97706",
   },
 
   // Finance & Team Management
   {
     key: "team:view",
     label: "View Team Directory",
+    shortLabel: "Team View",
     category: "Finance & Team",
     description: "View company staff members, performance leaderboard, and standup logs",
+    color: "#ec4899",
   },
   {
     key: "team:manage",
     label: "Manage Team & Roles",
+    shortLabel: "Team Admin",
     category: "Finance & Team",
     description: "Create staff accounts, assign roles, edit permissions, and manage departments",
+    color: "#db2777",
   },
   {
     key: "payments:view",
     label: "Finance Ledger & Billing",
+    shortLabel: "Financials",
     category: "Finance & Team",
     description: "Inspect student payments, transactions, and sensitive financial ledger",
+    color: "#ef4444",
   },
   {
     key: "analytics:view",
     label: "Executive Analytics & Dashboard",
+    shortLabel: "Analytics",
     category: "Finance & Team",
     description: "View high-level revenue, student enrollment, and executive telemetry",
+    color: "#64748b",
   },
 ];
+
+export function getPermissionDef(key: string): PermissionDefinition | undefined {
+  return ALL_PERMISSIONS.find((p) => p.key === key);
+}
 
 export const DESIGNATION_PRESETS: Record<
   string,
