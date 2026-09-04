@@ -143,14 +143,21 @@ export default function CollegeLeadsSection({
     };
   }, [baseUrl, collegeId, effectiveBranch, search, qualityFilter, statusFilter, counselorFilter, callDueFilter, scope]);
 
-  const { data: rawLeads = [], isLoading, isFetching, refetch } = useGetLeadsQuery(queryParams);
+  const { data: leadsData, isLoading, isFetching, refetch } = useGetLeadsQuery(queryParams);
   const { data: metaData } = useGetLeadsMetaQuery(baseUrl);
   const [updateLead] = useUpdateLeadMutation();
   const [syncUsersToLeads, { isLoading: isSyncing }] = useSyncUsersToLeadsMutation();
 
+  const rawLeads = useMemo(() => {
+    if (Array.isArray(leadsData)) return leadsData;
+    if (Array.isArray((leadsData as any)?.data)) return (leadsData as any).data;
+    return [];
+  }, [leadsData]);
+
   const meta = useMemo(() => {
+    const d = metaData?.data || metaData;
     return (
-      metaData?.data || {
+      d || {
         colleges: [],
         branches: [],
         teamMembers: [],
@@ -174,8 +181,9 @@ export default function CollegeLeadsSection({
 
   // Client-side scope filtering if "non_leads" is chosen
   const leads = useMemo(() => {
+    if (!Array.isArray(rawLeads)) return [];
     if (scope === "non_leads") {
-      return rawLeads.filter((l: any) => l.status === "NOT_A_LEAD");
+      return rawLeads.filter((l: any) => l?.status === "NOT_A_LEAD");
     }
     return rawLeads;
   }, [rawLeads, scope]);

@@ -147,7 +147,11 @@ export default function LeadsManagementPage() {
   };
 
 
-  const leadsList = leadsRes?.data || [];
+  const leadsList = useMemo(() => {
+    if (Array.isArray(leadsRes)) return leadsRes;
+    if (Array.isArray(leadsRes?.data)) return leadsRes.data;
+    return [];
+  }, [leadsRes]);
 
   // Toggle selection
   const handleSelectAll = () => {
