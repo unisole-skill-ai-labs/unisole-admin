@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import ReactDOM from "react-dom";
 import { User, Crown, ChevronDown, Search, X, Check, Shield } from "lucide-react";
 import { cn } from "../../lib/utils";
 
@@ -65,7 +66,14 @@ export const AssigneeBadge: React.FC<AssigneeBadgeProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [search, setSearch] = useState("");
+  const [popoverCoords, setPopoverCoords] = useState<{
+    top: number;
+    left: number;
+    placement: "top" | "bottom";
+  } | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
 
   // Derive resolved user properties
   const currentId = user?.id || userId;
@@ -79,10 +87,58 @@ export const AssigneeBadge: React.FC<AssigneeBadgeProps> = ({
 
   const isEditable = !disabled && Boolean(onSelect);
 
+  // Calculate coordinates to break out of all overflow:hidden boundaries via Portal
+  const updatePosition = () => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const popoverWidth = 280;
+    const popoverEstimatedHeight = 280;
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    const placement: "top" | "bottom" =
+      spaceBelow < popoverEstimatedHeight && spaceAbove > spaceBelow ? "top" : "bottom";
+
+    let top = placement === "bottom" ? rect.bottom + 6 : rect.top - popoverEstimatedHeight - 6;
+    if (top < 10) top = 10;
+    if (top + popoverEstimatedHeight > window.innerHeight - 10) {
+      top = Math.max(10, window.innerHeight - popoverEstimatedHeight - 10);
+    }
+
+    let left = rect.left;
+    if (left + popoverWidth > window.innerWidth - 16) {
+      left = window.innerWidth - popoverWidth - 16;
+    }
+    if (left < 16) left = 16;
+
+    setPopoverCoords({ top, left, placement });
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+
+    const handleReposition = () => updatePosition();
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
+
+    return () => {
+      window.removeEventListener("resize", handleReposition);
+      window.removeEventListener("scroll", handleReposition, true);
+    };
+  }, [isOpen]);
+
   // Close when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+      const target = event.target as Node;
+      if (
+        containerRef.current &&
+        !containerRef.current.contains(target) &&
+        popoverRef.current &&
+        !popoverRef.current.contains(target)
+      ) {
         setIsOpen(false);
       }
     };
@@ -183,110 +239,121 @@ export const AssigneeBadge: React.FC<AssigneeBadgeProps> = ({
         )}
       </button>
 
-      {/* Popover User Picker for Admins / Managers */}
-      {isOpen && (
-        <div
-          className="absolute z-50 mt-1.5 left-0 sm:left-auto right-auto min-w-[240px] max-w-xs bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-2.5 space-y-2 animate-in fade-in zoom-in-95 duration-150"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <div className="flex items-center justify-between pb-1.5 border-b border-zinc-100 dark:border-zinc-800">
-            <span className="text-[11px] font-black text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5 font-mono">
-              <IconComponent className="w-3.5 h-3.5 text-indigo-500" />
-              Assign {variant}
-            </span>
-            <button
-              type="button"
-              onClick={() => setIsOpen(false)}
-              className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded-lg"
-            >
-              <X className="w-3.5 h-3.5" />
-            </button>
-          </div>
+      {/* Popover User Picker Rendered into Body via React Portal to Avoid Clipping */}
+      {isOpen &&
+        popoverCoords &&
+        ReactDOM.createPortal(
+          <div
+            ref={popoverRef}
+            style={{
+              position: "fixed",
+              top: `${popoverCoords.top}px`,
+              left: `${popoverCoords.left}px`,
+              width: "280px",
+              zIndex: 99999,
+            }}
+            className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-2xl p-2.5 space-y-2 animate-in fade-in zoom-in-95 duration-150 backdrop-blur-md"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <div className="flex items-center justify-between pb-1.5 border-b border-zinc-100 dark:border-zinc-800">
+              <span className="text-[11px] font-black text-zinc-700 dark:text-zinc-300 uppercase tracking-wider flex items-center gap-1.5 font-mono">
+                <IconComponent className="w-3.5 h-3.5 text-indigo-500" />
+                Assign {variant}
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsOpen(false)}
+                className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+              >
+                <X className="w-3.5 h-3.5" />
+              </button>
+            </div>
 
-          {/* Search */}
-          <div className="relative">
-            <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-            <input
-              type="text"
-              placeholder="Search team members..."
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-1 focus:ring-indigo-500"
-              autoFocus
-            />
-          </div>
+            {/* Search */}
+            <div className="relative">
+              <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Search team members..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                autoFocus
+              />
+            </div>
 
-          {/* Member List */}
-          <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
-            {/* Unassign Option */}
-            <button
-              type="button"
-              onClick={() => handleChoose(null)}
-              className={cn(
-                "w-full flex items-center justify-between p-1.5 rounded-xl text-xs text-left transition-colors cursor-pointer",
-                !currentId
-                  ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold"
-                  : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500"
-              )}
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-400 flex items-center justify-center text-[10px]">
-                  ∅
-                </div>
-                <span>Unassigned (None)</span>
-              </div>
-              {!currentId && <Check className="w-3.5 h-3.5 text-indigo-600" />}
-            </button>
-
-            {filteredMembers.map((member) => {
-              const isSelected = member.id === currentId;
-              const grad = getAvatarColor(member.id || member.name);
-              const mInitial = member.name ? member.name.charAt(0).toUpperCase() : "U";
-
-              return (
-                <button
-                  key={member.id}
-                  type="button"
-                  onClick={() => handleChoose(member.id)}
-                  className={cn(
-                    "w-full flex items-center justify-between p-1.5 rounded-xl text-xs text-left transition-colors cursor-pointer",
-                    isSelected
-                      ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-bold"
-                      : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
-                  )}
-                >
-                  <div className="flex items-center gap-2 min-w-0">
-                    <div
-                      className={cn(
-                        "w-5 h-5 rounded-full text-white flex items-center justify-center text-[9px] font-black bg-gradient-to-tr shrink-0",
-                        grad
-                      )}
-                    >
-                      {mInitial}
-                    </div>
-                    <div className="truncate">
-                      <div className="font-semibold truncate">
-                        {member.name || member.phone}
-                      </div>
-                      <div className="text-[10px] text-zinc-400 font-mono">
-                        {member.role || "MEMBER"} {member.activeTasksCount ? `• ${member.activeTasksCount} active` : ""}
-                      </div>
-                    </div>
+            {/* Member List */}
+            <div className="max-h-56 overflow-y-auto space-y-1 pr-1">
+              {/* Unassign Option */}
+              <button
+                type="button"
+                onClick={() => handleChoose(null)}
+                className={cn(
+                  "w-full flex items-center justify-between p-1.5 rounded-xl text-xs text-left transition-colors cursor-pointer",
+                  !currentId
+                    ? "bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 font-bold"
+                    : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500"
+                )}
+              >
+                <div className="flex items-center gap-2">
+                  <div className="w-5 h-5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-400 flex items-center justify-center text-[10px]">
+                    ∅
                   </div>
+                  <span>Unassigned (None)</span>
+                </div>
+                {!currentId && <Check className="w-3.5 h-3.5 text-indigo-600" />}
+              </button>
 
-                  {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
-                </button>
-              );
-            })}
+              {filteredMembers.map((member) => {
+                const isSelected = member.id === currentId;
+                const grad = getAvatarColor(member.id || member.name);
+                const mInitial = member.name ? member.name.charAt(0).toUpperCase() : "U";
 
-            {filteredMembers.length === 0 && (
-              <div className="py-3 text-center text-xs text-zinc-400">
-                No matching members found
-              </div>
-            )}
-          </div>
-        </div>
-      )}
+                return (
+                  <button
+                    key={member.id}
+                    type="button"
+                    onClick={() => handleChoose(member.id)}
+                    className={cn(
+                      "w-full flex items-center justify-between p-1.5 rounded-xl text-xs text-left transition-colors cursor-pointer",
+                      isSelected
+                        ? "bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 font-bold"
+                        : "hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-800 dark:text-zinc-200"
+                    )}
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div
+                        className={cn(
+                          "w-5 h-5 rounded-full text-white flex items-center justify-center text-[9px] font-black bg-gradient-to-tr shrink-0",
+                          grad
+                        )}
+                      >
+                        {mInitial}
+                      </div>
+                      <div className="truncate">
+                        <div className="font-semibold truncate">
+                          {member.name || member.phone}
+                        </div>
+                        <div className="text-[10px] text-zinc-400 font-mono">
+                          {member.role || "MEMBER"} {member.activeTasksCount ? `• ${member.activeTasksCount} active` : ""}
+                        </div>
+                      </div>
+                    </div>
+
+                    {isSelected && <Check className="w-3.5 h-3.5 text-indigo-600 shrink-0" />}
+                  </button>
+                );
+              })}
+
+              {filteredMembers.length === 0 && (
+                <div className="py-3 text-center text-xs text-zinc-400">
+                  No matching members found
+                </div>
+              )}
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

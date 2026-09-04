@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
+import ReactDOM from "react-dom";
 import {
   Calendar as CalendarIcon,
   ChevronLeft,
@@ -666,12 +667,61 @@ export const DatePicker: React.FC<DatePickerProps> = ({
   const [isOpen, setIsOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
 
+  const [popoverCoords, setPopoverCoords] = useState<{
+    top: number;
+    left: number;
+    placement: "top" | "bottom";
+  } | null>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  const updatePosition = () => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const popoverWidth = 340;
+    const popoverEstimatedHeight = 450;
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    const placement: "top" | "bottom" =
+      spaceBelow < popoverEstimatedHeight && spaceAbove > spaceBelow ? "top" : "bottom";
+
+    let top = placement === "bottom" ? rect.bottom + 6 : rect.top - popoverEstimatedHeight - 6;
+    if (top < 10) top = 10;
+    if (top + popoverEstimatedHeight > window.innerHeight - 10) {
+      top = Math.max(10, window.innerHeight - popoverEstimatedHeight - 10);
+    }
+
+    let left = rect.left;
+    if (left + popoverWidth > window.innerWidth - 16) {
+      left = window.innerWidth - popoverWidth - 16;
+    }
+    if (left < 16) left = 16;
+
+    setPopoverCoords({ top, left, placement });
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+    const handleReposition = () => updatePosition();
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
+    return () => {
+      window.removeEventListener("resize", handleReposition);
+      window.removeEventListener("scroll", handleReposition, true);
+    };
+  }, [isOpen]);
+
   // Close on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
         containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        !containerRef.current.contains(target) &&
+        popoverRef.current &&
+        !popoverRef.current.contains(target)
       ) {
         setIsOpen(false);
       }
@@ -765,23 +815,36 @@ export const DatePicker: React.FC<DatePickerProps> = ({
         )}
       </button>
 
-      {/* Day Select Popup / Dropdown */}
-      {isOpen && (
-        <div className="absolute z-50 mt-2 left-0 sm:left-auto right-0 sm:right-auto animate-fade-in shadow-2xl">
-          <DaySelectView
-            selectedDate={value}
-            onSelectDate={(newVal) => {
-              onChange(newVal);
-              if (!includeTime) setIsOpen(false);
+      {/* Day Select Popup / Dropdown rendered in Portal */}
+      {isOpen &&
+        popoverCoords &&
+        ReactDOM.createPortal(
+          <div
+            ref={popoverRef}
+            style={{
+              position: "fixed",
+              top: `${popoverCoords.top}px`,
+              left: `${popoverCoords.left}px`,
+              zIndex: 99999,
             }}
-            onClose={() => setIsOpen(false)}
-            includeTime={includeTime}
-            minDate={minDate}
-            maxDate={maxDate}
-            title={label || "Pick a Date"}
-          />
-        </div>
-      )}
+            className="animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DaySelectView
+              selectedDate={value}
+              onSelectDate={(newVal) => {
+                onChange(newVal);
+                if (!includeTime) setIsOpen(false);
+              }}
+              onClose={() => setIsOpen(false)}
+              includeTime={includeTime}
+              minDate={minDate}
+              maxDate={maxDate}
+              title={label || "Pick a Date"}
+            />
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
@@ -809,13 +872,62 @@ export const QuickDateBadge: React.FC<QuickDateBadgeProps> = ({
   disabled = false,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [popoverCoords, setPopoverCoords] = useState<{
+    top: number;
+    left: number;
+    placement: "top" | "bottom";
+  } | null>(null);
+
   const containerRef = useRef<HTMLDivElement>(null);
+  const popoverRef = useRef<HTMLDivElement>(null);
+
+  const updatePosition = () => {
+    if (!containerRef.current) return;
+    const rect = containerRef.current.getBoundingClientRect();
+    const popoverWidth = 340;
+    const popoverEstimatedHeight = 450;
+
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    const placement: "top" | "bottom" =
+      spaceBelow < popoverEstimatedHeight && spaceAbove > spaceBelow ? "top" : "bottom";
+
+    let top = placement === "bottom" ? rect.bottom + 6 : rect.top - popoverEstimatedHeight - 6;
+    if (top < 10) top = 10;
+    if (top + popoverEstimatedHeight > window.innerHeight - 10) {
+      top = Math.max(10, window.innerHeight - popoverEstimatedHeight - 10);
+    }
+
+    let left = rect.left;
+    if (left + popoverWidth > window.innerWidth - 16) {
+      left = window.innerWidth - popoverWidth - 16;
+    }
+    if (left < 16) left = 16;
+
+    setPopoverCoords({ top, left, placement });
+  };
+
+  useEffect(() => {
+    if (!isOpen) return;
+    updatePosition();
+    const handleReposition = () => updatePosition();
+    window.addEventListener("resize", handleReposition);
+    window.addEventListener("scroll", handleReposition, true);
+    return () => {
+      window.removeEventListener("resize", handleReposition);
+      window.removeEventListener("scroll", handleReposition, true);
+    };
+  }, [isOpen]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
+      const target = event.target as Node;
       if (
         containerRef.current &&
-        !containerRef.current.contains(event.target as Node)
+        !containerRef.current.contains(target) &&
+        popoverRef.current &&
+        !popoverRef.current.contains(target)
       ) {
         setIsOpen(false);
       }
@@ -871,23 +983,33 @@ export const QuickDateBadge: React.FC<QuickDateBadgeProps> = ({
         {isOverdue && <span className="text-[9px]">⚠️</span>}
       </button>
 
-      {isOpen && (
-        <div
-          className="absolute z-50 mt-1 right-0 sm:right-auto sm:left-0 animate-fade-in shadow-2xl"
-          onClick={(e) => e.stopPropagation()}
-        >
-          <DaySelectView
-            selectedDate={value}
-            onSelectDate={(newVal) => {
-              onChange(newVal);
-              if (!includeTime) setIsOpen(false);
+      {isOpen &&
+        popoverCoords &&
+        ReactDOM.createPortal(
+          <div
+            ref={popoverRef}
+            style={{
+              position: "fixed",
+              top: `${popoverCoords.top}px`,
+              left: `${popoverCoords.left}px`,
+              zIndex: 99999,
             }}
-            onClose={() => setIsOpen(false)}
-            includeTime={includeTime}
-            title="Set Due Date"
-          />
-        </div>
-      )}
+            className="animate-in fade-in zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <DaySelectView
+              selectedDate={value}
+              onSelectDate={(newVal) => {
+                onChange(newVal);
+                if (!includeTime) setIsOpen(false);
+              }}
+              onClose={() => setIsOpen(false)}
+              includeTime={includeTime}
+              title="Set Due Date"
+            />
+          </div>,
+          document.body
+        )}
     </div>
   );
 };
