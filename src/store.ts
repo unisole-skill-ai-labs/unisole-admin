@@ -74,6 +74,9 @@ export const adminApi = createApi({
     "Lessons",
     "Enrollments",
     "Payments",
+    "Orders",
+    "Pricing",
+    "Coupons",
     "Presentations",
     "Sessions",
     "Leads",
@@ -451,11 +454,117 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Enrollments"],
     }),
+    manualGrantEnrollment: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/enrollments/manual-grant`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Enrollments"],
+    }),
+    revokeEnrollment: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/enrollments/${id}/revoke`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Enrollments"],
+    }),
 
     // Payments
     getPayments: build.query({
       query: (baseUrl) => ({ url: `${baseUrl}/api/admin/payments` }),
       providesTags: ["Payments"],
+    }),
+
+    // Commercial Orders & Invoices
+    getOrders: build.query({
+      query: (arg) => {
+        const baseUrl = typeof arg === "string" ? arg : arg?.baseUrl;
+        const params: Record<string, string> = {};
+        if (typeof arg === "object" && arg) {
+          if (arg.status) params.status = arg.status;
+          if (arg.search) params.search = arg.search;
+          if (arg.limit) params.limit = String(arg.limit);
+          if (arg.offset) params.offset = String(arg.offset);
+        }
+        return {
+          url: `${baseUrl}/api/admin/orders`,
+          params: Object.keys(params).length > 0 ? params : undefined,
+        };
+      },
+      providesTags: ["Orders"],
+    }),
+    getOrderById: build.query({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/orders/${id}`,
+      }),
+      providesTags: ["Orders"],
+    }),
+    confirmManualOrder: build.mutation({
+      query: ({ baseUrl, id, notes }) => ({
+        url: `${baseUrl}/api/admin/orders/${id}/confirm-manual`,
+        method: "POST",
+        body: { notes },
+      }),
+      invalidatesTags: ["Orders", "Payments", "Enrollments"],
+    }),
+
+    // Dynamic Offerings & Product Pricing Catalog
+    getOfferingsPricing: build.query({
+      query: (baseUrl) => ({ url: `${baseUrl}/api/admin/pricing` }),
+      providesTags: ["Pricing"],
+    }),
+    createOfferingPricing: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/pricing`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Pricing"],
+    }),
+    updateOfferingPricing: build.mutation({
+      query: ({ baseUrl, id, body }) => ({
+        url: `${baseUrl}/api/admin/pricing/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Pricing"],
+    }),
+    deleteOfferingPricing: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/pricing/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Pricing"],
+    }),
+
+    // Discount Coupons & Promo Codes
+    getCoupons: build.query({
+      query: (baseUrl) => ({ url: `${baseUrl}/api/admin/coupons` }),
+      providesTags: ["Coupons"],
+    }),
+    createCoupon: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/coupons`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Coupons"],
+    }),
+    updateCoupon: build.mutation({
+      query: ({ baseUrl, id, body }) => ({
+        url: `${baseUrl}/api/admin/coupons/${id}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Coupons"],
+    }),
+    deleteCoupon: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/coupons/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Coupons"],
     }),
 
     // Presentations & Roadshows
@@ -1149,8 +1258,23 @@ export const {
   useGetEnrollmentsQuery,
   useCreateEnrollmentMutation,
   useUpdateEnrollmentMutation,
-  // Payments
+  useManualGrantEnrollmentMutation,
+  useRevokeEnrollmentMutation,
+  // Payments & Financial Orders Suite
   useGetPaymentsQuery,
+  useGetOrdersQuery,
+  useGetOrderByIdQuery,
+  useConfirmManualOrderMutation,
+  // Dynamic Catalog Pricing
+  useGetOfferingsPricingQuery,
+  useCreateOfferingPricingMutation,
+  useUpdateOfferingPricingMutation,
+  useDeleteOfferingPricingMutation,
+  // Discount Coupons
+  useGetCouponsQuery,
+  useCreateCouponMutation,
+  useUpdateCouponMutation,
+  useDeleteCouponMutation,
   // Presentations & Sessions
   useGetPresentationsQuery,
   useGetPresentationQuery,
