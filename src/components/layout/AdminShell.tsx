@@ -32,6 +32,7 @@ import {
   Briefcase,
   ListTodo,
 } from "lucide-react";
+import { formatPhone } from "../../utils/formatters";
 
 export default function AdminShell() {
   const user = useSelector((s: any) => s.auth.user);
@@ -174,7 +175,7 @@ export default function AdminShell() {
                     {user?.name || "Internal Staff"}
                   </p>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono truncate">
-                    {user?.phone ? `+91 ${user.phone}` : "Platform Account"}
+                    {user?.phone ? formatPhone(user.phone) : "Platform Account"}
                   </p>
                   <span
                     className={`inline-block mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${
