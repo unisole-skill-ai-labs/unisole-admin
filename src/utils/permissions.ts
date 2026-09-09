@@ -52,6 +52,14 @@ export const ALL_PERMISSIONS: PermissionDefinition[] = [
     description: "Log phone calls, change lead status, assign leads, and import CSVs",
     color: "#059669",
   },
+  {
+    key: "leads:export",
+    label: "Export CRM & Student Data",
+    shortLabel: "CRM Export",
+    category: "Admissions & CRM",
+    description: "Export lead lists and student contact directories to CSV",
+    color: "#047857",
+  },
 
   // Campus & Operations
   {
@@ -285,6 +293,30 @@ export function hasPermission(user: any, permissionKey: string): boolean {
   // Fallback to default preset based on designation
   const defaultPerms = getDefaultPermissionsForUser(user);
   return defaultPerms.includes(permissionKey);
+}
+
+/**
+ * Check if user is permitted to export lead/student CSVs.
+ * Sales roles & counselors are explicitly blocked from exporting data.
+ */
+export function canExportLeads(user: any): boolean {
+  if (!user) return false;
+  if (user.role === "SUPER_ADMIN") return true;
+
+  const role = (user.role || "").toUpperCase();
+  const designation = (user.designation || "").toUpperCase();
+
+  // Any user with SALES role or sales/counselor in their designation is blocked from exporting
+  if (
+    role === "SALES" ||
+    designation.includes("SALES") ||
+    designation.includes("TELECALL") ||
+    designation.includes("COUNSEL")
+  ) {
+    return false;
+  }
+
+  return hasPermission(user, "leads:export");
 }
 
 /**

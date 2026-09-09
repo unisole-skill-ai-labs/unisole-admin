@@ -38,11 +38,14 @@ import {
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import Modal from "../../components/ui/Modal";
+import { canExportLeads } from "../../utils/permissions";
 
 export default function SessionAnalyticsPage() {
   const { sessionId } = useParams<{ sessionId: string }>();
   const navigate = useNavigate();
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
+  const currentUser = useSelector((s: any) => s.auth.user);
+  const canExport = canExportLeads(currentUser);
 
   const { data: analyticsRes, isLoading, isError, refetch } =
     useGetSessionAnalyticsQuery(
@@ -105,7 +108,7 @@ export default function SessionAnalyticsPage() {
 
   // Export Comprehensive CSV Function
   const handleExportCSV = () => {
-    if (!leads.length) return;
+    if (!canExport || !leads.length) return;
     const headers = [
       "Rank",
       "Full Name",
@@ -241,16 +244,18 @@ export default function SessionAnalyticsPage() {
         </div>
 
         <div className="flex items-center gap-2.5 shrink-0 self-start md:self-auto">
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={handleExportCSV}
-            icon={Download}
-            disabled={!leads.length}
-            className="flex items-center gap-1.5 font-bold shadow-xs text-xs"
-          >
-            Export CSV ({leads.length})
-          </Button>
+          {canExport && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={handleExportCSV}
+              icon={Download}
+              disabled={!leads.length}
+              className="flex items-center gap-1.5 font-bold shadow-xs text-xs"
+            >
+              Export CSV ({leads.length})
+            </Button>
+          )}
 
           <Button
             variant="outline"
