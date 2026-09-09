@@ -29,11 +29,14 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
 
+  const user = useSelector((s: any) => s.auth.user);
+  const isSales = user?.role === "SALES" || (user?.designation || "").toUpperCase().includes("SALES");
+
   useEffect(() => {
     if (isAuthenticated) {
-      navigate("/tasks", { replace: true });
+      navigate(isSales ? "/leads" : "/my-work", { replace: true });
     }
-  }, [isAuthenticated, navigate]);
+  }, [isAuthenticated, isSales, navigate]);
 
   const handleLogin = async (e?: React.FormEvent) => {
     e?.preventDefault();

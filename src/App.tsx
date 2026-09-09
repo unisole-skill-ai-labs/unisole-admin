@@ -32,9 +32,9 @@ function RootIndexRedirect() {
   const user = useSelector((s: any) => s.auth.user);
   const isSales = user?.role === "SALES" || (user?.designation || "").toUpperCase().includes("SALES");
   if (isSales) {
-    return <Navigate to="leads" replace />;
+    return <Navigate to="/leads" replace />;
   }
-  return <Navigate to="my-work" replace />;
+  return <Navigate to="/my-work" replace />;
 }
 
 export default function App() {
@@ -220,17 +220,17 @@ export default function App() {
           />
 
           {/* Backwards-compatible aliases */}
-          <Route path="tasks" element={<Navigate to="/my-work" replace />} />
+          <Route path="tasks" element={<RootIndexRedirect />} />
           <Route path="admin-ops" element={<Navigate to="/worksole" replace />} />
           <Route path="templates" element={<Navigate to="/worksole" replace />} />
-          <Route path="standup" element={<Navigate to="/my-work" replace />} />
+          <Route path="standup" element={<RootIndexRedirect />} />
           <Route path="metadata" element={<Navigate to="/colleges" replace />} />
           <Route path="lead-diversification" element={<Navigate to="/leads" replace />} />
 
-          <Route path="*" element={<Navigate to="my-work" replace />} />
+          <Route path="*" element={<RootIndexRedirect />} />
         </Route>
       </Route>
-      <Route path="*" element={<Navigate to="/my-work" replace />} />
+      <Route path="*" element={<RootIndexRedirect />} />
     </Routes>
   );
 }
