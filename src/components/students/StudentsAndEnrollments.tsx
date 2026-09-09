@@ -30,6 +30,7 @@ import {
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
+import { formatPhone } from "../../utils/formatters";
 import Input from "../ui/Input";
 
 interface StudentsAndEnrollmentsProps {
@@ -73,7 +74,7 @@ const exportLearnersCsv = (data: any[], filterLabel: string) => {
         ? "Session QR"
         : "Organic Web";
 
-    const formattedPhone = s.phone ? `+91 ${s.phone}` : "";
+    const formattedPhone = s.phone ? formatPhone(s.phone) : "";
     const joinedDate = s.createdAt
       ? new Date(s.createdAt).toISOString().replace("T", " ").substring(0, 19)
       : "";
@@ -135,7 +136,7 @@ const exportEnrollmentsCsv = (data: any[], allStudents: any[], allPathways: any[
   const rows = data.map((e: any) => {
     const student = allStudents.find((s: any) => s.id === e.userId);
     const pathway = allPathways.find((p: any) => p.id === e.pathwayId);
-    const formattedPhone = student?.phone ? `+91 ${student.phone}` : "";
+    const formattedPhone = student?.phone ? formatPhone(student.phone) : "";
     const enrolledDate = e.enrolledAt
       ? new Date(e.enrolledAt).toISOString().replace("T", " ").substring(0, 19)
       : "";
@@ -391,7 +392,7 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
                       <div className="text-[11px] text-zinc-400 font-mono mt-0.5">ID: {s.id}</div>
                     </td>
                     <td className="py-3.5 px-4 font-mono font-semibold text-zinc-700 dark:text-zinc-300">
-                      {s.phone ? `+91 ${s.phone}` : "—"}
+                      {s.phone ? formatPhone(s.phone) : "—"}
                     </td>
                     <td className="py-3.5 px-4">
                       {s.role !== "STUDENT" ? (
@@ -580,7 +581,7 @@ function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
                           {student ? student.name : "Learner"}
                         </div>
                         <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
-                          {e.userId} · {student?.phone ? `+91 ${student.phone}` : ""}
+                          {e.userId} · {student?.phone ? formatPhone(student.phone) : ""}
                         </div>
                       </td>
                       <td className="py-3.5 px-4">
@@ -668,7 +669,7 @@ function CreateEnrollmentModal({ students, pathways, isLoading, onClose, onSave 
           <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">Select Learner</label>
           <select value={userId} onChange={(e) => setUserId(e.target.value)} className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs" required>
             <option value="">Choose learner account...</option>
-            {students.map((s: any) => <option key={s.id} value={s.id}>{s.name || "Learner"} (+91 {s.phone})</option>)}
+            {students.map((s: any) => <option key={s.id} value={s.id}>{s.name || "Learner"} ({formatPhone(s.phone)})</option>)}
           </select>
         </div>
         <div>

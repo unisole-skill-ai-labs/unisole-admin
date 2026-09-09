@@ -43,6 +43,7 @@ import {
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
+import { formatPhone } from "../../utils/formatters";
 
 interface PaymentsViewProps {
   baseUrl: string;
@@ -484,7 +485,7 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
                               {o.customerName || "Learner"}
                             </div>
                             <div className="text-zinc-400 font-mono text-[11px]">
-                              {o.customerPhone ? `+91 ${o.customerPhone}` : o.customerEmail || o.userId}
+                              {o.customerPhone ? formatPhone(o.customerPhone) : o.customerEmail || o.userId}
                             </div>
                           </td>
                           <td className="py-3.5 px-4">
@@ -750,7 +751,7 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
                 <thead>
                   <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 text-zinc-400 font-mono">
                     <th className="py-3 px-4 font-semibold">Payment ID</th>
-                    <th className="py-3 px-4 font-semibold">User ID</th>
+                    <th className="py-3 px-4 font-semibold">Customer / Student</th>
                     <th className="py-3 px-4 font-semibold">Amount</th>
                     <th className="py-3 px-4 font-semibold">Provider References</th>
                     <th className="py-3 px-4 font-semibold">Status</th>
@@ -771,8 +772,13 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
                             {p.id}
                             {p.orderId && <div className="text-zinc-400 text-[10px]">Ord: {p.orderId}</div>}
                           </td>
-                          <td className="py-3.5 px-4 font-mono text-zinc-600 dark:text-zinc-400">
-                            {p.userId}
+                          <td className="py-3.5 px-4">
+                            <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">
+                              {p.userName || "Student / User"}
+                            </div>
+                            <div className="text-zinc-400 font-mono text-[11px]">
+                              {p.userPhone ? formatPhone(p.userPhone) : p.userId}
+                            </div>
                           </td>
                           <td className="py-3.5 px-4 font-black font-mono text-zinc-900 dark:text-zinc-100">
                             ₹{amountRupees.toLocaleString("en-IN")}
@@ -818,7 +824,7 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
               <div>
                 <span className="text-xs font-bold text-zinc-400">Phone / Email</span>
                 <div className="font-mono text-xs text-zinc-900 dark:text-zinc-100 mt-0.5">
-                  {selectedOrder.customerPhone ? `+91 ${selectedOrder.customerPhone}` : selectedOrder.customerEmail}
+                  {selectedOrder.customerPhone ? formatPhone(selectedOrder.customerPhone) : selectedOrder.customerEmail}
                 </div>
               </div>
               <div>
@@ -1130,7 +1136,7 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
                 <option value="">-- Choose Student --</option>
                 {students.map((s: any) => (
                   <option key={s.id} value={s.id}>
-                    {s.name} ({s.phone ? `+91 ${s.phone}` : s.email || s.id})
+                    {s.name} ({s.phone ? formatPhone(s.phone) : s.email || s.id})
                   </option>
                 ))}
               </select>

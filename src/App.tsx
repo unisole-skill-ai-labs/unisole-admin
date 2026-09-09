@@ -28,6 +28,15 @@ import JoinSessionPage from "./pages/live/JoinSessionPage";
 
 import PermissionGuard from "./components/auth/PermissionGuard";
 
+function RootIndexRedirect() {
+  const user = useSelector((s: any) => s.auth.user);
+  const isSales = user?.role === "SALES" || (user?.designation || "").toUpperCase().includes("SALES");
+  if (isSales) {
+    return <Navigate to="leads" replace />;
+  }
+  return <Navigate to="my-work" replace />;
+}
+
 export default function App() {
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
 
@@ -47,14 +56,28 @@ export default function App() {
       <Route element={<RequireAdminAuth />}>
         {/* Admin Console Workspace */}
         <Route element={<AdminShell />}>
-          {/* Default landing page for all staff is their personalized My Work Cockpit */}
-          <Route index element={<Navigate to="my-work" replace />} />
+          {/* Default landing page routes sales users to leads and staff to my-work */}
+          <Route index element={<RootIndexRedirect />} />
           
           {/* Personal Assigned Work Cockpit */}
-          <Route path="my-work" element={<MyWorkPage baseUrl={baseUrl} />} />
+          <Route
+            path="my-work"
+            element={
+              <PermissionGuard permission="my_work:view">
+                <MyWorkPage baseUrl={baseUrl} />
+              </PermissionGuard>
+            }
+          />
 
           {/* Calendar & Timeline */}
-          <Route path="calendar" element={<TaskCalendarPage baseUrl={baseUrl} />} />
+          <Route
+            path="calendar"
+            element={
+              <PermissionGuard permission="my_work:view">
+                <TaskCalendarPage baseUrl={baseUrl} />
+              </PermissionGuard>
+            }
+          />
 
           {/* WorkSole Suite Canvas */}
           <Route

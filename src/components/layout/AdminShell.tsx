@@ -32,6 +32,7 @@ import {
   Briefcase,
   ListTodo,
 } from "lucide-react";
+import { formatPhone } from "../../utils/formatters";
 
 export default function AdminShell() {
   const user = useSelector((s: any) => s.auth.user);
@@ -52,19 +53,20 @@ export default function AdminShell() {
   const isSuperAdmin = user?.role === "SUPER_ADMIN";
   const isAdmin = user?.role === "ADMIN" || isSuperAdmin;
   const isMember = user?.role === "MEMBER";
+  const isSales = user?.role === "SALES" || (user?.designation || "").toUpperCase().includes("SALES");
 
-  // Permission Checks
-  const canViewMyWork = hasPermission(user, "my_work:view") || true; // All staff have personal workspace
-  const canViewWorkSole = hasPermission(user, "worksole:manage") || isSuperAdmin;
-  const canViewTeam = hasPermission(user, "team:view") || hasPermission(user, "team:manage") || isSuperAdmin;
+  // Permission Checks (Sales role is strictly restricted to Leads Management only)
+  const canViewMyWork = !isSales && (hasPermission(user, "my_work:view") || true);
+  const canViewWorkSole = !isSales && (hasPermission(user, "worksole:manage") || isSuperAdmin);
+  const canViewTeam = !isSales && (hasPermission(user, "team:view") || hasPermission(user, "team:manage") || isSuperAdmin);
   const canViewLeads = hasPermission(user, "leads:view") || hasPermission(user, "leads:manage") || isSuperAdmin;
-  const canViewDashboard = hasPermission(user, "analytics:view") || isSuperAdmin || isAdmin;
-  const canViewPathways = hasPermission(user, "curriculum:view") || hasPermission(user, "curriculum:manage") || isSuperAdmin;
-  const canViewCurriculum = hasPermission(user, "curriculum:view") || hasPermission(user, "curriculum:manage") || isSuperAdmin;
-  const canViewColleges = hasPermission(user, "colleges:view") || hasPermission(user, "colleges:manage") || isSuperAdmin;
-  const canViewPresentations = hasPermission(user, "presentations:manage") || isSuperAdmin;
-  const canViewStudents = hasPermission(user, "students:manage") || isSuperAdmin;
-  const canViewPayments = hasPermission(user, "payments:view");
+  const canViewDashboard = !isSales && (hasPermission(user, "analytics:view") || isSuperAdmin || isAdmin);
+  const canViewPathways = !isSales && (hasPermission(user, "curriculum:view") || hasPermission(user, "curriculum:manage") || isSuperAdmin);
+  const canViewCurriculum = !isSales && (hasPermission(user, "curriculum:view") || hasPermission(user, "curriculum:manage") || isSuperAdmin);
+  const canViewColleges = !isSales && (hasPermission(user, "colleges:view") || hasPermission(user, "colleges:manage") || isSuperAdmin);
+  const canViewPresentations = !isSales && (hasPermission(user, "presentations:manage") || isSuperAdmin);
+  const canViewStudents = !isSales && (hasPermission(user, "students:manage") || isSuperAdmin);
+  const canViewPayments = !isSales && hasPermission(user, "payments:view");
 
   // Close mobile sidebar on route change
   useEffect(() => {
@@ -174,7 +176,7 @@ export default function AdminShell() {
                     {user?.name || "Internal Staff"}
                   </p>
                   <p className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono truncate">
-                    {user?.phone ? `+91 ${user.phone}` : "Platform Account"}
+                    {user?.phone ? formatPhone(user.phone) : "Platform Account"}
                   </p>
                   <span
                     className={`inline-block mt-1.5 px-2 py-0.5 rounded-md text-[10px] font-bold ${
@@ -219,83 +221,89 @@ export default function AdminShell() {
           }`}
         >
           {/* 1. Core Workspace Hub */}
-          <div className="space-y-1">
-            <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2 flex items-center justify-between">
-              <span>Personal Workspace</span>
-              {radar?.blockedCount ? (
-                <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
-              ) : null}
-            </div>
-
-            {/* My Assigned Work (Top Priority for all staff) */}
-            <NavLink
-              to="/my-work"
-              className={({ isActive }) =>
-                `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive || location.pathname === "/my-work"
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <div className="flex items-center gap-3">
-                <ListTodo className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-                <span>My Assigned Work</span>
+          {(canViewMyWork || canViewWorkSole || canViewTeam) && (
+            <div className="space-y-1">
+              <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2 flex items-center justify-between">
+                <span>Personal Workspace</span>
+                {radar?.blockedCount ? (
+                  <span className="w-2 h-2 rounded-full bg-rose-500 animate-pulse" />
+                ) : null}
               </div>
-              <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
-                ACTIVE
-              </span>
-            </NavLink>
 
-            {/* Calendar & Timeline */}
-            <NavLink
-              to="/calendar"
-              className={({ isActive }) =>
-                `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                  isActive
-                    ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
-                    : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                }`
-              }
-            >
-              <CalendarCheck className="w-4 h-4 text-purple-500" />
-              <span>Calendar</span>
-            </NavLink>
+              {/* My Assigned Work (Top Priority for all staff) */}
+              {canViewMyWork && (
+                <NavLink
+                  to="/my-work"
+                  className={({ isActive }) =>
+                    `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      isActive || location.pathname === "/my-work"
+                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    }`
+                  }
+                >
+                  <div className="flex items-center gap-3">
+                    <ListTodo className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                    <span>My Assigned Work</span>
+                  </div>
+                  <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20">
+                    ACTIVE
+                  </span>
+                </NavLink>
+              )}
 
-            {/* WorkSole Project Suite */}
-            {canViewWorkSole && (
-              <NavLink
-                to="/worksole"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    isActive || location.pathname.startsWith("/worksole")
-                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                  }`
-                }
-              >
-                <Folder className="w-4 h-4 text-indigo-500" />
-                <span>WorkSole Projects</span>
-              </NavLink>
-            )}
+              {/* Calendar & Timeline */}
+              {canViewMyWork && (
+                <NavLink
+                  to="/calendar"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      isActive
+                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    }`
+                  }
+                >
+                  <CalendarCheck className="w-4 h-4 text-purple-500" />
+                  <span>Calendar</span>
+                </NavLink>
+              )}
 
-            {/* Team Directory */}
-            {canViewTeam && (
-              <NavLink
-                to="/team"
-                className={({ isActive }) =>
-                  `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
-                    isActive
-                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
-                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
-                  }`
-                }
-              >
-                <UsersRound className="w-4 h-4 text-teal-500" />
-                <span>Team & Roles</span>
-              </NavLink>
-            )}
-          </div>
+              {/* WorkSole Project Suite */}
+              {canViewWorkSole && (
+                <NavLink
+                  to="/worksole"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      isActive || location.pathname.startsWith("/worksole")
+                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    }`
+                  }
+                >
+                  <Folder className="w-4 h-4 text-indigo-500" />
+                  <span>WorkSole Projects</span>
+                </NavLink>
+              )}
+
+              {/* Team Directory */}
+              {canViewTeam && (
+                <NavLink
+                  to="/team"
+                  className={({ isActive }) =>
+                    `flex items-center gap-3 px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                      isActive
+                        ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
+                        : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                    }`
+                  }
+                >
+                  <UsersRound className="w-4 h-4 text-teal-500" />
+                  <span>Team & Roles</span>
+                </NavLink>
+              )}
+            </div>
+          )}
 
           {/* 2. Admissions & CRM */}
           {canViewLeads && (

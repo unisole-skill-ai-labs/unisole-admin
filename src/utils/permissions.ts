@@ -153,6 +153,11 @@ export const DESIGNATION_PRESETS: Record<
     role: "ADMIN",
     permissions: ALL_PERMISSIONS.map((p) => p.key),
   },
+  SALES: {
+    label: "Sales Executive / Representative",
+    role: "MEMBER",
+    permissions: ["leads:view", "leads:manage"],
+  },
   COUNSELOR: {
     label: "Admissions Counselor / Telecaller",
     role: "MEMBER",
@@ -222,8 +227,14 @@ export function getDefaultPermissionsForUser(user: any): string[] {
     return ALL_PERMISSIONS.map((p) => p.key);
   }
 
-  // Check if designation matches a preset
+  const role = (user.role || "").toUpperCase();
   const des = (user.designation || "").toUpperCase();
+
+  if (role === "SALES" || des.includes("SALES")) {
+    return DESIGNATION_PRESETS.SALES.permissions;
+  }
+
+  // Check if designation matches a preset
   if (des.includes("COUNSEL") || des.includes("ADMISSION") || des.includes("TELECALL")) {
     return DESIGNATION_PRESETS.COUNSELOR.permissions;
   }
@@ -274,4 +285,20 @@ export function hasPermission(user: any, permissionKey: string): boolean {
   // Fallback to default preset based on designation
   const defaultPerms = getDefaultPermissionsForUser(user);
   return defaultPerms.includes(permissionKey);
+}
+
+/**
+ * Cleanly format team member label for dropdowns across CRM & Leads
+ */
+export function formatTeamMemberLabel(m: {
+  id?: string;
+  name?: string | null;
+  username?: string | null;
+  phone?: string;
+  role?: string;
+  designation?: string | null;
+}): string {
+  const displayName = m?.name || (m?.username ? `@${m.username}` : m?.phone) || "Team Member";
+  const roleLabel = m?.designation || (m?.role === "SUPER_ADMIN" ? "Super Admin" : m?.role === "ADMIN" ? "Admin" : m?.role === "SALES" ? "Sales" : "Staff");
+  return `${displayName} (${roleLabel})`;
 }

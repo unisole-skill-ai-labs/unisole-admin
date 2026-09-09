@@ -41,6 +41,7 @@ import {
   useBulkUpdateLeadStatusMutation,
   useSyncUsersToLeadsMutation,
 } from "../../store";
+import { formatTeamMemberLabel } from "../../utils/permissions";
 import LogCallModal from "../../components/leads/LogCallModal";
 import LeadDetailDrawer from "../../components/leads/LeadDetailDrawer";
 import LeadFormModal from "../../components/leads/LeadFormModal";
@@ -70,6 +71,9 @@ const STATUS_BADGES: Record<string, string> = {
 export default function LeadsManagementPage() {
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
   const currentUser = useSelector((s: any) => s.auth.user);
+  const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
+  const isAdmin = currentUser?.role === "ADMIN" || isSuperAdmin;
+  const isSales = currentUser?.role === "SALES" || (currentUser?.designation || "").toUpperCase().includes("SALES");
 
   const [activeTab, setActiveTab] = useState<"directory" | "analytics">("directory");
   const [scopeFilter, setScopeFilter] = useState<"ACTIVE" | "NON_LEADS" | "ALL">("ACTIVE");
@@ -111,7 +115,7 @@ export default function LeadsManagementPage() {
     search: search.trim() || undefined,
     collegeId: collegeId || undefined,
     branch: branch || undefined,
-    assignedToUserId: assignedToUserId || undefined,
+    assignedToUserId: isSales ? undefined : (assignedToUserId || undefined),
     quality: quality || undefined,
     status: effectiveStatus,
     excludeNonLeads: scopeFilter === "ACTIVE" && !status ? true : undefined,
@@ -119,7 +123,16 @@ export default function LeadsManagementPage() {
   });
 
   const { data: metaRes } = useGetLeadsMetaQuery({ baseUrl });
-  const meta = metaRes?.data || { colleges: [], branches: [], teamMembers: [] };
+  const meta = useMemo(() => {
+    const raw = metaRes?.data || metaRes;
+    return {
+      colleges: Array.isArray(raw?.colleges) ? raw.colleges : [],
+      branches: Array.isArray(raw?.branches) ? raw.branches : [],
+      teamMembers: Array.isArray(raw?.teamMembers) ? raw.teamMembers : [],
+      qualities: Array.isArray(raw?.qualities) ? raw.qualities : [],
+      statuses: Array.isArray(raw?.statuses) ? raw.statuses : [],
+    };
+  }, [metaRes]);
 
   const [updateLead] = useUpdateLeadMutation();
   const [deleteLead] = useDeleteLeadMutation();
@@ -305,11 +318,21 @@ export default function LeadsManagementPage() {
               <PhoneCall className="w-5 h-5" />
             </div>
             <div>
-              <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                Lead Management CRM
-              </h1>
+              <div className="flex items-center gap-2">
+                <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
+                  {isSales ? "My Assigned Leads" : "Lead Management CRM"}
+                </h1>
+                {isSales && (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>Sales Rep: {currentUser?.name || currentUser?.phone || "Mokta"}</span>
+                  </span>
+                )}
+              </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                Counselor assignments, quality scoring, call logging & conversion tracking
+                {isSales
+                  ? "Access your assigned prospective students, log calling notes, and update disposition status."
+                  : "Counselor assignments, quality scoring, call logging & conversion tracking"}
               </p>
             </div>
           </div>
@@ -346,23 +369,27 @@ export default function LeadsManagementPage() {
             </button>
           </div>
 
-          <button
-            onClick={handleSyncUsers}
-            disabled={isSyncingUsers}
-            title="Sync all registered platform students into CRM leads"
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800/80 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all shadow-xs cursor-pointer disabled:opacity-50"
-          >
-            <Sparkles className={`w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 ${isSyncingUsers ? "animate-spin" : ""}`} />
-            <span>{isSyncingUsers ? "Syncing Platform Users..." : "Sync All Users to Leads"}</span>
-          </button>
+          {!isSales && (
+            <button
+              onClick={handleSyncUsers}
+              disabled={isSyncingUsers}
+              title="Sync all registered platform students into CRM leads"
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-indigo-200 dark:border-indigo-800/80 bg-indigo-50 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 text-xs font-bold hover:bg-indigo-100 dark:hover:bg-indigo-900/60 transition-all shadow-xs cursor-pointer disabled:opacity-50"
+            >
+              <Sparkles className={`w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 ${isSyncingUsers ? "animate-spin" : ""}`} />
+              <span>{isSyncingUsers ? "Syncing Platform Users..." : "Sync All Users to Leads"}</span>
+            </button>
+          )}
 
-          <button
-            onClick={() => setShowImportModal(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-xs font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer"
-          >
-            <UploadCloud className="w-3.5 h-3.5 text-indigo-500" />
-            <span className="hidden sm:inline">Import CSV</span>
-          </button>
+          {!isSales && (
+            <button
+              onClick={() => setShowImportModal(true)}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-xs font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer"
+            >
+              <UploadCloud className="w-3.5 h-3.5 text-indigo-500" />
+              <span className="hidden sm:inline">Import CSV</span>
+            </button>
+          )}
 
           <button
             onClick={handleExportCSV}
@@ -465,7 +492,7 @@ export default function LeadsManagementPage() {
               )}
             </div>
 
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
+            <div className={`grid grid-cols-1 sm:grid-cols-2 ${isSales ? "lg:grid-cols-3" : "lg:grid-cols-4"} gap-2.5`}>
               {/* Search */}
               <div className="relative">
                 <Search className="w-4 h-4 absolute left-3 top-2.5 text-zinc-400" />
@@ -510,22 +537,24 @@ export default function LeadsManagementPage() {
                 </select>
               </div>
 
-              {/* Assigned Counselor */}
-              <div>
-                <select
-                  value={assignedToUserId}
-                  onChange={(e) => setAssignedToUserId(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
-                >
-                  <option value="">All Assigned Counselors</option>
-                  <option value="unassigned">⚠️ Unassigned Leads</option>
-                  {meta.teamMembers.map((m: any) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name || m.phone} ({m.role})
-                    </option>
-                  ))}
-                </select>
-              </div>
+              {/* Assigned Rep / Team Member Filter (Admins Only) */}
+              {!isSales && (
+                <div>
+                  <select
+                    value={assignedToUserId}
+                    onChange={(e) => setAssignedToUserId(e.target.value)}
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200 font-medium"
+                  >
+                    <option value="">All Assigned Reps / Staff</option>
+                    <option value="unassigned">⚠️ Unassigned Leads</option>
+                    {meta.teamMembers.map((m: any) => (
+                      <option key={m.id} value={m.id}>
+                        {formatTeamMemberLabel(m)}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
             </div>
 
             {/* Sub-Filters: Quality, Status, Next Call Due */}
@@ -537,34 +566,36 @@ export default function LeadsManagementPage() {
                   onChange={(e) => setQuality(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
                 >
-                  <option value="">All Quality Tiers</option>
-                  <option value="HOT">🔥 Hot Leads (High Intent)</option>
-                  <option value="WARM">☀️ Warm Leads</option>
-                  <option value="COLD">❄️ Cold Leads</option>
-                  <option value="POOR">⚠️ Poor Fit</option>
+                  <option value="">All Qualities</option>
+                  <option value="HOT">🔥 Hot</option>
+                  <option value="WARM">☀️ Warm</option>
+                  <option value="COLD">❄️ Cold</option>
+                  <option value="POOR">⚠️ Poor</option>
+                  <option value="UNQUALIFIED">❌ Unqualified</option>
                 </select>
               </div>
 
-              {/* Status */}
+              {/* Status Filter */}
               <div>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
                 >
-                  <option value="">All Pipeline Statuses</option>
-                  <option value="NEW">New Leads</option>
-                  <option value="ATTEMPTED">Call Attempted</option>
+                  <option value="">All Lead Statuses</option>
+                  <option value="NEW">New</option>
                   <option value="CONTACTED">Contacted</option>
                   <option value="INTERESTED">Interested</option>
                   <option value="FOLLOW_UP_SCHEDULED">Follow-up Scheduled</option>
                   <option value="DEMO_GIVEN">Demo Given</option>
-                  <option value="CONVERTED">🎉 Converted / Enrolled</option>
+                  <option value="CONVERTED">🎉 Converted</option>
                   <option value="LOST">Lost</option>
+                  <option value="JUNK">🗑️ Junk</option>
+                  <option value="NOT_A_LEAD">🚫 Not a Lead</option>
                 </select>
               </div>
 
-              {/* Follow-up Queue */}
+              {/* Next Call Due Filter */}
               <div>
                 <select
                   value={nextCallDue}
@@ -572,44 +603,43 @@ export default function LeadsManagementPage() {
                   className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
                 >
                   <option value="">All Schedules</option>
-                  <option value="overdue">🚨 Overdue Follow-ups</option>
-                  <option value="today">📅 Follow-ups Due Today</option>
-                  <option value="upcoming">⏳ Upcoming Follow-ups</option>
-                  <option value="none">⚪ No Follow-up Set</option>
+                  <option value="overdue">🚨 Overdue Only</option>
+                  <option value="today">📅 Due Today</option>
+                  <option value="upcoming">⏳ Upcoming (Next 7 Days)</option>
+                  <option value="none">⚪ Unscheduled</option>
                 </select>
               </div>
             </div>
           </div>
 
-          {/* Bulk Action Strip */}
+          {/* Bulk Selection Strip */}
           {selectedLeadIds.length > 0 && (
-            <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+            <div className="bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/50 rounded-2xl p-3 flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center">
-                  {selectedLeadIds.length}
-                </span>
                 <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
-                  {selectedLeadIds.length} leads selected
+                  {selectedLeadIds.length} lead{selectedLeadIds.length > 1 ? "s" : ""} selected
                 </span>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap">
-                {/* Bulk Assign */}
-                <select
-                  value={bulkAssignee}
-                  onChange={(e) => {
-                    setBulkAssignee(e.target.value);
-                    if (e.target.value) handleBulkAssignSubmit(e.target.value);
-                  }}
-                  className="px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 text-xs text-zinc-800 dark:text-zinc-200 font-semibold"
-                >
-                  <option value="">Assign To Counselor...</option>
-                  {meta.teamMembers.map((m: any) => (
-                    <option key={m.id} value={m.id}>
-                      {m.name || m.phone}
-                    </option>
-                  ))}
-                </select>
+                {/* Bulk Assign (Admins Only) */}
+                {!isSales && (
+                  <select
+                    value={bulkAssignee}
+                    onChange={(e) => {
+                      setBulkAssignee(e.target.value);
+                      if (e.target.value) handleBulkAssignSubmit(e.target.value);
+                    }}
+                    className="px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 text-xs text-zinc-800 dark:text-zinc-200 font-semibold"
+                  >
+                    <option value="">Assign To Team Member / Sales Rep...</option>
+                    {meta.teamMembers.map((m: any) => (
+                      <option key={m.id} value={m.id}>
+                        {formatTeamMemberLabel(m)}
+                      </option>
+                    ))}
+                  </select>
+                )}
 
                 {/* Bulk Status */}
                 <select
@@ -656,7 +686,7 @@ export default function LeadsManagementPage() {
               <div className="p-12 text-center space-y-3">
                 <Users className="w-10 h-10 text-zinc-300 dark:text-zinc-700 mx-auto" />
                 <p className="text-sm font-bold text-zinc-700 dark:text-zinc-300">
-                  No student leads match your criteria.
+                  {isSales ? "No assigned leads found" : "No student leads match your criteria."}
                 </p>
                 <div className="flex items-center justify-center gap-2">
                   {hasActiveFilters && (
@@ -667,12 +697,14 @@ export default function LeadsManagementPage() {
                       Clear Filters
                     </button>
                   )}
-                  <button
-                    onClick={() => setShowAddModal(true)}
-                    className="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700"
-                  >
-                    Add Lead
-                  </button>
+                  {!isSales && (
+                    <button
+                      onClick={() => setShowAddModal(true)}
+                      className="px-3.5 py-1.5 rounded-xl bg-indigo-600 text-white text-xs font-bold hover:bg-indigo-700"
+                    >
+                      Add Lead
+                    </button>
+                  )}
                 </div>
               </div>
             ) : (
@@ -830,20 +862,26 @@ export default function LeadsManagementPage() {
                             )}
                           </td>
 
-                          {/* Assigned Counselor */}
+                          {/* Assigned Rep / Staff */}
                           <td className="p-3">
-                            <select
-                              value={lead.assignedToUserId || ""}
-                              onChange={(e) => handleInlineAssignee(lead.id, e.target.value)}
-                              className="text-xs font-semibold px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 max-w-[140px]"
-                            >
-                              <option value="">Unassigned</option>
-                              {meta.teamMembers.map((m: any) => (
-                                <option key={m.id} value={m.id}>
-                                  {m.name || m.phone}
-                                </option>
-                              ))}
-                            </select>
+                            {isSales ? (
+                              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                                {lead.assignedToUser?.name || "Assigned"}
+                              </span>
+                            ) : (
+                              <select
+                                value={lead.assignedToUserId || ""}
+                                onChange={(e) => handleInlineAssignee(lead.id, e.target.value)}
+                                className="text-xs font-semibold px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 max-w-[140px]"
+                              >
+                                <option value="">Unassigned</option>
+                                {meta.teamMembers.map((m: any) => (
+                                  <option key={m.id} value={m.id}>
+                                    {formatTeamMemberLabel(m)}
+                                  </option>
+                                ))}
+                              </select>
+                            )}
                           </td>
 
                           {/* Status */}
