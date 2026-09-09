@@ -145,7 +145,7 @@ export default function CollegeLeadsSection({
   }, [baseUrl, collegeId, effectiveBranch, search, qualityFilter, statusFilter, counselorFilter, callDueFilter, scope]);
 
   const { data: leadsData, isLoading, isFetching, refetch } = useGetLeadsQuery(queryParams);
-  const { data: metaData } = useGetLeadsMetaQuery(baseUrl);
+  const { data: metaData } = useGetLeadsMetaQuery({ baseUrl });
   const [updateLead] = useUpdateLeadMutation();
   const [syncUsersToLeads, { isLoading: isSyncing }] = useSyncUsersToLeadsMutation();
 
@@ -157,27 +157,12 @@ export default function CollegeLeadsSection({
 
   const meta = useMemo(() => {
     const d = metaData?.data || metaData;
-    return (
-      d || {
-        colleges: [],
-        branches: [],
-        teamMembers: [],
-        qualities: ["HOT", "WARM", "COLD", "POOR", "UNQUALIFIED"],
-        statuses: [
-          "NEW",
-          "ATTEMPTED",
-          "CONTACTED",
-          "INTERESTED",
-          "FOLLOW_UP_SCHEDULED",
-          "DEMO_GIVEN",
-          "CONVERTED",
-          "LOST",
-          "JUNK",
-          "NOT_A_LEAD",
-        ],
-        sources: [],
-      }
-    );
+    return {
+      colleges: Array.isArray(d?.colleges) ? d.colleges : [],
+      branches: Array.isArray(d?.branches) ? d.branches : [],
+      teamMembers: Array.isArray(d?.teamMembers) ? d.teamMembers : [],
+      qualities: Array.isArray(d?.qualities) ? d.qualities : ["HOT", "WARM", "COLD", "POOR", "UNQUALIFIED"],
+    };
   }, [metaData]);
 
   // Client-side scope filtering if "non_leads" is chosen

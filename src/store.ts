@@ -722,9 +722,12 @@ export const adminApi = createApi({
       providesTags: ["LeadAnalytics", "Leads"],
     }),
     getLeadsMeta: build.query({
-      query: ({ baseUrl }: any) => ({
-        url: `${baseUrl}/api/admin/leads/meta`,
-      }),
+      query: (arg: any) => {
+        const bUrl = typeof arg === "string" ? arg : arg?.baseUrl || "";
+        return {
+          url: `${bUrl}/api/admin/leads/meta`,
+        };
+      },
       transformResponse: (response: any) => response?.data || response,
       providesTags: ["LeadMeta", "Leads", "Colleges", "TeamMembers"],
     }),

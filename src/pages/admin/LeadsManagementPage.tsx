@@ -123,7 +123,16 @@ export default function LeadsManagementPage() {
   });
 
   const { data: metaRes } = useGetLeadsMetaQuery({ baseUrl });
-  const meta = metaRes?.data || { colleges: [], branches: [], teamMembers: [] };
+  const meta = useMemo(() => {
+    const raw = metaRes?.data || metaRes;
+    return {
+      colleges: Array.isArray(raw?.colleges) ? raw.colleges : [],
+      branches: Array.isArray(raw?.branches) ? raw.branches : [],
+      teamMembers: Array.isArray(raw?.teamMembers) ? raw.teamMembers : [],
+      qualities: Array.isArray(raw?.qualities) ? raw.qualities : [],
+      statuses: Array.isArray(raw?.statuses) ? raw.statuses : [],
+    };
+  }, [metaRes]);
 
   const [updateLead] = useUpdateLeadMutation();
   const [deleteLead] = useDeleteLeadMutation();
