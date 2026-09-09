@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useSelector } from "react-redux";
+import { canExportLeads } from "../../utils/permissions";
 import {
   Users,
   TrendingUp,
@@ -74,6 +75,7 @@ export default function LeadsManagementPage() {
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
   const isAdmin = currentUser?.role === "ADMIN" || isSuperAdmin;
   const isSales = currentUser?.role === "SALES" || (currentUser?.designation || "").toUpperCase().includes("SALES");
+  const canExport = canExportLeads(currentUser);
 
   const [activeTab, setActiveTab] = useState<"directory" | "analytics">("directory");
   const [scopeFilter, setScopeFilter] = useState<"ACTIVE" | "NON_LEADS" | "ALL">("ACTIVE");
@@ -251,6 +253,7 @@ export default function LeadsManagementPage() {
 
   // Export CSV
   const handleExportCSV = () => {
+    if (!canExport) return;
     if (leadsList.length === 0) return;
     const headers = [
       "Name",
@@ -391,13 +394,15 @@ export default function LeadsManagementPage() {
             </button>
           )}
 
-          <button
-            onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-xs font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer"
-          >
-            <Download className="w-3.5 h-3.5 text-zinc-500" />
-            <span className="hidden sm:inline">Export</span>
-          </button>
+          {canExport && (
+            <button
+              onClick={handleExportCSV}
+              className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-xs font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer"
+            >
+              <Download className="w-3.5 h-3.5 text-zinc-500" />
+              <span className="hidden sm:inline">Export</span>
+            </button>
+          )}
 
           <button
             onClick={() => setShowAddModal(true)}

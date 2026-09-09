@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
+import { canExportLeads } from "../../utils/permissions";
 
 const BRANCH_COLORS = [
   "bg-indigo-500",
@@ -45,6 +46,8 @@ const BRANCH_COLORS = [
 export default function LeadDiversificationPage() {
   const navigate = useNavigate();
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
+  const currentUser = useSelector((s: any) => s.auth.user);
+  const canExport = canExportLeads(currentUser);
 
   const {
     data: report,
@@ -60,6 +63,7 @@ export default function LeadDiversificationPage() {
 
   // Format and export CSV
   const handleExportCSV = (collegeId?: string) => {
+    if (!canExport) return;
     if (!report?.masterLeads) return;
 
     let targetLeads = report.masterLeads;
@@ -224,15 +228,17 @@ export default function LeadDiversificationPage() {
             <span>Refresh</span>
           </Button>
 
-          <Button
-            variant="secondary"
-            size="sm"
-            onClick={() => handleExportCSV()}
-            icon={Download}
-            className="flex items-center gap-1.5"
-          >
-            Export All Leads CSV
-          </Button>
+          {canExport && (
+            <Button
+              variant="secondary"
+              size="sm"
+              onClick={() => handleExportCSV()}
+              icon={Download}
+              className="flex items-center gap-1.5"
+            >
+              Export All Leads CSV
+            </Button>
+          )}
 
           <Button
             variant="primary"
@@ -636,15 +642,17 @@ export default function LeadDiversificationPage() {
                       )}
 
                       <div className="flex items-center gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleExportCSV(college.id)}
-                          icon={Download}
-                          title="Download college leads CSV"
-                        >
-                          CSV
-                        </Button>
+                        {canExport && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleExportCSV(college.id)}
+                            icon={Download}
+                            title="Download college leads CSV"
+                          >
+                            CSV
+                          </Button>
+                        )}
                         <Button
                           variant="secondary"
                           size="sm"
@@ -670,14 +678,16 @@ export default function LeadDiversificationPage() {
             <h3 className="text-xs font-bold uppercase tracking-wider text-zinc-500 font-mono">
               Campus Lead Diversification Matrix ({filteredColleges.length} Colleges)
             </h3>
-            <Button
-              variant="secondary"
-              size="sm"
-              onClick={() => handleExportCSV()}
-              icon={Download}
-            >
-              Export Matrix
-            </Button>
+            {canExport && (
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={() => handleExportCSV()}
+                icon={Download}
+              >
+                Export Matrix
+              </Button>
+            )}
           </div>
 
           <div className="overflow-x-auto">
@@ -759,13 +769,15 @@ export default function LeadDiversificationPage() {
                               </Button>
                             </Link>
                           )}
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => handleExportCSV(college.id)}
-                            icon={Download}
-                            title="Export CSV"
-                          />
+                          {canExport && (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleExportCSV(college.id)}
+                              icon={Download}
+                              title="Export CSV"
+                            />
+                          )}
                         </div>
                       </td>
                     </tr>
@@ -790,15 +802,17 @@ export default function LeadDiversificationPage() {
               </p>
             </div>
 
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => handleExportCSV()}
-              icon={Download}
-              className="shadow-md"
-            >
-              Export ({filteredMasterLeads.length}) Leads CSV
-            </Button>
+            {canExport && (
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => handleExportCSV()}
+                icon={Download}
+                className="shadow-md"
+              >
+                Export ({filteredMasterLeads.length}) Leads CSV
+              </Button>
+            )}
           </div>
 
           <div className="overflow-x-auto">
