@@ -286,3 +286,19 @@ export function hasPermission(user: any, permissionKey: string): boolean {
   const defaultPerms = getDefaultPermissionsForUser(user);
   return defaultPerms.includes(permissionKey);
 }
+
+/**
+ * Cleanly format team member label for dropdowns across CRM & Leads
+ */
+export function formatTeamMemberLabel(m: {
+  id?: string;
+  name?: string | null;
+  username?: string | null;
+  phone?: string;
+  role?: string;
+  designation?: string | null;
+}): string {
+  const displayName = m?.name || (m?.username ? `@${m.username}` : m?.phone) || "Team Member";
+  const roleLabel = m?.designation || (m?.role === "SUPER_ADMIN" ? "Super Admin" : m?.role === "ADMIN" ? "Admin" : m?.role === "SALES" ? "Sales" : "Staff");
+  return `${displayName} (${roleLabel})`;
+}

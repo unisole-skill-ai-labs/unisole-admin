@@ -37,6 +37,7 @@ import {
   useDeleteLeadMutation,
   useSyncUsersToLeadsMutation,
 } from "../../store";
+import { formatTeamMemberLabel } from "../../utils/permissions";
 import LogCallModal from "./LogCallModal";
 import LeadDetailDrawer from "./LeadDetailDrawer";
 import LeadFormModal from "./LeadFormModal";
@@ -524,17 +525,17 @@ export default function CollegeLeadsSection({
             </select>
           </div>
 
-          {/* Counselor Filter */}
+          {/* Assigned Rep Filter */}
           <div>
             <select
               value={counselorFilter}
               onChange={(e) => setCounselorFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100"
+              className="w-full px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100 font-medium"
             >
-              <option value="ALL">All Counselors</option>
+              <option value="ALL">All Assigned Reps / Staff</option>
               {meta.teamMembers.map((m: any) => (
                 <option key={m.id} value={m.id}>
-                  {m.name || m.phone}
+                  {formatTeamMemberLabel(m)}
                 </option>
               ))}
             </select>
@@ -567,11 +568,11 @@ export default function CollegeLeadsSection({
                 onChange={(e) => setBulkAssignCounselor(e.target.value)}
                 className="px-2 py-1 rounded-lg border border-indigo-300 dark:border-indigo-800 bg-white dark:bg-zinc-900 text-xs font-medium text-zinc-900 dark:text-zinc-100"
               >
-                <option value="">Assign Counselor...</option>
+                <option value="">Assign To Team Member / Sales Rep...</option>
                 <option value="UNASSIGNED">Unassign</option>
                 {meta.teamMembers.map((m: any) => (
                   <option key={m.id} value={m.id}>
-                    {m.name || m.phone}
+                    {formatTeamMemberLabel(m)}
                   </option>
                 ))}
               </select>
@@ -645,7 +646,7 @@ export default function CollegeLeadsSection({
                   <th className="p-3">Quality</th>
                   <th className="p-3">Calls</th>
                   <th className="p-3">Next Call Time</th>
-                  <th className="p-3">Assigned Counselor</th>
+                  <th className="p-3">Assigned Rep / Staff</th>
                   <th className="p-3">Status</th>
                   <th className="p-3 text-right">Actions</th>
                 </tr>
@@ -783,17 +784,17 @@ export default function CollegeLeadsSection({
                         )}
                       </td>
 
-                      {/* Assigned Counselor */}
+                      {/* Assigned Rep / Staff */}
                       <td className="p-3">
                         <select
                           value={lead.assignedToUserId || ""}
                           onChange={(e) => handleInlineAssignee(lead.id, e.target.value)}
-                          className="text-xs font-semibold px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 max-w-[130px]"
+                          className="text-xs font-semibold px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 max-w-[150px]"
                         >
                           <option value="">Unassigned</option>
                           {meta.teamMembers.map((m: any) => (
                             <option key={m.id} value={m.id}>
-                              {m.name || m.phone}
+                              {formatTeamMemberLabel(m)}
                             </option>
                           ))}
                         </select>

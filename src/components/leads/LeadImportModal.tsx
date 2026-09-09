@@ -12,13 +12,14 @@ import {
   FileText,
 } from "lucide-react";
 import { useBulkImportLeadsMutation } from "../../store";
+import { formatTeamMemberLabel } from "../../utils/permissions";
 
 interface LeadImportModalProps {
   baseUrl: string;
   onClose: () => void;
   onSuccess?: () => void;
   colleges?: Array<{ id: string; name: string }>;
-  teamMembers?: Array<{ id: string; name: string; phone: string; role: string }>;
+  teamMembers?: Array<any>;
   initialCollegeId?: string;
   initialCollegeName?: string;
   initialBranch?: string;
@@ -276,7 +277,7 @@ export default function LeadImportModal({
 
                 <div>
                   <label className="text-[11px] font-bold text-zinc-600 dark:text-zinc-400 block mb-1">
-                    Assign Counselor
+                    Assign Team Member / Sales Rep
                   </label>
                   <select
                     value={defaultAssignedTo}
@@ -286,7 +287,7 @@ export default function LeadImportModal({
                     <option value="">Unassigned</option>
                     {teamMembers.map((m) => (
                       <option key={m.id} value={m.id}>
-                        {m.name || m.phone}
+                        {formatTeamMemberLabel(m)}
                       </option>
                     ))}
                   </select>

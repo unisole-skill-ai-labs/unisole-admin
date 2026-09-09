@@ -41,6 +41,7 @@ import {
   useBulkUpdateLeadStatusMutation,
   useSyncUsersToLeadsMutation,
 } from "../../store";
+import { formatTeamMemberLabel } from "../../utils/permissions";
 import LogCallModal from "../../components/leads/LogCallModal";
 import LeadDetailDrawer from "../../components/leads/LeadDetailDrawer";
 import LeadFormModal from "../../components/leads/LeadFormModal";
@@ -527,19 +528,19 @@ export default function LeadsManagementPage() {
                 </select>
               </div>
 
-              {/* Assigned Counselor Filter (Admins Only) */}
+              {/* Assigned Rep / Team Member Filter (Admins Only) */}
               {!isSales && (
                 <div>
                   <select
                     value={assignedToUserId}
                     onChange={(e) => setAssignedToUserId(e.target.value)}
-                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
+                    className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200 font-medium"
                   >
-                    <option value="">All Assigned Counselors</option>
+                    <option value="">All Assigned Reps / Staff</option>
                     <option value="unassigned">⚠️ Unassigned Leads</option>
                     {meta.teamMembers.map((m: any) => (
                       <option key={m.id} value={m.id}>
-                        {m.name || m.phone} ({m.role})
+                        {formatTeamMemberLabel(m)}
                       </option>
                     ))}
                   </select>
@@ -556,34 +557,36 @@ export default function LeadsManagementPage() {
                   onChange={(e) => setQuality(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
                 >
-                  <option value="">All Quality Tiers</option>
-                  <option value="HOT">🔥 Hot Leads (High Intent)</option>
-                  <option value="WARM">☀️ Warm Leads</option>
-                  <option value="COLD">❄️ Cold Leads</option>
-                  <option value="POOR">⚠️ Poor Fit</option>
+                  <option value="">All Qualities</option>
+                  <option value="HOT">🔥 Hot</option>
+                  <option value="WARM">☀️ Warm</option>
+                  <option value="COLD">❄️ Cold</option>
+                  <option value="POOR">⚠️ Poor</option>
+                  <option value="UNQUALIFIED">❌ Unqualified</option>
                 </select>
               </div>
 
-              {/* Status */}
+              {/* Status Filter */}
               <div>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
                   className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
                 >
-                  <option value="">All Pipeline Statuses</option>
-                  <option value="NEW">New Leads</option>
-                  <option value="ATTEMPTED">Call Attempted</option>
+                  <option value="">All Lead Statuses</option>
+                  <option value="NEW">New</option>
                   <option value="CONTACTED">Contacted</option>
                   <option value="INTERESTED">Interested</option>
                   <option value="FOLLOW_UP_SCHEDULED">Follow-up Scheduled</option>
                   <option value="DEMO_GIVEN">Demo Given</option>
-                  <option value="CONVERTED">🎉 Converted / Enrolled</option>
+                  <option value="CONVERTED">🎉 Converted</option>
                   <option value="LOST">Lost</option>
+                  <option value="JUNK">🗑️ Junk</option>
+                  <option value="NOT_A_LEAD">🚫 Not a Lead</option>
                 </select>
               </div>
 
-              {/* Follow-up Queue */}
+              {/* Next Call Due Filter */}
               <div>
                 <select
                   value={nextCallDue}
@@ -591,24 +594,21 @@ export default function LeadsManagementPage() {
                   className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
                 >
                   <option value="">All Schedules</option>
-                  <option value="overdue">🚨 Overdue Follow-ups</option>
-                  <option value="today">📅 Follow-ups Due Today</option>
-                  <option value="upcoming">⏳ Upcoming Follow-ups</option>
-                  <option value="none">⚪ No Follow-up Set</option>
+                  <option value="overdue">🚨 Overdue Only</option>
+                  <option value="today">📅 Due Today</option>
+                  <option value="upcoming">⏳ Upcoming (Next 7 Days)</option>
+                  <option value="none">⚪ Unscheduled</option>
                 </select>
               </div>
             </div>
           </div>
 
-          {/* Bulk Action Strip */}
+          {/* Bulk Selection Strip */}
           {selectedLeadIds.length > 0 && (
-            <div className="p-3.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/30 flex flex-wrap items-center justify-between gap-3 animate-fade-in">
+            <div className="bg-indigo-50/80 dark:bg-indigo-950/40 border border-indigo-200 dark:border-indigo-900/50 rounded-2xl p-3 flex items-center justify-between gap-3 flex-wrap">
               <div className="flex items-center gap-2">
-                <span className="w-6 h-6 rounded-full bg-indigo-600 text-white font-bold text-xs flex items-center justify-center">
-                  {selectedLeadIds.length}
-                </span>
                 <span className="text-xs font-bold text-indigo-900 dark:text-indigo-200">
-                  {selectedLeadIds.length} leads selected
+                  {selectedLeadIds.length} lead{selectedLeadIds.length > 1 ? "s" : ""} selected
                 </span>
               </div>
 
@@ -623,10 +623,10 @@ export default function LeadsManagementPage() {
                     }}
                     className="px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 text-xs text-zinc-800 dark:text-zinc-200 font-semibold"
                   >
-                    <option value="">Assign To Counselor...</option>
+                    <option value="">Assign To Team Member / Sales Rep...</option>
                     {meta.teamMembers.map((m: any) => (
                       <option key={m.id} value={m.id}>
-                        {m.name || m.phone}
+                        {formatTeamMemberLabel(m)}
                       </option>
                     ))}
                   </select>
@@ -853,7 +853,7 @@ export default function LeadsManagementPage() {
                             )}
                           </td>
 
-                          {/* Assigned Counselor */}
+                          {/* Assigned Rep / Staff */}
                           <td className="p-3">
                             {isSales ? (
                               <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
@@ -868,7 +868,7 @@ export default function LeadsManagementPage() {
                                 <option value="">Unassigned</option>
                                 {meta.teamMembers.map((m: any) => (
                                   <option key={m.id} value={m.id}>
-                                    {m.name || m.phone}
+                                    {formatTeamMemberLabel(m)}
                                   </option>
                                 ))}
                               </select>

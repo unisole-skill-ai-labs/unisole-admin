@@ -28,6 +28,7 @@ import {
   useUpdateLeadMutation,
   useDeleteLeadMutation,
 } from "../../store";
+import { formatTeamMemberLabel } from "../../utils/permissions";
 import LogCallModal from "./LogCallModal";
 
 interface LeadDetailDrawerProps {
@@ -35,7 +36,7 @@ interface LeadDetailDrawerProps {
   baseUrl: string;
   onClose: () => void;
   onEditLead?: (lead: any) => void;
-  teamMembers?: Array<{ id: string; name: string; phone: string; role: string }>;
+  teamMembers?: Array<any>;
 }
 
 const QUALITY_CONFIG: Record<string, { label: string; icon: any; badgeClass: string }> = {
@@ -277,11 +278,11 @@ export default function LeadDetailDrawer({
                   </div>
                 </div>
 
-                {/* Assigned Counselor & Status Changers */}
+                {/* Assigned Team Member & Status Changers */}
                 <div className="pt-3 border-t border-zinc-200 dark:border-zinc-800 grid grid-cols-2 gap-3">
                   <div>
                     <label className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">
-                      Assigned Counselor
+                      Assigned Rep / Staff
                     </label>
                     <select
                       value={lead.assignedToUserId || ""}
@@ -291,7 +292,7 @@ export default function LeadDetailDrawer({
                       <option value="">Unassigned</option>
                       {teamMembers.map((m) => (
                         <option key={m.id} value={m.id}>
-                          {m.name || m.phone} ({m.role})
+                          {formatTeamMemberLabel(m)}
                         </option>
                       ))}
                     </select>

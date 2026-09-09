@@ -15,6 +15,7 @@ import {
   CheckCircle2,
 } from "lucide-react";
 import { useCreateLeadMutation, useUpdateLeadMutation } from "../../store";
+import { formatTeamMemberLabel } from "../../utils/permissions";
 
 interface LeadFormModalProps {
   lead?: any;
@@ -23,7 +24,7 @@ interface LeadFormModalProps {
   onSuccess?: () => void;
   colleges?: Array<{ id: string; name: string }>;
   branches?: string[];
-  teamMembers?: Array<{ id: string; name: string; phone: string; role: string }>;
+  teamMembers?: Array<any>;
   initialCollegeId?: string;
   initialCollegeName?: string;
   initialBranch?: string;
@@ -279,7 +280,7 @@ export default function LeadFormModal({
 
             <div>
               <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                Assign to Team Member
+                Assign to Team Member / Sales Rep
               </label>
               <select
                 value={assignedToUserId}
@@ -289,7 +290,7 @@ export default function LeadFormModal({
                 <option value="">Unassigned</option>
                 {teamMembers.map((m) => (
                   <option key={m.id} value={m.id}>
-                    {m.name || m.phone} ({m.role})
+                    {formatTeamMemberLabel(m)}
                   </option>
                 ))}
               </select>
