@@ -602,7 +602,7 @@ export default function TeamMembersPage() {
 
           {/* Role Filter Pills */}
           <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-            {["ALL", "SUPER_ADMIN", "ADMIN", "MEMBER"].map((role) => (
+            {["ALL", "SUPER_ADMIN", "ADMIN", "MEMBER", "SALES"].map((role) => (
               <button
                 key={role}
                 type="button"
@@ -1498,6 +1498,7 @@ export default function TeamMembersPage() {
                     className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold focus:outline-hidden focus:border-indigo-500 cursor-pointer"
                   >
                     <option value="MEMBER">MEMBER (Staff / Support)</option>
+                    <option value="SALES">SALES (Sales Executive / Leads Only)</option>
                     <option value="ADMIN">ADMIN (Lead / Manager)</option>
                     <option value="SUPER_ADMIN">SUPER ADMIN (Founders)</option>
                   </select>
@@ -1735,6 +1736,7 @@ export default function TeamMembersPage() {
                     className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-950 font-bold focus:outline-hidden focus:border-indigo-500 cursor-pointer"
                   >
                     <option value="MEMBER">MEMBER (Staff / Support)</option>
+                    <option value="SALES">SALES (Sales Executive / Leads Only)</option>
                     <option value="ADMIN">ADMIN (Lead / Manager)</option>
                     <option value="SUPER_ADMIN">SUPER ADMIN (Founders)</option>
                   </select>

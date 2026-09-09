@@ -40,7 +40,7 @@ export default function RequireAdminAuth() {
         if (!resData || cancelled) return;
         const user = resData.data || resData;
         const role = user?.role;
-        if (role && !["SUPER_ADMIN", "ADMIN", "MEMBER"].includes(role)) {
+        if (role && !["SUPER_ADMIN", "ADMIN", "MEMBER", "SALES"].includes(role)) {
           dispatch(logout());
         }
         setAuthChecked(true);

@@ -153,6 +153,11 @@ export const DESIGNATION_PRESETS: Record<
     role: "ADMIN",
     permissions: ALL_PERMISSIONS.map((p) => p.key),
   },
+  SALES: {
+    label: "Sales Executive / Representative",
+    role: "MEMBER",
+    permissions: ["leads:view", "leads:manage"],
+  },
   COUNSELOR: {
     label: "Admissions Counselor / Telecaller",
     role: "MEMBER",
@@ -222,8 +227,14 @@ export function getDefaultPermissionsForUser(user: any): string[] {
     return ALL_PERMISSIONS.map((p) => p.key);
   }
 
-  // Check if designation matches a preset
+  const role = (user.role || "").toUpperCase();
   const des = (user.designation || "").toUpperCase();
+
+  if (role === "SALES" || des.includes("SALES")) {
+    return DESIGNATION_PRESETS.SALES.permissions;
+  }
+
+  // Check if designation matches a preset
   if (des.includes("COUNSEL") || des.includes("ADMISSION") || des.includes("TELECALL")) {
     return DESIGNATION_PRESETS.COUNSELOR.permissions;
   }

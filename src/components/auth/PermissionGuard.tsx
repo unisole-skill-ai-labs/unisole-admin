@@ -16,6 +16,8 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
   fallbackTo = "/my-work",
 }) => {
   const user = useSelector((s: any) => s.auth.user);
+  const isSales = user?.role === "SALES" || (user?.designation || "").toUpperCase().includes("SALES");
+  const effectiveFallback = (fallbackTo === "/my-work" && isSales) ? "/leads" : fallbackTo;
 
   if (!hasPermission(user, permission)) {
     return (
@@ -31,11 +33,11 @@ export const PermissionGuard: React.FC<PermissionGuardProps> = ({
             Your account ({user?.designation || user?.role || "Team Member"}) does not currently have the <strong>"{permission}"</strong> capability. Contact your Super Administrator if you need access.
           </p>
           <Link
-            to={fallbackTo}
+            to={effectiveFallback}
             className="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold shadow-md transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
-            <span>Return to My Assigned Work</span>
+            <span>{isSales ? "Return to Lead Management" : "Return to My Assigned Work"}</span>
           </Link>
         </div>
       </div>
