@@ -52,7 +52,7 @@ export default function LoginPage() {
         throw new Error(data.message || data.error || `HTTP ${res.status}`);
       }
 
-      if (!["SUPER_ADMIN", "ADMIN", "MEMBER"].includes(data.user?.role)) {
+      if (!["SUPER_ADMIN", "ADMIN", "MEMBER", "SALES"].includes(data.user?.role)) {
         throw new Error("Access denied. Internal staff privileges required.");
       }
 
