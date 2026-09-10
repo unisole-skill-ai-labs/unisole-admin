@@ -814,6 +814,7 @@ export const adminApi = createApi({
         if (typeof arg === "object" && arg) {
           if (arg.departmentId) params.departmentId = arg.departmentId;
           if (arg.leadId) params.leadId = arg.leadId;
+          if (arg.memberId && arg.memberId !== "ALL") params.memberId = arg.memberId;
           if (arg.status && arg.status !== "ALL") params.status = arg.status;
           if (arg.priority) params.priority = arg.priority;
           if (arg.search) params.search = arg.search;
@@ -834,8 +835,9 @@ export const adminApi = createApi({
       providesTags: ["Projects"],
     }),
     getProjectHierarchy: build.query({
-      query: ({ baseUrl, id }) => ({
+      query: ({ baseUrl, id, memberId }: { baseUrl: string; id: string; memberId?: string }) => ({
         url: `${baseUrl}/api/admin/projects/${id}/hierarchy`,
+        params: memberId && memberId !== "ALL" ? { memberId } : undefined,
       }),
       providesTags: ["Projects", "SubProjects", "Tasks"],
     }),
