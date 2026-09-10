@@ -173,19 +173,28 @@ export interface TaskItem {
   projectId?: string;
   projectName?: string;
   projectCode?: string;
+  projectColor?: string;
   subProjectId?: string;
   subProjectName?: string;
   assigneeId?: string;
   assigneeName?: string;
   assigneePhone?: string;
   assigneeRole?: string;
+  assigneeDesignation?: string;
   assignee?: {
     id: string;
     name?: string;
     phone?: string;
     role?: string;
+    designation?: string;
   };
   reporterId?: string;
+  reporterName?: string;
+  reporter?: {
+    id: string;
+    name?: string;
+    phone?: string;
+  };
   departmentId?: string;
   departmentName?: string;
   departmentCode?: string;
