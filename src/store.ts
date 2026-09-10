@@ -1057,7 +1057,16 @@ export const adminApi = createApi({
           params: userId ? { userId } : undefined,
         };
       },
-      providesTags: ["MyWork", "Tasks", "Leads", "DailyLogs"],
+      providesTags: (result, error, arg) => [
+        "MyWork",
+        "Tasks",
+        "Leads",
+        "DailyLogs",
+        {
+          type: "MyWork",
+          id: typeof arg === "object" ? `${arg?.authUserId || "me"}_${arg?.userId || "self"}` : "me",
+        },
+      ],
     }),
     getTeamMembers: build.query({
       query: (arg: any) => {

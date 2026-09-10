@@ -102,6 +102,7 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
   // Queries & Mutations
   const { data: summaryRes, isLoading, isFetching, refetch } = useGetMyWorkSummaryQuery({
     baseUrl,
+    authUserId: currentUser?.id,
     userId: isAdminOrSuperAdmin && selectedTeamMemberId ? selectedTeamMemberId : undefined,
   });
 
@@ -138,6 +139,12 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
   // Filter Tasks
   const filteredTasks = useMemo(() => {
     return allTasks.filter((t) => {
+      // Non-admins must strictly only see their own assigned tasks
+      if (!isAdminOrSuperAdmin) {
+        if (t.assigneeId && currentUser?.id && t.assigneeId !== currentUser.id) {
+          return false;
+        }
+      }
       if (selectedProjectId && t.projectId !== selectedProjectId) {
         return false;
       }
@@ -156,7 +163,7 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
       if (taskStatusFilter === "COMPLETED") return t.status === "COMPLETED";
       return true;
     });
-  }, [allTasks, taskStatusFilter, taskSearch, selectedProjectId]);
+  }, [allTasks, taskStatusFilter, taskSearch, selectedProjectId, isAdminOrSuperAdmin, currentUser?.id]);
 
   // Group Tasks by Project for Grouped View
   const tasksByProject = useMemo(() => {
@@ -179,9 +186,9 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
         const pObj = allProjects.find((p) => p.id === pId);
         groups[pId] = {
           id: pId,
-          name: t.projectName || pObj?.name || (pId === "unassigned" ? "Standalone Deliverables" : "Project"),
-          code: t.projectCode || pObj?.code,
-          color: t.projectColor || pObj?.color || "#6366f1",
+          name: pObj?.name || t.projectName || (pId === "unassigned" ? "General / Standalone Tasks" : "Project Tasks"),
+          code: pObj?.code || t.projectCode,
+          color: pObj?.color || t.projectColor || "#6366f1",
           priority: pObj?.priority,
           leadName: pObj?.leadName || pObj?.lead?.name,
           tasks: [],
@@ -198,6 +205,12 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
     endOfToday.setHours(23, 59, 59, 999);
 
     return allLeads.filter((l) => {
+      // Non-admins must strictly only see their own assigned leads
+      if (!isAdminOrSuperAdmin) {
+        if (l.assignedToUserId && currentUser?.id && l.assignedToUserId !== currentUser.id) {
+          return false;
+        }
+      }
       if (leadSearch.trim()) {
         const q = leadSearch.toLowerCase();
         const matchName = l.name?.toLowerCase().includes(q);
@@ -222,7 +235,7 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
 
       return true;
     });
-  }, [allLeads, leadStatusFilter, leadSearch]);
+  }, [allLeads, leadStatusFilter, leadSearch, isAdminOrSuperAdmin, currentUser?.id]);
 
   // Task Actions Handlers
   const handleSubtaskToggle = async (e: React.MouseEvent, taskId: string, subtask: TaskSubtask) => {
