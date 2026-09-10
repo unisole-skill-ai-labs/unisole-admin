@@ -303,21 +303,7 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
     return list;
   }, [filteredTasks, allProjects, selectedProjectId]);
 
-  // Auto-expand projects on first load of hierarchy
-  React.useEffect(() => {
-    if (hierarchyTree.length > 0 && Object.keys(expandedHierarchyProjects).length === 0) {
-      const initP: Record<string, boolean> = {};
-      const initSp: Record<string, boolean> = {};
-      hierarchyTree.forEach((p) => {
-        initP[p.id] = true;
-        p.subProjects.forEach((sp) => {
-          initSp[sp.id] = true;
-        });
-      });
-      setExpandedHierarchyProjects(initP);
-      setExpandedHierarchySubProjects(initSp);
-    }
-  }, [hierarchyTree]);
+  // Hierarchy expansion state handlers (collapsed by default)
 
   const toggleHierarchyProject = (pId: string) => {
     setExpandedHierarchyProjects((prev) => ({ ...prev, [pId]: !prev[pId] }));
