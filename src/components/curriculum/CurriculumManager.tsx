@@ -3,6 +3,7 @@ import {
   useGetCoursesQuery,
   useCreateCourseMutation,
   useUpdateCourseMutation,
+  useDeleteCourseMutation,
   useGetCourseModulesQuery,
   useAttachCourseModuleMutation,
   useDetachCourseModuleMutation,
@@ -106,6 +107,7 @@ function CoursesSection({ baseUrl }: { baseUrl: string }) {
   const { data: courses = [], isLoading, refetch } = useGetCoursesQuery(baseUrl);
   const [createCourse, { isLoading: isCreating }] = useCreateCourseMutation();
   const [updateCourse, { isLoading: isUpdating }] = useUpdateCourseMutation();
+  const [deleteCourse] = useDeleteCourseMutation();
 
   const [search, setSearch] = useState("");
   const [editingCourse, setEditingCourse] = useState<any>(null);
@@ -126,6 +128,12 @@ function CoursesSection({ baseUrl }: { baseUrl: string }) {
     setEditingCourse(null);
   };
 
+  const handleDelete = async (courseId: string) => {
+    if (window.confirm("Are you sure you want to delete this course?")) {
+      await deleteCourse({ baseUrl, id: courseId }).unwrap();
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
@@ -133,7 +141,7 @@ function CoursesSection({ baseUrl }: { baseUrl: string }) {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
           <input
             type="text"
-            placeholder="Search courses by title..."
+            placeholder="Search courses by title or slug..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden"
@@ -155,6 +163,7 @@ function CoursesSection({ baseUrl }: { baseUrl: string }) {
             <thead>
               <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 text-zinc-400 font-mono">
                 <th className="py-3 px-4 font-semibold">Course Title & Slug</th>
+                <th className="py-3 px-4 font-semibold">Live Price (₹)</th>
                 <th className="py-3 px-4 font-semibold">Status</th>
                 <th className="py-3 px-4 font-semibold">Active</th>
                 <th className="py-3 px-4 font-semibold text-right">Actions</th>
@@ -162,40 +171,60 @@ function CoursesSection({ baseUrl }: { baseUrl: string }) {
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
               {isLoading ? (
-                <tr><td colSpan={4} className="py-8 text-center text-zinc-400">Loading courses...</td></tr>
+                <tr><td colSpan={5} className="py-8 text-center text-zinc-400">Loading courses...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={4} className="py-8 text-center text-zinc-400">No courses found.</td></tr>
+                <tr><td colSpan={5} className="py-8 text-center text-zinc-400">No courses found.</td></tr>
               ) : (
-                filtered.map((c: any) => (
-                  <tr key={c.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
-                    <td className="py-3.5 px-4">
-                      <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">{c.title}</div>
-                      <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">/{c.slug} · ID: {c.id}</div>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <Badge variant={c.status === "PUBLISHED" ? "emerald" : "default"} size="sm">{c.status}</Badge>
-                    </td>
-                    <td className="py-3.5 px-4">
-                      <span className={`text-[10px] font-bold ${c.isActive ? "text-emerald-500" : "text-zinc-400"}`}>
-                        {c.isActive ? "ACTIVE" : "INACTIVE"}
-                      </span>
-                    </td>
-                    <td className="py-3.5 px-4 text-right">
-                      <div className="flex items-center justify-end gap-1.5">
-                        <Button
-                          variant="secondary"
-                          size="sm"
-                          onClick={() => setManagingModulesCourse(c)}
-                          icon={FolderTree}
-                          className="text-xs"
-                        >
-                          Modules
-                        </Button>
-                        <Button variant="ghost" size="sm" onClick={() => setEditingCourse(c)} icon={Edit2} />
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                filtered.map((c: any) => {
+                  const priceRupees = c.pricePaise ? Math.round(c.pricePaise / 100) : 0;
+                  const mrpRupees = c.mrpPaise ? Math.round(c.mrpPaise / 100) : 0;
+                  return (
+                    <tr key={c.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          {c.metadata?.badge && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 border border-violet-200/60 dark:border-violet-800/60">
+                              {c.metadata.badge}
+                            </span>
+                          )}
+                          <span className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">{c.title}</span>
+                        </div>
+                        <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">/{c.slug} · ID: {c.id}</div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <div className="flex items-baseline gap-1.5">
+                          <span className="font-bold text-sm text-emerald-600 dark:text-emerald-400">₹{priceRupees.toLocaleString('en-IN')}</span>
+                          {mrpRupees > priceRupees && (
+                            <span className="text-[11px] text-zinc-400 line-through">₹{mrpRupees.toLocaleString('en-IN')}</span>
+                          )}
+                        </div>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <Badge variant={c.status === "PUBLISHED" ? "emerald" : "default"} size="sm">{c.status}</Badge>
+                      </td>
+                      <td className="py-3.5 px-4">
+                        <span className={`text-[10px] font-bold ${c.isActive ? "text-emerald-500" : "text-zinc-400"}`}>
+                          {c.isActive ? "ACTIVE" : "INACTIVE"}
+                        </span>
+                      </td>
+                      <td className="py-3.5 px-4 text-right">
+                        <div className="flex items-center justify-end gap-1.5">
+                          <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setManagingModulesCourse(c)}
+                            icon={FolderTree}
+                            className="text-xs"
+                          >
+                            Modules
+                          </Button>
+                          <Button variant="ghost" size="sm" onClick={() => setEditingCourse(c)} icon={Edit2} title="Edit Course & Price" />
+                          <Button variant="ghost" size="sm" onClick={() => handleDelete(c.id)} icon={Trash2} title="Delete Course" />
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -459,7 +488,13 @@ function CourseModal({ course, isLoading, onClose, onSave }: any) {
   const [slug, setSlug] = useState(course?.slug || "");
   const [shortDescription, setShortDescription] = useState(course?.shortDescription || "");
   const [description, setDescription] = useState(course?.description || "");
-  const [status, setStatus] = useState(course?.status || "DRAFT");
+  const [priceRupees, setPriceRupees] = useState(
+    course?.pricePaise !== undefined ? (course.pricePaise / 100).toString() : ""
+  );
+  const [mrpRupees, setMrpRupees] = useState(
+    course?.mrpPaise !== undefined ? (course.mrpPaise / 100).toString() : ""
+  );
+  const [status, setStatus] = useState(course?.status || "PUBLISHED");
   const [isActive, setIsActive] = useState(course ? !!course.isActive : true);
 
   const handleTitleChange = (val: string) => {
@@ -467,18 +502,92 @@ function CourseModal({ course, isLoading, onClose, onSave }: any) {
     if (!course) setSlug(val.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, ""));
   };
 
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const pricePaise = priceRupees ? Math.round(parseFloat(priceRupees) * 100) : 0;
+    const mrpPaise = mrpRupees ? Math.round(parseFloat(mrpRupees) * 100) : 0;
+
+    onSave({
+      title,
+      slug,
+      shortDescription,
+      description,
+      pricePaise,
+      mrpPaise,
+      status,
+      isActive,
+    });
+  };
+
   return (
-    <Modal isOpen={true} onClose={onClose} title={course ? "Edit Course" : "Add New Course"} maxWidth="max-w-lg">
-      <form onSubmit={(e) => { e.preventDefault(); onSave({ title, slug, shortDescription, description, status, isActive }); }} className="space-y-4">
+    <Modal isOpen={true} onClose={onClose} title={course ? "Edit Course & Pricing" : "Add New Course"} maxWidth="max-w-lg">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <Input label="Course Title" value={title} onChange={(e) => handleTitleChange(e.target.value)} required />
         <Input label="Slug" value={slug} onChange={(e) => setSlug(e.target.value)} required />
+        
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <Input
+              label="Live Price (₹ INR)"
+              type="number"
+              placeholder="e.g. 2999"
+              value={priceRupees}
+              onChange={(e) => setPriceRupees(e.target.value)}
+              required
+            />
+            <span className="text-[10px] text-zinc-400 mt-0.5 block">Stored as paise in DB</span>
+          </div>
+          <div>
+            <Input
+              label="Original MRP (₹ INR)"
+              type="number"
+              placeholder="e.g. 9999"
+              value={mrpRupees}
+              onChange={(e) => setMrpRupees(e.target.value)}
+            />
+            <span className="text-[10px] text-zinc-400 mt-0.5 block">For strike-through discount</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">Status</label>
+            <select
+              value={status}
+              onChange={(e) => setStatus(e.target.value)}
+              className="w-full px-3 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs"
+            >
+              <option value="PUBLISHED">PUBLISHED</option>
+              <option value="DRAFT">DRAFT</option>
+              <option value="ARCHIVED">ARCHIVED</option>
+            </select>
+          </div>
+          <div className="flex flex-col justify-center pt-4">
+            <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-zinc-700 dark:text-zinc-300">
+              <input
+                type="checkbox"
+                checked={isActive}
+                onChange={(e) => setIsActive(e.target.checked)}
+                className="rounded border-zinc-300 text-zinc-900 focus:ring-0"
+              />
+              Active on Platform
+            </label>
+          </div>
+        </div>
+
         <div>
-          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">Overview</label>
+          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">Overview / Short Description</label>
           <textarea rows={2} value={shortDescription} onChange={(e) => setShortDescription(e.target.value)} className="w-full px-3.5 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs" />
         </div>
+
+        <div>
+          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">Full Description (Optional)</label>
+          <textarea rows={3} value={description} onChange={(e) => setDescription(e.target.value)} className="w-full px-3.5 py-2 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs" />
+        </div>
+
         <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
           <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="primary" size="sm" loading={isLoading}>Save Course</Button>
+          <Button type="submit" variant="primary" size="sm" loading={isLoading}>Save Course & Price</Button>
         </div>
       </form>
     </Modal>

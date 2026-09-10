@@ -58,9 +58,16 @@ export interface Course {
   id: string;
   title: string;
   slug?: string;
+  shortDescription?: string;
   description?: string;
+  pricePaise?: number;
+  mrpPaise?: number;
+  status?: string;
+  isActive?: boolean;
+  metadata?: Record<string, any>;
   modules?: Module[];
   createdAt?: string;
+  updatedAt?: string;
 }
 
 export interface Module {

@@ -45,6 +45,21 @@ import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import { formatPhone } from "../../utils/formatters";
 
+const COURSES_CATALOG = [
+  { id: "cs-p1", title: "ML Engineering in Production", group: "Group 01 • CS & IT" },
+  { id: "cs-p2", title: "Full Stack Web Development (AI)", group: "Group 01 • CS & IT" },
+  { id: "cs-p3", title: "Complete ML + Full Stack (Dual Track)", group: "Group 01 • CS & IT" },
+  { id: "cs-common", title: "AI Entrepreneurship & Innovation", group: "Group 01 • CS & IT" },
+  { id: "sci-p1", title: "Scientific Machine Learning & AI", group: "Group 02 • Science & Math" },
+  { id: "sci-p2", title: "Mathematics + AI / Comp Intelligence", group: "Group 02 • Science & Math" },
+  { id: "mgmt-p1", title: "Business Analytics & Data Engineering", group: "Group 03 • Commerce" },
+  { id: "mgmt-p2", title: "AI in Finance & FinTech Systems", group: "Group 03 • Commerce" },
+  { id: "mgmt-p3", title: "Complete Business AI (Dual Track)", group: "Group 03 • Commerce" },
+  { id: "mgmt-common", title: "AI Entrepreneurship & Biz Innovation", group: "Group 03 • Commerce" },
+  { id: "arts-p1", title: "Applied AI for Humanities & Careers", group: "Group 04 • Humanities" },
+  { id: "ai-masterclass", title: "AI Revolution Masterclass (2-Hour)", group: "Workshop" },
+];
+
 interface PaymentsViewProps {
   baseUrl: string;
 }
@@ -73,7 +88,7 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
   const [deletePricing] = useDeleteOfferingPricingMutation();
 
   const [createCoupon, { isLoading: isCreatingCoupon }] = useCreateCouponMutation();
-  const [updateCoupon] = useUpdateCouponMutation();
+  const [updateCoupon, { isLoading: isUpdatingCoupon }] = useUpdateCouponMutation();
   const [deleteCoupon] = useDeleteCouponMutation();
 
   const [confirmManualOrder, { isLoading: isConfirmingManual }] = useConfirmManualOrderMutation();
@@ -84,6 +99,7 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
   const [isPricingModalOpen, setIsPricingModalOpen] = useState(false);
   const [editingPricing, setEditingPricing] = useState<any>(null);
   const [isCouponModalOpen, setIsCouponModalOpen] = useState(false);
+  const [editingCoupon, setEditingCoupon] = useState<any>(null);
   const [isManualEnrollModalOpen, setIsManualEnrollModalOpen] = useState(false);
 
   // Form states for dynamic pricing
@@ -107,6 +123,8 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
     minOrderRupees: "0",
     maxDiscountRupees: "",
     maxUses: "",
+    applicableScope: "ALL" as "ALL" | "SELECTED",
+    applicableItemIds: [] as string[],
     validUntil: "",
     isActive: true,
   });
@@ -174,6 +192,48 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
     }
   };
 
+  const handleOpenCreateCoupon = () => {
+    setEditingCoupon(null);
+    setCouponForm({
+      code: "",
+      description: "",
+      discountType: "PERCENTAGE",
+      discountValue: "20",
+      minOrderRupees: "0",
+      maxDiscountRupees: "",
+      maxUses: "",
+      applicableScope: "ALL",
+      applicableItemIds: [],
+      validUntil: "",
+      isActive: true,
+    });
+    setIsCouponModalOpen(true);
+  };
+
+  const handleOpenEditCoupon = (c: any) => {
+    const isFlat = c.discountType === "FLAT";
+    const discountVal = isFlat ? String((Number(c.discountValue) || 0) / 100) : String(c.discountValue || "0");
+    const minOrderRupees = String((Number(c.minOrderPaise) || 0) / 100);
+    const maxDiscountRupees = c.maxDiscountPaise ? String(Number(c.maxDiscountPaise) / 100) : "";
+    const appIds = Array.isArray(c.applicableItemIds) ? c.applicableItemIds : [];
+
+    setEditingCoupon(c);
+    setCouponForm({
+      code: c.code || "",
+      description: c.description || "",
+      discountType: c.discountType || "PERCENTAGE",
+      discountValue: discountVal,
+      minOrderRupees,
+      maxDiscountRupees,
+      maxUses: c.maxUses !== null && c.maxUses !== undefined ? String(c.maxUses) : "",
+      applicableScope: appIds.length > 0 ? "SELECTED" : "ALL",
+      applicableItemIds: appIds,
+      validUntil: c.validUntil ? c.validUntil.slice(0, 10) : "",
+      isActive: c.isActive !== false,
+    });
+    setIsCouponModalOpen(true);
+  };
+
   const handleSaveCoupon = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -182,37 +242,39 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
       const minOrderPaise = Math.round(parseFloat(couponForm.minOrderRupees || "0") * 100);
       const maxDiscountPaise = couponForm.maxDiscountRupees ? Math.round(parseFloat(couponForm.maxDiscountRupees) * 100) : null;
       const maxUses = couponForm.maxUses ? parseInt(couponForm.maxUses, 10) : null;
+      const applicableItemIds = couponForm.applicableScope === "SELECTED" ? couponForm.applicableItemIds : [];
 
-      await createCoupon({
-        baseUrl,
-        body: {
-          code: couponForm.code.trim().toUpperCase(),
-          description: couponForm.description,
-          discountType: couponForm.discountType,
-          discountValue,
-          minOrderPaise,
-          maxDiscountPaise,
-          maxUses,
-          validUntil: couponForm.validUntil ? new Date(couponForm.validUntil).toISOString() : undefined,
-          isActive: couponForm.isActive,
-        },
-      }).unwrap();
+      const body = {
+        code: couponForm.code.trim().toUpperCase(),
+        description: couponForm.description,
+        discountType: couponForm.discountType,
+        discountValue,
+        minOrderPaise,
+        maxDiscountPaise,
+        maxUses,
+        applicableItemIds,
+        validUntil: couponForm.validUntil ? new Date(couponForm.validUntil).toISOString() : undefined,
+        isActive: couponForm.isActive,
+      };
+
+      if (editingCoupon) {
+        await updateCoupon({
+          baseUrl,
+          id: editingCoupon.id,
+          body,
+        }).unwrap();
+      } else {
+        await createCoupon({
+          baseUrl,
+          body,
+        }).unwrap();
+      }
 
       setIsCouponModalOpen(false);
-      setCouponForm({
-        code: "",
-        description: "",
-        discountType: "PERCENTAGE",
-        discountValue: "20",
-        minOrderRupees: "0",
-        maxDiscountRupees: "",
-        maxUses: "",
-        validUntil: "",
-        isActive: true,
-      });
+      setEditingCoupon(null);
       refetchCoupons();
     } catch (err: any) {
-      alert(err?.data?.message || err?.message || "Failed to create coupon");
+      alert(err?.data?.message || err?.message || "Failed to save coupon");
     }
   };
 
@@ -675,8 +737,9 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
                 <thead>
                   <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 text-zinc-400 font-mono">
                     <th className="py-3 px-4 font-semibold">Coupon Code</th>
-                    <th className="py-3 px-4 font-semibold">Discount</th>
-                    <th className="py-3 px-4 font-semibold">Min Order Amount</th>
+                    <th className="py-3 px-4 font-semibold">Discount Type & Value</th>
+                    <th className="py-3 px-4 font-semibold">Applicable Courses</th>
+                    <th className="py-3 px-4 font-semibold">Min Order</th>
                     <th className="py-3 px-4 font-semibold">Usage Limit</th>
                     <th className="py-3 px-4 font-semibold">Valid Until</th>
                     <th className="py-3 px-4 font-semibold">Status</th>
@@ -685,21 +748,67 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
                 </thead>
                 <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
                   {isCouponsLoading ? (
-                    <tr><td colSpan={7} className="py-8 text-center text-zinc-400">Loading discount coupons...</td></tr>
+                    <tr><td colSpan={8} className="py-8 text-center text-zinc-400">Loading discount coupons...</td></tr>
                   ) : coupons.length === 0 ? (
-                    <tr><td colSpan={7} className="py-8 text-center text-zinc-400">No coupons found. Click 'Create Coupon' to generate promo codes!</td></tr>
+                    <tr><td colSpan={8} className="py-8 text-center text-zinc-400">No coupons found. Click 'Create Coupon' to generate promo codes!</td></tr>
                   ) : (
                     coupons.map((c: any) => {
                       const isFlat = c.discountType === "FLAT";
                       const discountText = isFlat ? `₹${(c.discountValue / 100).toFixed(0)} FLAT` : `${c.discountValue}% OFF`;
                       const minOrderRupees = (Number(c.minOrderPaise) || 0) / 100;
+                      const maxDiscountRupees = c.maxDiscountPaise ? (Number(c.maxDiscountPaise) / 100) : null;
+                      const appIds: string[] = Array.isArray(c.applicableItemIds) ? c.applicableItemIds : [];
+
                       return (
                         <tr key={c.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
                           <td className="py-3.5 px-4 font-mono font-black text-sm text-purple-600 dark:text-purple-400">
-                            {c.code}
+                            <div className="flex items-center gap-1.5">
+                              <Tag className="w-3.5 h-3.5" />
+                              <span>{c.code}</span>
+                            </div>
+                            {c.description && (
+                              <div className="text-[11px] text-zinc-400 font-normal font-sans line-clamp-1 mt-0.5">
+                                {c.description}
+                              </div>
+                            )}
                           </td>
-                          <td className="py-3.5 px-4 font-black text-xs text-zinc-900 dark:text-zinc-100 font-mono">
-                            {discountText}
+                          <td className="py-3.5 px-4">
+                            <div className="flex items-center gap-1.5">
+                              <span className={`px-2 py-0.5 rounded-md text-xs font-black font-mono ${
+                                isFlat
+                                  ? "bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800"
+                                  : "bg-purple-100 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800"
+                              }`}>
+                                {discountText}
+                              </span>
+                            </div>
+                            {maxDiscountRupees && (
+                              <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+                                Max Cap: ₹{maxDiscountRupees}
+                              </div>
+                            )}
+                          </td>
+                          <td className="py-3.5 px-4 max-w-xs">
+                            {appIds.length === 0 ? (
+                              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                                All 12 Courses & Offerings
+                              </span>
+                            ) : (
+                              <div className="flex flex-wrap gap-1">
+                                {appIds.map((id) => {
+                                  const courseObj = COURSES_CATALOG.find((co) => co.id === id);
+                                  return (
+                                    <span
+                                      key={id}
+                                      className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200/60 dark:border-indigo-800/60"
+                                      title={courseObj?.title || id}
+                                    >
+                                      {courseObj ? courseObj.title.slice(0, 18) + (courseObj.title.length > 18 ? "…" : "") : id}
+                                    </span>
+                                  );
+                                })}
+                              </div>
+                            )}
                           </td>
                           <td className="py-3.5 px-4 font-mono text-zinc-600 dark:text-zinc-400">
                             ₹{minOrderRupees}
@@ -716,18 +825,45 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
                             </Badge>
                           </td>
                           <td className="py-3.5 px-4 text-right">
-                            <button
-                              onClick={async () => {
-                                if (confirm(`Delete coupon ${c.code}?`)) {
-                                  await deleteCoupon({ baseUrl, id: c.id });
+                            <div className="flex items-center justify-end gap-1">
+                              <button
+                                onClick={() => handleOpenEditCoupon(c)}
+                                className="p-1.5 text-zinc-400 hover:text-purple-600 hover:bg-purple-50 dark:hover:bg-purple-950/40 rounded-lg transition-colors"
+                                title="Edit Coupon & Course Scope"
+                              >
+                                <Edit2 className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  await updateCoupon({
+                                    baseUrl,
+                                    id: c.id,
+                                    body: { isActive: !c.isActive },
+                                  });
                                   refetchCoupons();
-                                }
-                              }}
-                              className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
-                              title="Delete Coupon"
-                            >
-                              <Trash2 className="w-4 h-4" />
-                            </button>
+                                }}
+                                className={`p-1.5 rounded-lg transition-colors ${
+                                  c.isActive
+                                    ? "text-zinc-400 hover:text-amber-600 hover:bg-amber-50"
+                                    : "text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50"
+                                }`}
+                                title={c.isActive ? "Disable Coupon" : "Enable Coupon"}
+                              >
+                                <CheckCircle className="w-4 h-4" />
+                              </button>
+                              <button
+                                onClick={async () => {
+                                  if (confirm(`Are you sure you want to permanently delete coupon "${c.code}"?`)) {
+                                    await deleteCoupon({ baseUrl, id: c.id });
+                                    refetchCoupons();
+                                  }
+                                }}
+                                className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                                title="Delete Coupon"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                            </div>
                           </td>
                         </tr>
                       );
@@ -1015,24 +1151,38 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
       )}
 
       {/* ============================================================ */}
-      {/* MODAL: CREATE DISCOUNT COUPON */}
+      {/* MODAL: CREATE / EDIT DISCOUNT COUPON */}
       {/* ============================================================ */}
       {isCouponModalOpen && (
         <Modal
           isOpen={isCouponModalOpen}
-          onClose={() => setIsCouponModalOpen(false)}
-          title="Create New Discount Promo Code"
+          onClose={() => {
+            setIsCouponModalOpen(false);
+            setEditingCoupon(null);
+          }}
+          title={editingCoupon ? `Edit Coupon — ${editingCoupon.code}` : "Create New Discount Promo Code"}
         >
           <form onSubmit={handleSaveCoupon} className="space-y-4">
             <div>
               <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Coupon Code</label>
               <input
                 type="text"
-                placeholder="e.g. UNISOLE50 or SPECIAL39"
+                placeholder="e.g. UNISOLE50, SPECIAL39, EARLYBIRD"
                 value={couponForm.code}
                 onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
                 required
                 className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-mono font-black text-purple-600 dark:text-purple-400 focus:outline-hidden"
+              />
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Description / Campaign Label</label>
+              <input
+                type="text"
+                placeholder="e.g. Himachal Campus Launch Special 20% Off"
+                value={couponForm.description}
+                onChange={(e) => setCouponForm({ ...couponForm, description: e.target.value })}
+                className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs focus:outline-hidden"
               />
             </div>
 
@@ -1044,26 +1194,133 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
                   onChange={(e) => setCouponForm({ ...couponForm, discountType: e.target.value })}
                   className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-semibold focus:outline-hidden"
                 >
-                  <option value="PERCENTAGE">Percentage (%)</option>
-                  <option value="FLAT">Flat Amount (₹)</option>
+                  <option value="PERCENTAGE">Percentage (%) Off</option>
+                  <option value="FLAT">Flat Rupee Amount (₹) Off</option>
                 </select>
               </div>
 
               <div>
                 <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                  {couponForm.discountType === "PERCENTAGE" ? "Percentage Value (%)" : "Flat Value (₹)"}
+                  {couponForm.discountType === "PERCENTAGE" ? "Percentage Value (%)" : "Flat Amount (₹)"}
                 </label>
                 <input
                   type="number"
                   step="1"
                   min="1"
-                  placeholder={couponForm.discountType === "PERCENTAGE" ? "50" : "100"}
+                  placeholder={couponForm.discountType === "PERCENTAGE" ? "20" : "500"}
                   value={couponForm.discountValue}
                   onChange={(e) => setCouponForm({ ...couponForm, discountValue: e.target.value })}
                   required
                   className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-sm font-mono font-bold focus:outline-hidden"
                 />
               </div>
+            </div>
+
+            {/* Applicable Course Scope */}
+            <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950/70 border border-zinc-200 dark:border-zinc-800 rounded-2xl space-y-2.5">
+              <div className="flex items-center justify-between">
+                <label className="text-xs font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                  <ShoppingBag className="w-3.5 h-3.5 text-indigo-500" /> Course & Offering Scope
+                </label>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setCouponForm({ ...couponForm, applicableScope: "ALL", applicableItemIds: [] })}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      couponForm.applicableScope === "ALL"
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                    }`}
+                  >
+                    All Courses
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setCouponForm({ ...couponForm, applicableScope: "SELECTED" })}
+                    className={`px-2.5 py-1 rounded-lg text-xs font-bold transition-all ${
+                      couponForm.applicableScope === "SELECTED"
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "bg-zinc-200/80 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400"
+                    }`}
+                  >
+                    Selected Only ({couponForm.applicableItemIds.length})
+                  </button>
+                </div>
+              </div>
+
+              {couponForm.applicableScope === "SELECTED" && (
+                <div className="pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60 space-y-2">
+                  <div className="flex items-center justify-between text-[11px] text-zinc-500">
+                    <span>Select which courses this coupon applies to:</span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setCouponForm({
+                            ...couponForm,
+                            applicableItemIds: COURSES_CATALOG.map((c) => c.id),
+                          })
+                        }
+                        className="text-indigo-600 dark:text-indigo-400 hover:underline font-semibold"
+                      >
+                        Select All
+                      </button>
+                      <span>•</span>
+                      <button
+                        type="button"
+                        onClick={() => setCouponForm({ ...couponForm, applicableItemIds: [] })}
+                        className="text-zinc-400 hover:underline"
+                      >
+                        Clear
+                      </button>
+                    </div>
+                  </div>
+
+                  <div className="max-h-48 overflow-y-auto space-y-1 pr-1">
+                    {COURSES_CATALOG.map((course) => {
+                      const isSelected = couponForm.applicableItemIds.includes(course.id);
+                      return (
+                        <label
+                          key={course.id}
+                          className={`flex items-center justify-between p-2 rounded-xl text-xs cursor-pointer border transition-all ${
+                            isSelected
+                              ? "bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200 dark:border-indigo-800 text-indigo-950 dark:text-indigo-100"
+                              : "bg-white dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800/80 text-zinc-700 dark:text-zinc-300"
+                          }`}
+                        >
+                          <div className="flex items-center gap-2">
+                            <input
+                              type="checkbox"
+                              checked={isSelected}
+                              onChange={(e) => {
+                                if (e.target.checked) {
+                                  setCouponForm({
+                                    ...couponForm,
+                                    applicableItemIds: [...couponForm.applicableItemIds, course.id],
+                                  });
+                                } else {
+                                  setCouponForm({
+                                    ...couponForm,
+                                    applicableItemIds: couponForm.applicableItemIds.filter((id) => id !== course.id),
+                                  });
+                                }
+                              }}
+                              className="rounded text-indigo-600 focus:ring-0"
+                            />
+                            <div>
+                              <span className="font-bold">{course.title}</span>
+                              <span className="text-[10px] text-zinc-400 ml-1.5 font-mono">({course.id})</span>
+                            </div>
+                          </div>
+                          <span className="text-[10px] font-mono font-bold text-zinc-400">
+                            {course.group}
+                          </span>
+                        </label>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </div>
 
             <div className="grid grid-cols-2 gap-3">
@@ -1081,34 +1338,82 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
               </div>
 
               <div>
-                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Usage Limit (Max Uses)</label>
+                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+                  {couponForm.discountType === "PERCENTAGE" ? "Max Discount Cap (₹)" : "Usage Limit (Max Uses)"}
+                </label>
+                {couponForm.discountType === "PERCENTAGE" ? (
+                  <input
+                    type="number"
+                    step="1"
+                    min="0"
+                    placeholder="No cap if blank"
+                    value={couponForm.maxDiscountRupees}
+                    onChange={(e) => setCouponForm({ ...couponForm, maxDiscountRupees: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono focus:outline-hidden"
+                  />
+                ) : (
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Unlimited if blank"
+                    value={couponForm.maxUses}
+                    onChange={(e) => setCouponForm({ ...couponForm, maxUses: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono focus:outline-hidden"
+                  />
+                )}
+              </div>
+            </div>
+
+            <div className="grid grid-cols-2 gap-3">
+              {couponForm.discountType === "PERCENTAGE" && (
+                <div>
+                  <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Usage Limit (Max Uses)</label>
+                  <input
+                    type="number"
+                    min="1"
+                    placeholder="Unlimited if blank"
+                    value={couponForm.maxUses}
+                    onChange={(e) => setCouponForm({ ...couponForm, maxUses: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono focus:outline-hidden"
+                  />
+                </div>
+              )}
+
+              <div>
+                <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Expiry Date (Optional)</label>
                 <input
-                  type="number"
-                  min="1"
-                  placeholder="Unlimited if blank"
-                  value={couponForm.maxUses}
-                  onChange={(e) => setCouponForm({ ...couponForm, maxUses: e.target.value })}
-                  className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-mono focus:outline-hidden"
+                  type="date"
+                  value={couponForm.validUntil}
+                  onChange={(e) => setCouponForm({ ...couponForm, validUntil: e.target.value })}
+                  className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs focus:outline-hidden"
                 />
               </div>
             </div>
 
-            <div>
-              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Expiry Date (Optional)</label>
-              <input
-                type="date"
-                value={couponForm.validUntil}
-                onChange={(e) => setCouponForm({ ...couponForm, validUntil: e.target.value })}
-                className="w-full px-3.5 py-2.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs focus:outline-hidden"
-              />
+            <div className="flex items-center gap-2 pt-1">
+              <label className="flex items-center gap-2 text-xs font-semibold text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                <input
+                  type="checkbox"
+                  checked={couponForm.isActive}
+                  onChange={(e) => setCouponForm({ ...couponForm, isActive: e.target.checked })}
+                  className="rounded text-purple-600 focus:ring-0"
+                />
+                Active (Can be applied by learners)
+              </label>
             </div>
 
             <div className="flex justify-end gap-2 pt-4 border-t border-zinc-100 dark:border-zinc-800">
-              <Button variant="secondary" onClick={() => setIsCouponModalOpen(false)}>
+              <Button
+                variant="secondary"
+                onClick={() => {
+                  setIsCouponModalOpen(false);
+                  setEditingCoupon(null);
+                }}
+              >
                 Cancel
               </Button>
-              <Button variant="primary" type="submit" disabled={isCreatingCoupon}>
-                Create Coupon
+              <Button variant="primary" type="submit" disabled={isCreatingCoupon || isUpdatingCoupon}>
+                {editingCoupon ? "Save Coupon Changes" : "Create Coupon"}
               </Button>
             </div>
           </form>
