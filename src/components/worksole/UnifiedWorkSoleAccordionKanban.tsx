@@ -138,11 +138,13 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
   // Filter state
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const [memberFilter, setMemberFilter] = useState("");
   const [visibilityFilter, setVisibilityFilter] = useState<"ACTIVE" | "HIDDEN" | "ALL">("ACTIVE");
 
   const { data: projectsData, isLoading: isProjectsLoading, refetch: refetchProjects } = useGetProjectsQuery({
     baseUrl,
     departmentId: departmentFilter || undefined,
+    memberId: memberFilter && memberFilter !== "ALL" ? memberFilter : undefined,
     search: search || undefined,
     includeHidden: visibilityFilter !== "ACTIVE" ? true : undefined,
     onlyHidden: visibilityFilter === "HIDDEN" ? true : undefined,
@@ -208,6 +210,24 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
 
   return (
     <div className="w-full space-y-4">
+      {/* Non-Admin Info Banner */}
+      {!isLeader && (
+        <div className="flex items-center justify-between p-3 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-200/80 dark:border-indigo-800/60 shadow-xs">
+          <div className="flex items-center gap-2">
+            <span className="w-2 h-2 rounded-full bg-indigo-600 animate-pulse" />
+            <span className="text-xs font-bold text-indigo-950 dark:text-indigo-200">
+              Personalized WorkSole Workspace:
+            </span>
+            <span className="text-xs text-indigo-700 dark:text-indigo-300">
+              Showing projects and tasks assigned to you ({currentUser?.name || "Member"}).
+            </span>
+          </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-600 text-white font-mono">
+            My Assigned Projects ({projects.length})
+          </span>
+        </div>
+      )}
+
       {/* Top Filter & Toolbar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-zinc-900 p-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
         <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
@@ -216,7 +236,7 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
             placeholder="Search projects, sub-projects, tasks..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-64 px-3.5 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full sm:w-56 px-3.5 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
 
           <select
@@ -231,6 +251,23 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
               </option>
             ))}
           </select>
+
+          {/* Admin-only: Team Member Filter Dropdown */}
+          {isLeader && teamMembers.length > 0 && (
+            <select
+              value={memberFilter}
+              onChange={(e) => setMemberFilter(e.target.value)}
+              className="px-3 py-1.5 text-xs rounded-xl border border-amber-300/80 dark:border-amber-700/80 bg-amber-50/40 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
+              title="Filter canvas to a specific admin or team member's assigned deliverables"
+            >
+              <option value="">👤 All Team Members & Operations</option>
+              {teamMembers.map((m: any) => (
+                <option key={m.id} value={m.id}>
+                  👤 {m.name || m.username || m.phone} ({m.designation || m.role})
+                </option>
+              ))}
+            </select>
+          )}
 
           {/* Admin-only: Visibility Filter Pills (Active, Hidden, All) */}
           {isLeader && (
@@ -356,6 +393,7 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
               baseUrl={baseUrl}
               teamMembers={teamMembers}
               isLeader={isLeader}
+              memberFilter={isLeader ? memberFilter : undefined}
               onOpenCreateSubProject={onOpenCreateSubProject}
               onOpenCreateTask={onOpenCreateTask}
               onEditProject={onEditProject}
@@ -454,6 +492,7 @@ interface ProjectAccordionItemProps {
   baseUrl: string;
   teamMembers?: TeamMemberOption[];
   isLeader?: boolean;
+  memberFilter?: string;
   onOpenCreateSubProject: (projectId: string) => void;
   onOpenCreateTask: (projectId: string, subProjectId?: string) => void;
   onEditProject?: (project: Project) => void;
@@ -470,6 +509,7 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
   baseUrl,
   teamMembers = [],
   isLeader = false,
+  memberFilter,
   onOpenCreateSubProject,
   onOpenCreateTask,
   onEditProject,
@@ -478,9 +518,9 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
   onShiftHierarchy,
   onRequestToggleVisibility,
 }) => {
-  // Query hierarchy for this project when expanded
+  // Query hierarchy for this project when expanded (respecting member filter)
   const { data: hierarchyData, isLoading } = useGetProjectHierarchyQuery(
-    { baseUrl, id: project.id },
+    { baseUrl, id: project.id, memberId: memberFilter },
     { skip: !isExpanded }
   );
 

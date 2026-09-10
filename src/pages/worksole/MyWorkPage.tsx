@@ -21,6 +21,7 @@ import {
   GraduationCap,
   Building2,
   ChevronDown,
+  ChevronRight,
   Check,
   Search,
   UserCheck,
@@ -67,10 +68,12 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
   // Tab State: "TASKS" | "LEADS" | "STANDUP"
   const [activeTab, setActiveTab] = useState<"TASKS" | "LEADS" | "STANDUP">("TASKS");
 
-  // Tasks Filter, Project Filter & Drawer
+  // Tasks Filter, Project Filter, View Mode & Drawer
   const [taskStatusFilter, setTaskStatusFilter] = useState<string>("ACTIVE");
   const [selectedProjectId, setSelectedProjectId] = useState<string>("");
-  const [groupByProject, setGroupByProject] = useState<boolean>(false);
+  const [viewMode, setViewMode] = useState<"HIERARCHY" | "GROUPED" | "LIST">("HIERARCHY");
+  const [expandedHierarchyProjects, setExpandedHierarchyProjects] = useState<Record<string, boolean>>({});
+  const [expandedHierarchySubProjects, setExpandedHierarchySubProjects] = useState<Record<string, boolean>>({});
   const [taskSearch, setTaskSearch] = useState<string>("");
   const [selectedTaskForDrawer, setSelectedTaskForDrawer] = useState<TaskItem | null>(null);
 
@@ -194,6 +197,155 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
 
     return Object.values(groups);
   }, [filteredTasks, allProjects]);
+
+  // 4-Tier Hierarchy Construction: Project -> SubProject -> Task -> Subtask
+  const hierarchyTree = useMemo(() => {
+    const projectMap = new Map<
+      string,
+      {
+        id: string;
+        name: string;
+        code?: string;
+        color?: string;
+        priority?: string;
+        leadName?: string;
+        progressPercentage: number;
+        subProjects: Array<{
+          id: string;
+          name: string;
+          leadName?: string;
+          status?: string;
+          tasks: TaskItem[];
+        }>;
+        unassignedTasks: TaskItem[];
+      }
+    >();
+
+    // Initialize with allProjects
+    for (const p of allProjects) {
+      if (selectedProjectId && p.id !== selectedProjectId) continue;
+      projectMap.set(p.id, {
+        id: p.id,
+        name: p.name,
+        code: p.code,
+        color: p.color || "#6366f1",
+        priority: p.priority,
+        leadName: p.leadName || p.lead?.name,
+        progressPercentage: p.progressPercentage || 0,
+        subProjects: (p.subProjects || []).map((sp: any) => ({
+          id: sp.id,
+          name: sp.name,
+          leadName: sp.leadName || sp.lead?.name,
+          status: sp.status,
+          tasks: [],
+        })),
+        unassignedTasks: [],
+      });
+    }
+
+    const unassignedBucket = {
+      id: "unassigned",
+      name: "General / Standalone Tasks",
+      code: "TASK",
+      color: "#64748b",
+      priority: "MEDIUM",
+      leadName: undefined,
+      progressPercentage: 0,
+      subProjects: [],
+      unassignedTasks: [] as TaskItem[],
+    };
+
+    for (const t of filteredTasks) {
+      const pId = t.projectId || "unassigned";
+      let projObj = projectMap.get(pId);
+      if (!projObj) {
+        if (pId === "unassigned") {
+          projObj = unassignedBucket;
+        } else {
+          projObj = {
+            id: pId,
+            name: t.projectName || "Project Deliverables",
+            code: t.projectCode || "PROJ",
+            color: t.projectColor || "#6366f1",
+            priority: "MEDIUM",
+            leadName: undefined,
+            progressPercentage: 0,
+            subProjects: [],
+            unassignedTasks: [],
+          };
+          projectMap.set(pId, projObj);
+        }
+      }
+
+      if (t.subProjectId) {
+        let spObj = projObj.subProjects.find((sp) => sp.id === t.subProjectId);
+        if (!spObj) {
+          spObj = {
+            id: t.subProjectId,
+            name: t.subProjectName || "Sub-Project",
+            status: "IN_PROGRESS",
+            tasks: [],
+          };
+          projObj.subProjects.push(spObj);
+        }
+        spObj.tasks.push(t);
+      } else {
+        projObj.unassignedTasks.push(t);
+      }
+    }
+
+    const list = Array.from(projectMap.values()).filter(
+      (p) => p.unassignedTasks.length > 0 || p.subProjects.some((sp) => sp.tasks.length > 0)
+    );
+
+    if (unassignedBucket.unassignedTasks.length > 0 && !list.some((p) => p.id === "unassigned")) {
+      list.push(unassignedBucket);
+    }
+
+    return list;
+  }, [filteredTasks, allProjects, selectedProjectId]);
+
+  // Auto-expand projects on first load of hierarchy
+  React.useEffect(() => {
+    if (hierarchyTree.length > 0 && Object.keys(expandedHierarchyProjects).length === 0) {
+      const initP: Record<string, boolean> = {};
+      const initSp: Record<string, boolean> = {};
+      hierarchyTree.forEach((p) => {
+        initP[p.id] = true;
+        p.subProjects.forEach((sp) => {
+          initSp[sp.id] = true;
+        });
+      });
+      setExpandedHierarchyProjects(initP);
+      setExpandedHierarchySubProjects(initSp);
+    }
+  }, [hierarchyTree]);
+
+  const toggleHierarchyProject = (pId: string) => {
+    setExpandedHierarchyProjects((prev) => ({ ...prev, [pId]: !prev[pId] }));
+  };
+
+  const toggleHierarchySubProject = (spId: string) => {
+    setExpandedHierarchySubProjects((prev) => ({ ...prev, [spId]: !prev[spId] }));
+  };
+
+  const handleExpandAllHierarchy = () => {
+    const pAll: Record<string, boolean> = {};
+    const spAll: Record<string, boolean> = {};
+    hierarchyTree.forEach((p) => {
+      pAll[p.id] = true;
+      p.subProjects.forEach((sp: any) => {
+        spAll[sp.id] = true;
+      });
+    });
+    setExpandedHierarchyProjects(pAll);
+    setExpandedHierarchySubProjects(spAll);
+  };
+
+  const handleCollapseAllHierarchy = () => {
+    setExpandedHierarchyProjects({});
+    setExpandedHierarchySubProjects({});
+  };
 
   // Filter Leads
   const filteredLeads = useMemo(() => {
@@ -383,6 +535,264 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
     } catch (err) {
       console.error("Lead status update error:", err);
     }
+  };
+
+  const renderTaskCard = (task: TaskItem, hideProjectTag: boolean = false) => {
+    const subtasks = task.subtasks || [];
+    const hasSubtasks = subtasks.length > 0;
+    const isOverdue =
+      task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "COMPLETED";
+    const assigneeDisplayName = task.assigneeName || task.assignee?.name || (targetUser?.name || "Assigned");
+    const assigneeRoleName =
+      task.assigneeDesignation ||
+      task.assigneeRole ||
+      task.assignee?.role ||
+      targetUser?.designation ||
+      targetUser?.role;
+    const subtasksCompletedCount =
+      task.subtasksCompleted !== undefined
+        ? task.subtasksCompleted
+        : subtasks.filter((s) => s.isCompleted).length;
+    const subtasksPct = hasSubtasks
+      ? Math.round((subtasksCompletedCount / subtasks.length) * 100)
+      : 0;
+
+    return (
+      <div
+        key={task.id}
+        className={cn(
+          "bg-white dark:bg-zinc-900 border rounded-2xl p-4 transition-all shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700",
+          task.status === "BLOCKED"
+            ? "border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10"
+            : "border-zinc-200 dark:border-zinc-800"
+        )}
+      >
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3 flex-1 min-w-0">
+            <button
+              onClick={() =>
+                handleQuickStatusChange(
+                  task,
+                  task.status === "COMPLETED" ? "TODO" : "COMPLETED"
+                )
+              }
+              className="mt-0.5 text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors cursor-pointer"
+            >
+              {task.status === "COMPLETED" ? (
+                <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+              ) : (
+                <Circle className="w-5 h-5" />
+              )}
+            </button>
+
+            <div className="flex-1 min-w-0">
+              <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                {!hideProjectTag && task.projectName && (
+                  <button
+                    onClick={() => setSelectedProjectId(task.projectId || "")}
+                    className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 hover:bg-indigo-100 transition-colors cursor-pointer"
+                    title="Filter by this project"
+                  >
+                    <Folder className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                    <span>
+                      {task.projectCode ? `[${task.projectCode}] ` : ""}
+                      {task.projectName}
+                    </span>
+                  </button>
+                )}
+
+                {task.subProjectName && (
+                  <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center gap-1 border border-zinc-200/60 dark:border-zinc-700/60">
+                    <Layers className="w-3 h-3 text-zinc-500" />
+                    {task.subProjectName}
+                  </span>
+                )}
+
+                {/* Assigned Person Pill */}
+                <div className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60">
+                  <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-bold">
+                    {assigneeDisplayName.charAt(0).toUpperCase()}
+                  </span>
+                  <span className="font-semibold">{assigneeDisplayName}</span>
+                  {assigneeRoleName && (
+                    <span className="text-[9px] text-zinc-400">({assigneeRoleName})</span>
+                  )}
+                </div>
+
+                <span
+                  className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
+                    task.priority === "URGENT"
+                      ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                      : task.priority === "HIGH"
+                      ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                      : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                  )}
+                >
+                  {task.priority}
+                </span>
+
+                <span
+                  className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
+                    task.status === "COMPLETED"
+                      ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                      : task.status === "IN_PROGRESS"
+                      ? "bg-indigo-500/10 text-indigo-600 border border-indigo-500/20"
+                      : task.status === "SUBMITTED_FOR_REVIEW"
+                      ? "bg-purple-500/10 text-purple-600 border border-purple-500/20"
+                      : task.status === "BLOCKED"
+                      ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                      : "bg-zinc-500/10 text-zinc-600 border border-zinc-500/20"
+                  )}
+                >
+                  {task.status.replace(/_/g, " ")}
+                </span>
+              </div>
+
+              <h3
+                onClick={() => setSelectedTaskForDrawer(task)}
+                className={cn(
+                  "text-sm font-bold cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors",
+                  task.status === "COMPLETED"
+                    ? "line-through text-zinc-400 dark:text-zinc-500"
+                    : "text-zinc-900 dark:text-zinc-100"
+                )}
+              >
+                {task.title}
+              </h3>
+
+              {task.description && (
+                <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
+                  {task.description}
+                </p>
+              )}
+
+              {task.blockedReason && (
+                <div className="mt-2 text-xs p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 flex items-start gap-1.5">
+                  <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                  <span>
+                    <strong>Blocker:</strong> {task.blockedReason}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* Task Quick Actions */}
+          <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
+            {task.dueDate && (
+              <span
+                className={cn(
+                  "text-xs flex items-center gap-1 mr-2 font-medium",
+                  isOverdue ? "text-rose-600 dark:text-rose-400 font-bold" : "text-zinc-400"
+                )}
+              >
+                <Calendar className="w-3 h-3" />
+                {new Date(task.dueDate).toLocaleDateString("en-US", {
+                  month: "short",
+                  day: "numeric",
+                })}
+                {isOverdue && " (Overdue)"}
+              </span>
+            )}
+
+            {task.status === "TODO" && (
+              <button
+                onClick={() => handleQuickStatusChange(task, "IN_PROGRESS")}
+                className="px-2.5 py-1 text-xs font-bold rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition-colors cursor-pointer"
+              >
+                Start Task ▶
+              </button>
+            )}
+
+            {task.status === "IN_PROGRESS" && (
+              <button
+                onClick={(e) => handleOpenProofModal(e, task)}
+                className="px-2.5 py-1 text-xs font-bold rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 transition-colors cursor-pointer"
+              >
+                Submit Proof 📤
+              </button>
+            )}
+
+            {task.status !== "BLOCKED" && task.status !== "COMPLETED" && (
+              <button
+                onClick={(e) => handleOpenBlockModal(e, task)}
+                className="px-2.5 py-1 text-xs font-semibold rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/60 transition-colors cursor-pointer"
+              >
+                I'm Blocked ⚠️
+              </button>
+            )}
+
+            {task.status === "BLOCKED" && (
+              <button
+                onClick={() => handleQuickStatusChange(task, "IN_PROGRESS")}
+                className="px-2.5 py-1 text-xs font-bold rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors cursor-pointer"
+              >
+                Unblock & Resume ✓
+              </button>
+            )}
+
+            <button
+              onClick={() => setSelectedTaskForDrawer(task)}
+              className="p-1.5 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              title="Open full task drawer"
+            >
+              <ExternalLink className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Tier 4: Sub-Tasks Checklist (Sub) */}
+        {hasSubtasks && (
+          <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2 pl-8">
+            <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+              <div className="flex items-center gap-1.5">
+                <CheckSquare className="w-3.5 h-3.5 text-indigo-500" />
+                <span>Tier 4: Sub-Tasks Checklist (Sub)</span>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-20 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                  <div
+                    className="h-full bg-emerald-500 transition-all duration-300"
+                    style={{ width: `${subtasksPct}%` }}
+                  />
+                </div>
+                <span className="text-zinc-600 dark:text-zinc-300 font-mono">
+                  {subtasksCompletedCount}/{subtasks.length} Done ({subtasksPct}%)
+                </span>
+              </div>
+            </div>
+
+            <div className="space-y-1 bg-zinc-50/60 dark:bg-zinc-950/40 p-2 rounded-xl border border-zinc-100 dark:border-zinc-800/50">
+              {subtasks.map((st) => (
+                <div
+                  key={st.id}
+                  onClick={(e) => handleSubtaskToggle(e, task.id, st)}
+                  className="flex items-center gap-2 text-xs py-1.5 px-2 rounded-lg hover:bg-white dark:hover:bg-zinc-900 cursor-pointer select-none transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800"
+                >
+                  {st.isCompleted ? (
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
+                  ) : (
+                    <Circle className="w-4 h-4 text-zinc-400 hover:text-indigo-500 shrink-0" />
+                  )}
+                  <span
+                    className={cn(
+                      "flex-1 font-medium",
+                      st.isCompleted
+                        ? "line-through text-zinc-400 dark:text-zinc-500"
+                        : "text-zinc-800 dark:text-zinc-200"
+                    )}
+                  >
+                    {st.title}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -824,13 +1234,39 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
                 </div>
               )}
 
-              {/* View Switcher: Flat List vs Group by Project */}
+              {/* View Switcher: 4-Tier Hierarchy vs Group by Project vs Flat List */}
               <div className="flex items-center border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-50 dark:bg-zinc-950 p-0.5">
                 <button
-                  onClick={() => setGroupByProject(false)}
+                  onClick={() => setViewMode("HIERARCHY")}
                   className={cn(
-                    "flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg transition-all",
-                    !groupByProject
+                    "flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer",
+                    viewMode === "HIERARCHY"
+                      ? "bg-indigo-600 text-white shadow-xs"
+                      : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  )}
+                  title="4-Tier Hierarchy: Project ➔ Sub-Project ➔ Task ➔ Subtask"
+                >
+                  <Layers className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">4-Tier Hierarchy</span>
+                </button>
+                <button
+                  onClick={() => setViewMode("GROUPED")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer",
+                    viewMode === "GROUPED"
+                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs"
+                      : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  )}
+                  title="Group deliverables by Project"
+                >
+                  <Grid className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">By Project</span>
+                </button>
+                <button
+                  onClick={() => setViewMode("LIST")}
+                  className={cn(
+                    "flex items-center gap-1.5 px-3 py-1 text-xs font-bold rounded-lg transition-all cursor-pointer",
+                    viewMode === "LIST"
                       ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs"
                       : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
                   )}
@@ -838,19 +1274,6 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
                 >
                   <LayoutList className="w-3.5 h-3.5" />
                   <span className="hidden sm:inline">List</span>
-                </button>
-                <button
-                  onClick={() => setGroupByProject(true)}
-                  className={cn(
-                    "flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg transition-all",
-                    groupByProject
-                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs"
-                      : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
-                  )}
-                  title="Group deliverables by Project"
-                >
-                  <Grid className="w-3.5 h-3.5" />
-                  <span className="hidden sm:inline">Group by Project</span>
                 </button>
               </div>
 
@@ -868,7 +1291,7 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
             </div>
           </div>
 
-          {/* Task Cards List (Flat or Grouped View) */}
+          {/* Task Cards List (Hierarchy, Grouped, or Flat View) */}
           {isLoading ? (
             <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
               <Clock className="w-8 h-8 text-zinc-400 animate-spin mx-auto mb-2" />
@@ -894,8 +1317,226 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
                 </button>
               )}
             </div>
-          ) : groupByProject ? (
-            /* GROUPED BY PROJECT VIEW */
+          ) : viewMode === "HIERARCHY" ? (
+            /* ========================================================================= */
+            /* VIEW 1: 4-TIER HIERARCHY TREE (PROJECT -> SUB-PROJECT -> TASK -> SUBTASK) */
+            /* ========================================================================= */
+            <div className="space-y-4">
+              <div className="flex items-center justify-between text-xs text-zinc-500 px-1">
+                <span className="font-semibold flex items-center gap-1.5">
+                  <Layers className="w-4 h-4 text-indigo-500" />
+                  <span>WorkSole 4-Tier Interactive Hierarchy (Project ➔ Sub-Project ➔ Task ➔ Subtask)</span>
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    onClick={handleExpandAllHierarchy}
+                    className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
+                  >
+                    Expand All
+                  </button>
+                  <span>•</span>
+                  <button
+                    onClick={handleCollapseAllHierarchy}
+                    className="text-[11px] font-bold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-300 cursor-pointer"
+                  >
+                    Collapse All
+                  </button>
+                </div>
+              </div>
+
+              {hierarchyTree.map((proj) => {
+                const isPExpanded = !!expandedHierarchyProjects[proj.id];
+                const allProjTasksCount =
+                  proj.unassignedTasks.length +
+                  proj.subProjects.reduce((acc: number, sp: any) => acc + sp.tasks.length, 0);
+                const allCompletedCount =
+                  proj.unassignedTasks.filter((t: any) => t.status === "COMPLETED").length +
+                  proj.subProjects.reduce(
+                    (acc: number, sp: any) =>
+                      acc + sp.tasks.filter((t: any) => t.status === "COMPLETED").length,
+                    0
+                  );
+                const pct =
+                  allProjTasksCount > 0
+                    ? Math.round((allCompletedCount / allProjTasksCount) * 100)
+                    : 0;
+
+                return (
+                  <div
+                    key={proj.id}
+                    className="border rounded-2xl bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden"
+                  >
+                    {/* Tier 1: Project Header */}
+                    <div
+                      onClick={() => toggleHierarchyProject(proj.id)}
+                      className={cn(
+                        "flex flex-col sm:flex-row sm:items-center justify-between p-4 cursor-pointer select-none transition-colors gap-3",
+                        isPExpanded
+                          ? "bg-zinc-50/90 dark:bg-zinc-800/40 border-b border-zinc-200 dark:border-zinc-800"
+                          : "hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20"
+                      )}
+                    >
+                      <div className="flex items-center gap-3 flex-1 min-w-0">
+                        <button className="p-1 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 rounded-lg">
+                          {isPExpanded ? (
+                            <ChevronDown className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                          ) : (
+                            <ChevronRight className="w-5 h-5" />
+                          )}
+                        </button>
+
+                        <div
+                          className="w-9 h-9 rounded-xl flex items-center justify-center text-white shadow-xs font-bold shrink-0"
+                          style={{ backgroundColor: proj.color || "#6366f1" }}
+                        >
+                          <Folder className="w-4 h-4" />
+                        </div>
+
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="text-[10px] font-bold font-mono px-1.5 py-0.5 rounded bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                              {proj.code || "PROJ"}
+                            </span>
+                            <h3 className="text-sm font-black text-zinc-900 dark:text-white truncate">
+                              {proj.name}
+                            </h3>
+                            {proj.priority && (
+                              <span
+                                className={cn(
+                                  "text-[9px] font-bold px-2 py-0.5 rounded-full uppercase",
+                                  proj.priority === "URGENT"
+                                    ? "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400"
+                                    : proj.priority === "HIGH"
+                                    ? "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400"
+                                    : "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400"
+                                )}
+                              >
+                                {proj.priority}
+                              </span>
+                            )}
+                          </div>
+                          {proj.leadName && (
+                            <p className="text-[11px] text-zinc-500 flex items-center gap-1 mt-0.5">
+                              <User className="w-3 h-3 text-zinc-400" />
+                              Lead: <strong className="text-zinc-700 dark:text-zinc-300">{proj.leadName}</strong>
+                            </p>
+                          )}
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-3 sm:ml-auto">
+                        <div className="flex items-center gap-2">
+                          <div className="w-20 bg-zinc-200 dark:bg-zinc-800 h-2 rounded-full overflow-hidden">
+                            <div
+                              className="bg-indigo-600 h-full rounded-full transition-all"
+                              style={{ width: `${pct}%` }}
+                            />
+                          </div>
+                          <span className="text-xs font-bold text-zinc-700 dark:text-zinc-300">{pct}%</span>
+                        </div>
+                        <span className="text-xs text-zinc-500 font-semibold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800">
+                          {allCompletedCount}/{allProjTasksCount} Deliverables
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* Tier 2: Sub-Projects & Tasks Accordion Content */}
+                    {isPExpanded && (
+                      <div className="p-4 space-y-4 bg-zinc-50/40 dark:bg-zinc-950/20">
+                        {/* Nested Sub-Projects */}
+                        {proj.subProjects.map((sp: any) => {
+                          const isSpExpanded = !!expandedHierarchySubProjects[sp.id];
+                          const spCompleted = sp.tasks.filter((t: any) => t.status === "COMPLETED").length;
+                          const spPct =
+                            sp.tasks.length > 0 ? Math.round((spCompleted / sp.tasks.length) * 100) : 0;
+
+                          return (
+                            <div
+                              key={sp.id}
+                              className="border rounded-2xl bg-white dark:bg-zinc-900 border-zinc-200/80 dark:border-zinc-800/80 shadow-xs overflow-hidden"
+                            >
+                              {/* Sub-Project Tier 2 Header */}
+                              <div
+                                onClick={() => toggleHierarchySubProject(sp.id)}
+                                className={cn(
+                                  "flex items-center justify-between p-3 cursor-pointer select-none transition-colors gap-3",
+                                  isSpExpanded
+                                    ? "bg-zinc-50 dark:bg-zinc-800/30 border-b border-zinc-200/70 dark:border-zinc-800/70"
+                                    : "hover:bg-zinc-50/50 dark:hover:bg-zinc-800/20"
+                                )}
+                              >
+                                <div className="flex items-center gap-2.5 flex-1 min-w-0">
+                                  <button className="p-0.5 text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200">
+                                    {isSpExpanded ? (
+                                      <ChevronDown className="w-4 h-4 text-indigo-500" />
+                                    ) : (
+                                      <ChevronRight className="w-4 h-4" />
+                                    )}
+                                  </button>
+                                  <div className="w-7 h-7 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-200/60 dark:border-indigo-800">
+                                    <Layers className="w-3.5 h-3.5" />
+                                  </div>
+                                  <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                                    {sp.name}
+                                  </span>
+                                  {sp.leadName && (
+                                    <span className="text-[10px] text-zinc-400 hidden sm:inline">
+                                      (Lead: {sp.leadName})
+                                    </span>
+                                  )}
+                                </div>
+
+                                <div className="flex items-center gap-2">
+                                  <div className="w-16 bg-zinc-200 dark:bg-zinc-800 h-1.5 rounded-full overflow-hidden hidden sm:block">
+                                    <div
+                                      className="bg-emerald-500 h-full rounded-full transition-all"
+                                      style={{ width: `${spPct}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-[11px] font-bold text-zinc-600 dark:text-zinc-300">
+                                    {spCompleted}/{sp.tasks.length} Deliverables
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* Sub-Project Tier 3 Tasks & Tier 4 Subtasks */}
+                              {isSpExpanded && (
+                                <div className="p-3 space-y-3 bg-zinc-50/20 dark:bg-zinc-950/10">
+                                  {sp.tasks.length === 0 ? (
+                                    <p className="text-xs text-zinc-400 italic py-2 text-center">
+                                      No tasks in this sub-project milestone.
+                                    </p>
+                                  ) : (
+                                    sp.tasks.map((task: TaskItem) => renderTaskCard(task, true))
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                          );
+                        })}
+
+                        {/* Direct Unassigned Project Tasks */}
+                        {proj.unassignedTasks.length > 0 && (
+                          <div className="space-y-3 pt-1">
+                            <h4 className="text-xs font-bold uppercase tracking-wider text-zinc-500 flex items-center gap-1.5 px-1">
+                              <span>⚡ Direct Project Tasks</span>
+                              <span className="px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-zinc-800 text-[10px]">
+                                {proj.unassignedTasks.length} tasks
+                              </span>
+                            </h4>
+                            {proj.unassignedTasks.map((task: TaskItem) => renderTaskCard(task, true))}
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ) : viewMode === "GROUPED" ? (
+            /* ========================================================================= */
+            /* VIEW 2: GROUPED BY PROJECT VIEW                                           */
+            /* ========================================================================= */
             <div className="space-y-6">
               {tasksByProject.map((group) => (
                 <div
@@ -930,497 +1571,17 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
                   </div>
 
                   <div className="space-y-3">
-                    {group.tasks.map((task) => {
-                      const subtasks = task.subtasks || [];
-                      const hasSubtasks = subtasks.length > 0;
-                      const isOverdue =
-                        task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "COMPLETED";
-                      const assigneeDisplayName = task.assigneeName || task.assignee?.name || (targetUser?.name || "Assigned");
-                      const assigneeRoleName = task.assigneeDesignation || task.assigneeRole || task.assignee?.role || targetUser?.designation || targetUser?.role;
-                      const subtasksCompletedCount = task.subtasksCompleted !== undefined 
-                        ? task.subtasksCompleted 
-                        : subtasks.filter((s) => s.isCompleted).length;
-                      const subtasksPct = hasSubtasks ? Math.round((subtasksCompletedCount / subtasks.length) * 100) : 0;
-
-                      return (
-                        <div
-                          key={task.id}
-                          className={cn(
-                            "bg-white dark:bg-zinc-900 border rounded-2xl p-4 transition-all shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700",
-                            task.status === "BLOCKED"
-                              ? "border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10"
-                              : "border-zinc-200 dark:border-zinc-800"
-                          )}
-                        >
-                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                            <div className="flex items-start gap-3 flex-1 min-w-0">
-                              <button
-                                onClick={() =>
-                                  handleQuickStatusChange(
-                                    task,
-                                    task.status === "COMPLETED" ? "TODO" : "COMPLETED"
-                                  )
-                                }
-                                className="mt-0.5 text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-                              >
-                                {task.status === "COMPLETED" ? (
-                                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                                ) : (
-                                  <Circle className="w-5 h-5" />
-                                )}
-                              </button>
-
-                              <div className="flex-1 min-w-0">
-                                <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                                  {task.subProjectName && (
-                                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
-                                      <Layers className="w-3 h-3 text-zinc-500" />
-                                      {task.subProjectName}
-                                    </span>
-                                  )}
-
-                                  {/* Assigned Person Pill */}
-                                  <div className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60">
-                                    <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-bold">
-                                      {assigneeDisplayName.charAt(0).toUpperCase()}
-                                    </span>
-                                    <span className="font-semibold">{assigneeDisplayName}</span>
-                                    {assigneeRoleName && (
-                                      <span className="text-[9px] text-zinc-400">({assigneeRoleName})</span>
-                                    )}
-                                  </div>
-
-                                  <span
-                                    className={cn(
-                                      "text-[10px] font-bold px-2 py-0.5 rounded-full",
-                                      task.priority === "URGENT"
-                                        ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
-                                        : task.priority === "HIGH"
-                                        ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
-                                        : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
-                                    )}
-                                  >
-                                    {task.priority}
-                                  </span>
-                                  <span
-                                    className={cn(
-                                      "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
-                                      task.status === "COMPLETED"
-                                        ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                                        : task.status === "IN_PROGRESS"
-                                        ? "bg-indigo-500/10 text-indigo-600 border border-indigo-500/20"
-                                        : task.status === "SUBMITTED_FOR_REVIEW"
-                                        ? "bg-purple-500/10 text-purple-600 border border-purple-500/20"
-                                        : task.status === "BLOCKED"
-                                        ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
-                                        : "bg-zinc-500/10 text-zinc-600 border border-zinc-500/20"
-                                    )}
-                                  >
-                                    {task.status.replace(/_/g, " ")}
-                                  </span>
-                                </div>
-
-                                <h3
-                                  onClick={() => setSelectedTaskForDrawer(task)}
-                                  className={cn(
-                                    "text-sm font-bold cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors",
-                                    task.status === "COMPLETED"
-                                      ? "line-through text-zinc-400 dark:text-zinc-500"
-                                      : "text-zinc-900 dark:text-zinc-100"
-                                  )}
-                                >
-                                  {task.title}
-                                </h3>
-
-                                {task.description && (
-                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
-                                    {task.description}
-                                  </p>
-                                )}
-
-                                {task.blockedReason && (
-                                  <div className="mt-2 text-xs p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 flex items-start gap-1.5">
-                                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                                    <span>
-                                      <strong>Blocker:</strong> {task.blockedReason}
-                                    </span>
-                                  </div>
-                                )}
-                              </div>
-                            </div>
-
-                            {/* Task Quick Actions */}
-                            <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
-                              {task.dueDate && (
-                                <span
-                                  className={cn(
-                                    "text-xs flex items-center gap-1 mr-2 font-medium",
-                                    isOverdue ? "text-rose-600 dark:text-rose-400 font-bold" : "text-zinc-400"
-                                  )}
-                                >
-                                  <Calendar className="w-3 h-3" />
-                                  {new Date(task.dueDate).toLocaleDateString("en-US", {
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
-                                  {isOverdue && " (Overdue)"}
-                                </span>
-                              )}
-
-                              {task.status === "TODO" && (
-                                <button
-                                  onClick={() => handleQuickStatusChange(task, "IN_PROGRESS")}
-                                  className="px-2.5 py-1 text-xs font-bold rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition-colors"
-                                >
-                                  Start Task ▶
-                                </button>
-                              )}
-
-                              {task.status === "IN_PROGRESS" && (
-                                <button
-                                  onClick={(e) => handleOpenProofModal(e, task)}
-                                  className="px-2.5 py-1 text-xs font-bold rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 transition-colors"
-                                >
-                                  Submit Proof 📤
-                                </button>
-                              )}
-
-                              {task.status !== "BLOCKED" && task.status !== "COMPLETED" && (
-                                <button
-                                  onClick={(e) => handleOpenBlockModal(e, task)}
-                                  className="px-2.5 py-1 text-xs font-semibold rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/60 transition-colors"
-                                >
-                                  I'm Blocked ⚠️
-                                </button>
-                              )}
-
-                              {task.status === "BLOCKED" && (
-                                <button
-                                  onClick={() => handleQuickStatusChange(task, "IN_PROGRESS")}
-                                  className="px-2.5 py-1 text-xs font-bold rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors"
-                                >
-                                  Unblock & Resume ✓
-                                </button>
-                              )}
-
-                              <button
-                                onClick={() => setSelectedTaskForDrawer(task)}
-                                className="p-1.5 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                                title="Open full task drawer"
-                              >
-                                <ExternalLink className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </div>
-
-                          {/* Sub-Tasks Checklist */}
-                          {hasSubtasks && (
-                            <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2 pl-8">
-                              <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                                <div className="flex items-center gap-1.5">
-                                  <CheckSquare className="w-3.5 h-3.5 text-indigo-500" />
-                                  <span>Sub-Tasks Checklist</span>
-                                </div>
-                                <div className="flex items-center gap-2">
-                                  <div className="w-20 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                                    <div
-                                      className="h-full bg-emerald-500 transition-all duration-300"
-                                      style={{ width: `${subtasksPct}%` }}
-                                    />
-                                  </div>
-                                  <span className="text-zinc-600 dark:text-zinc-300">
-                                    {subtasksCompletedCount}/{subtasks.length} Done ({subtasksPct}%)
-                                  </span>
-                                </div>
-                              </div>
-
-                              <div className="space-y-1 bg-zinc-50/60 dark:bg-zinc-950/40 p-2 rounded-xl border border-zinc-100 dark:border-zinc-800/50">
-                                {subtasks.map((st) => (
-                                  <div
-                                    key={st.id}
-                                    onClick={(e) => handleSubtaskToggle(e, task.id, st)}
-                                    className="flex items-center gap-2 text-xs py-1.5 px-2 rounded-lg hover:bg-white dark:hover:bg-zinc-900 cursor-pointer select-none transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800"
-                                  >
-                                    {st.isCompleted ? (
-                                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                                    ) : (
-                                      <Circle className="w-4 h-4 text-zinc-400 hover:text-indigo-500 flex-shrink-0" />
-                                    )}
-                                    <span
-                                      className={cn(
-                                        "flex-1 font-medium",
-                                        st.isCompleted
-                                          ? "line-through text-zinc-400 dark:text-zinc-500"
-                                          : "text-zinc-800 dark:text-zinc-200"
-                                      )}
-                                    >
-                                      {st.title}
-                                    </span>
-                                  </div>
-                                ))}
-                              </div>
-                            </div>
-                          )}
-                        </div>
-                      );
-                    })}
+                    {group.tasks.map((task) => renderTaskCard(task, true))}
                   </div>
                 </div>
               ))}
             </div>
           ) : (
-            /* FLAT DELIVERABLES LIST VIEW */
+            /* ========================================================================= */
+            /* VIEW 3: FLAT DELIVERABLES LIST VIEW                                       */
+            /* ========================================================================= */
             <div className="space-y-3">
-              {filteredTasks.map((task) => {
-                const subtasks = task.subtasks || [];
-                const hasSubtasks = subtasks.length > 0;
-                const isOverdue =
-                  task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "COMPLETED";
-                const assigneeDisplayName = task.assigneeName || task.assignee?.name || (targetUser?.name || "Assigned");
-                const assigneeRoleName = task.assigneeDesignation || task.assigneeRole || task.assignee?.role || targetUser?.designation || targetUser?.role;
-                const subtasksCompletedCount = task.subtasksCompleted !== undefined 
-                  ? task.subtasksCompleted 
-                  : subtasks.filter((s) => s.isCompleted).length;
-                const subtasksPct = hasSubtasks ? Math.round((subtasksCompletedCount / subtasks.length) * 100) : 0;
-
-                return (
-                  <div
-                    key={task.id}
-                    className={cn(
-                      "bg-white dark:bg-zinc-900 border rounded-2xl p-4 transition-all shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700",
-                      task.status === "BLOCKED"
-                        ? "border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10"
-                        : "border-zinc-200 dark:border-zinc-800"
-                    )}
-                  >
-                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                      <div className="flex items-start gap-3 flex-1 min-w-0">
-                        <button
-                          onClick={() =>
-                            handleQuickStatusChange(
-                              task,
-                              task.status === "COMPLETED" ? "TODO" : "COMPLETED"
-                            )
-                          }
-                          className="mt-0.5 text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
-                        >
-                          {task.status === "COMPLETED" ? (
-                            <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
-                          ) : (
-                            <Circle className="w-5 h-5" />
-                          )}
-                        </button>
-
-                        <div className="flex-1 min-w-0">
-                          {/* Project, SubProject, Assignee, Priority & Status Badges */}
-                          <div className="flex items-center gap-2 flex-wrap mb-1.5">
-                            {task.projectName && (
-                              <button
-                                onClick={() => setSelectedProjectId(task.projectId || "")}
-                                className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 hover:bg-indigo-100 transition-colors cursor-pointer"
-                                title="Filter by this project"
-                              >
-                                <Folder className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
-                                <span>
-                                  {task.projectCode ? `[${task.projectCode}] ` : ""}
-                                  {task.projectName}
-                                </span>
-                              </button>
-                            )}
-
-                            {task.subProjectName && (
-                              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
-                                <Layers className="w-3 h-3 text-zinc-500" />
-                                {task.subProjectName}
-                              </span>
-                            )}
-
-                            {/* Assigned Person Pill */}
-                            <div className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60">
-                              <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-bold">
-                                {assigneeDisplayName.charAt(0).toUpperCase()}
-                              </span>
-                              <span className="font-semibold">{assigneeDisplayName}</span>
-                              {assigneeRoleName && (
-                                <span className="text-[9px] text-zinc-400">({assigneeRoleName})</span>
-                              )}
-                            </div>
-
-                            <span
-                              className={cn(
-                                "text-[10px] font-bold px-2 py-0.5 rounded-full",
-                                task.priority === "URGENT"
-                                  ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
-                                  : task.priority === "HIGH"
-                                  ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
-                                  : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
-                              )}
-                            >
-                              {task.priority}
-                            </span>
-
-                            <span
-                              className={cn(
-                                "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
-                                task.status === "COMPLETED"
-                                  ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
-                                  : task.status === "IN_PROGRESS"
-                                  ? "bg-indigo-500/10 text-indigo-600 border border-indigo-500/20"
-                                  : task.status === "SUBMITTED_FOR_REVIEW"
-                                  ? "bg-purple-500/10 text-purple-600 border border-purple-500/20"
-                                  : task.status === "BLOCKED"
-                                  ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
-                                  : "bg-zinc-500/10 text-zinc-600 border border-zinc-500/20"
-                              )}
-                            >
-                              {task.status.replace(/_/g, " ")}
-                            </span>
-                          </div>
-
-                          <h3
-                            onClick={() => setSelectedTaskForDrawer(task)}
-                            className={cn(
-                              "text-sm font-bold cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors",
-                              task.status === "COMPLETED"
-                                ? "line-through text-zinc-400 dark:text-zinc-500"
-                                : "text-zinc-900 dark:text-zinc-100"
-                            )}
-                          >
-                            {task.title}
-                          </h3>
-
-                          {task.description && (
-                            <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
-                              {task.description}
-                            </p>
-                          )}
-
-                          {task.blockedReason && (
-                            <div className="mt-2 text-xs p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 flex items-start gap-1.5">
-                              <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
-                              <span>
-                                <strong>Blocker:</strong> {task.blockedReason}
-                              </span>
-                            </div>
-                          )}
-                        </div>
-                      </div>
-
-                      {/* Task Quick Actions */}
-                      <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
-                        {task.dueDate && (
-                          <span
-                            className={cn(
-                              "text-xs flex items-center gap-1 mr-2 font-medium",
-                              isOverdue ? "text-rose-600 dark:text-rose-400 font-bold" : "text-zinc-400"
-                            )}
-                          >
-                            <Calendar className="w-3 h-3" />
-                            {new Date(task.dueDate).toLocaleDateString("en-US", {
-                              month: "short",
-                              day: "numeric",
-                            })}
-                            {isOverdue && " (Overdue)"}
-                          </span>
-                        )}
-
-                        {task.status === "TODO" && (
-                          <button
-                            onClick={() => handleQuickStatusChange(task, "IN_PROGRESS")}
-                            className="px-2.5 py-1 text-xs font-bold rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition-colors"
-                          >
-                            Start Task ▶
-                          </button>
-                        )}
-
-                        {task.status === "IN_PROGRESS" && (
-                          <button
-                            onClick={(e) => handleOpenProofModal(e, task)}
-                            className="px-2.5 py-1 text-xs font-bold rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 transition-colors"
-                          >
-                            Submit Proof 📤
-                          </button>
-                        )}
-
-                        {task.status !== "BLOCKED" && task.status !== "COMPLETED" && (
-                          <button
-                            onClick={(e) => handleOpenBlockModal(e, task)}
-                            className="px-2.5 py-1 text-xs font-semibold rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/60 transition-colors"
-                          >
-                            I'm Blocked ⚠️
-                          </button>
-                        )}
-
-                        {task.status === "BLOCKED" && (
-                          <button
-                            onClick={() => handleQuickStatusChange(task, "IN_PROGRESS")}
-                            className="px-2.5 py-1 text-xs font-bold rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors"
-                          >
-                            Unblock & Resume ✓
-                          </button>
-                        )}
-
-                        <button
-                          onClick={() => setSelectedTaskForDrawer(task)}
-                          className="p-1.5 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                          title="Open full task drawer"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </button>
-                      </div>
-                    </div>
-
-                    {/* Sub-Tasks Checklist */}
-                    {hasSubtasks && (
-                      <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2 pl-8">
-                        <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                          <div className="flex items-center gap-1.5">
-                            <CheckSquare className="w-3.5 h-3.5 text-indigo-500" />
-                            <span>Sub-Tasks Checklist</span>
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <div className="w-20 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
-                              <div
-                                className="h-full bg-emerald-500 transition-all duration-300"
-                                style={{ width: `${subtasksPct}%` }}
-                              />
-                            </div>
-                            <span className="text-zinc-600 dark:text-zinc-300">
-                              {subtasksCompletedCount}/{subtasks.length} Done ({subtasksPct}%)
-                            </span>
-                          </div>
-                        </div>
-
-                        <div className="space-y-1 bg-zinc-50/60 dark:bg-zinc-950/40 p-2 rounded-xl border border-zinc-100 dark:border-zinc-800/50">
-                          {subtasks.map((st) => (
-                            <div
-                              key={st.id}
-                              onClick={(e) => handleSubtaskToggle(e, task.id, st)}
-                              className="flex items-center gap-2 text-xs py-1.5 px-2 rounded-lg hover:bg-white dark:hover:bg-zinc-900 cursor-pointer select-none transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800"
-                            >
-                              {st.isCompleted ? (
-                                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                              ) : (
-                                <Circle className="w-4 h-4 text-zinc-400 hover:text-indigo-500 flex-shrink-0" />
-                              )}
-                              <span
-                                className={cn(
-                                  "flex-1 font-medium",
-                                  st.isCompleted
-                                    ? "line-through text-zinc-400 dark:text-zinc-500"
-                                    : "text-zinc-800 dark:text-zinc-200"
-                                )}
-                              >
-                                {st.title}
-                              </span>
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    )}
-                  </div>
-                );
-              })}
+              {filteredTasks.map((task) => renderTaskCard(task, false))}
             </div>
           )}
         </div>
