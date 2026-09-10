@@ -32,6 +32,7 @@ import {
   UserX,
   UserCheck,
   Ban,
+  FileText,
 } from "lucide-react";
 import {
   useGetLeadsQuery,
@@ -821,23 +822,16 @@ export default function LeadsManagementPage() {
 
                           {/* Call Velocity */}
                           <td className="p-3">
-                            <div className="flex items-center gap-1.5">
+                            <div>
                               <span className="font-mono font-extrabold text-xs px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                                 {lead.callCount || 0} calls
                               </span>
-                              <button
-                                onClick={() => setSelectedLeadForCall(lead)}
-                                title="Log a discussion"
-                                className="p-1 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 transition-colors"
-                              >
-                                <PhoneCall className="w-3.5 h-3.5" />
-                              </button>
+                              {lead.lastCallAt && (
+                                <span className="text-[10px] text-zinc-400 block mt-0.5 font-mono">
+                                  Last: {new Date(lead.lastCallAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                                </span>
+                              )}
                             </div>
-                            {lead.lastCallAt && (
-                              <span className="text-[10px] text-zinc-400 block mt-0.5 font-mono">
-                                Last: {new Date(lead.lastCallAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                              </span>
-                            )}
                           </td>
 
                           {/* Next Call Time */}
@@ -956,7 +950,7 @@ export default function LeadsManagementPage() {
                                 title="Log call notes"
                                 className="p-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                               >
-                                <PhoneCall className="w-3.5 h-3.5" />
+                                <FileText className="w-3.5 h-3.5" />
                               </button>
 
                               <button
