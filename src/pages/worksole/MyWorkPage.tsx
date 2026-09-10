@@ -37,6 +37,9 @@ import {
   CheckSquare,
   LayoutList,
   Grid,
+  ClipboardList,
+  Save,
+  X,
 } from "lucide-react";
 import {
   useGetMyWorkSummaryQuery,
@@ -102,6 +105,11 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
   const [callOutcome, setCallOutcome] = useState<string>("CONNECTED_INTERESTED");
   const [callNotes, setCallNotes] = useState("");
   const [callNextFollowUp, setCallNextFollowUp] = useState("");
+
+  // Inline Lead Note Editor State
+  const [editingNoteLeadId, setEditingNoteLeadId] = useState<string | null>(null);
+  const [editingNoteText, setEditingNoteText] = useState("");
+  const [isSavingNote, setIsSavingNote] = useState(false);
 
   // Queries & Mutations
   const { data: summaryRes, isLoading, isFetching, refetch } = useGetMyWorkSummaryQuery({
@@ -518,6 +526,35 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
       refetch();
     } catch (err) {
       console.error("Lead status update error:", err);
+    }
+  };
+
+  // Inline Note Editor Handlers
+  const handleOpenNoteEditor = (lead: any) => {
+    setEditingNoteLeadId(lead.id);
+    setEditingNoteText(lead.notes || "");
+  };
+
+  const handleCancelNoteEditor = () => {
+    setEditingNoteLeadId(null);
+    setEditingNoteText("");
+  };
+
+  const handleSaveNote = async (leadId: string) => {
+    setIsSavingNote(true);
+    try {
+      await updateLead({
+        baseUrl,
+        id: leadId,
+        body: { notes: editingNoteText.trim() || null },
+      }).unwrap();
+      setEditingNoteLeadId(null);
+      setEditingNoteText("");
+      refetch();
+    } catch (err) {
+      console.error("Save note error:", err);
+    } finally {
+      setIsSavingNote(false);
     }
   };
 
@@ -1750,18 +1787,51 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
                           )}
                         </div>
 
-                        {lead.notes && (
-                          <p className="text-xs text-zinc-500 italic line-clamp-1">
-                            💬 Notes: {lead.notes}
+                        {/* Notes Display / Inline Editor */}
+                        {editingNoteLeadId === lead.id ? (
+                          <div className="w-full mt-1 space-y-2">
+                            <textarea
+                              rows={2}
+                              value={editingNoteText}
+                              onChange={(e) => setEditingNoteText(e.target.value)}
+                              autoFocus
+                              placeholder="Add a note about this lead..."
+                              className="w-full px-3 py-2 text-xs rounded-xl border border-indigo-300 dark:border-indigo-700 bg-white dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 resize-none"
+                            />
+                            <div className="flex items-center gap-2">
+                              <button
+                                onClick={() => handleSaveNote(lead.id)}
+                                disabled={isSavingNote}
+                                className="flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors"
+                              >
+                                <Save className="w-3 h-3" />
+                                {isSavingNote ? "Saving..." : "Save Note"}
+                              </button>
+                              <button
+                                onClick={handleCancelNoteEditor}
+                                className="flex items-center gap-1 px-3 py-1.5 text-[11px] font-bold rounded-lg text-zinc-500 hover:text-zinc-700 dark:hover:text-zinc-300 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 transition-colors"
+                              >
+                                <X className="w-3 h-3" />
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : lead.notes ? (
+                          <p
+                            onClick={() => handleOpenNoteEditor(lead)}
+                            className="text-xs text-zinc-500 italic line-clamp-2 cursor-pointer hover:text-indigo-500 transition-colors"
+                            title="Click to edit note"
+                          >
+                            💬 {lead.notes}
                           </p>
-                        )}
+                        ) : null}
                       </div>
 
-                      {/* Callback Schedule & Call Button */}
-                      <div className="flex items-center gap-3 flex-wrap lg:ml-auto">
+                      {/* Callback Schedule & Action Buttons */}
+                      <div className="flex items-center gap-2.5 flex-wrap lg:ml-auto">
                         <div className="text-right">
                           <div className="text-[11px] font-semibold text-zinc-400">
-                            Calls Logged: <strong className="text-zinc-700 dark:text-zinc-300">{lead.callCount || 0}</strong>
+                            Calls: <strong className="text-zinc-700 dark:text-zinc-300">{lead.callCount || 0}</strong>
                           </div>
                           {lead.nextCallAt ? (
                             <div
@@ -1783,15 +1853,27 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
                               })}
                             </div>
                           ) : (
-                            <div className="text-[11px] text-zinc-400">No scheduled callback</div>
+                            <div className="text-[11px] text-zinc-400">No callback set</div>
                           )}
                         </div>
 
+                        {/* Save Note Button */}
+                        <button
+                          onClick={() => handleOpenNoteEditor(lead)}
+                          className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:border-indigo-300 dark:hover:border-indigo-700 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 hover:text-indigo-600 dark:hover:text-indigo-400 shadow-xs transition-all"
+                          title="Add or edit note"
+                        >
+                          <MessageSquare className="w-3.5 h-3.5" />
+                          <span>Note</span>
+                        </button>
+
+                        {/* Log Call Button */}
                         <button
                           onClick={() => handleOpenLogCall(lead)}
-                          className="flex items-center gap-1.5 px-4 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors"
+                          className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors"
+                          title="Log a call with this lead"
                         >
-                          <PhoneCall className="w-3.5 h-3.5" />
+                          <ClipboardList className="w-3.5 h-3.5" />
                           <span>Log Call</span>
                         </button>
                       </div>
