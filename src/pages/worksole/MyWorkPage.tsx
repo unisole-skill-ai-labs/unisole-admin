@@ -58,8 +58,9 @@ interface MyWorkPageProps {
 export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
   const currentUser = useSelector((s: any) => s.auth.user);
   const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
+  const isAdminOrSuperAdmin = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
 
-  // Super Admin Executive Switcher
+  // Executive Team Member Switcher
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState<string>("");
 
   // Tab State: "TASKS" | "LEADS" | "STANDUP"
@@ -101,7 +102,7 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
   // Queries & Mutations
   const { data: summaryRes, isLoading, isFetching, refetch } = useGetMyWorkSummaryQuery({
     baseUrl,
-    userId: isSuperAdmin && selectedTeamMemberId ? selectedTeamMemberId : undefined,
+    userId: isAdminOrSuperAdmin && selectedTeamMemberId ? selectedTeamMemberId : undefined,
   });
 
   const { data: deptsData } = useGetDepartmentsQuery(baseUrl);
@@ -383,8 +384,8 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
 
   return (
     <div className="space-y-6 pb-16 animate-fade-in">
-      {/* Super Admin Executive Team Switcher Bar */}
-      {isSuperAdmin && teamMembers.length > 0 && (
+      {/* Admin & Super Admin Executive Team Switcher Bar */}
+      {isAdminOrSuperAdmin && teamMembers.length > 0 && (
         <div className="bg-gradient-to-r from-amber-500/10 via-orange-500/10 to-indigo-500/10 dark:from-amber-950/40 dark:via-orange-950/30 dark:to-indigo-950/40 border border-amber-300/60 dark:border-amber-700/60 rounded-2xl p-4 shadow-sm">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex items-center gap-2.5">
@@ -393,10 +394,10 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 font-mono">
-                  Super Admin Executive Mode
+                  {isSuperAdmin ? "Super Admin Executive Mode" : "Admin Operations Mode"}
                 </span>
                 <p className="text-xs font-semibold text-zinc-800 dark:text-zinc-200">
-                  Inspect & Monitor Any Staff Member's Workspace
+                  Inspect Any Staff Member, Admin Workspace, or View All Team Work
                 </p>
               </div>
             </div>
@@ -405,16 +406,17 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
               <span className="text-xs text-zinc-500 dark:text-zinc-400 font-medium hidden sm:inline">
                 Viewing Workspace:
               </span>
-              <div className="relative min-w-[240px]">
+              <div className="relative min-w-[260px]">
                 <select
                   value={selectedTeamMemberId}
                   onChange={(e) => setSelectedTeamMemberId(e.target.value)}
                   className="w-full appearance-none pl-3 pr-8 py-2 text-xs font-bold rounded-xl border border-amber-300 dark:border-amber-700 bg-white dark:bg-zinc-900 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer shadow-xs"
                 >
-                  <option value="">👤 My Own Workspace ({currentUser?.name || "Super Admin"})</option>
+                  <option value="">👤 My Personal Workspace ({currentUser?.name || "Admin"})</option>
+                  <option value="ALL">🌐 All Team Members (Full Organization Deliverables)</option>
                   {teamMembers.map((m) => (
                     <option key={m.id} value={m.id}>
-                      {m.name || m.username || m.phone} ({m.designation || m.role}) — {m.activeTasksCount} Tasks, {m.assignedLeadsCount} Leads
+                      👤 {m.name || m.username || m.phone} ({m.designation || m.role}) — {m.activeTasksCount} Tasks, {m.assignedLeadsCount} Leads
                     </option>
                   ))}
                 </select>
@@ -443,19 +445,27 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
           <div>
             <div className="flex items-center gap-2 flex-wrap">
               <h1 className="text-xl font-black text-zinc-900 dark:text-white tracking-tight">
-                {selectedTeamMemberId && targetUser ? `${targetUser.name || "Member"}'s Workspace` : "My Assigned Work & Cockpit"}
+                {selectedTeamMemberId === "ALL"
+                  ? "Company-Wide Deliverables & Operations Cockpit"
+                  : selectedTeamMemberId && targetUser
+                  ? `${targetUser.name || "Member"}'s Workspace`
+                  : "My Assigned Work & Cockpit"}
               </h1>
               <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-                {targetUser?.designation || targetUser?.role || "Team Member"}
+                {selectedTeamMemberId === "ALL"
+                  ? "Full Organization"
+                  : targetUser?.designation || targetUser?.role || "Team Member"}
               </span>
-              {targetUser?.departmentName && (
+              {targetUser?.departmentName && selectedTeamMemberId !== "ALL" && (
                 <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
                   {targetUser.departmentName}
                 </span>
               )}
             </div>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 mt-1">
-              Personalized operational queue for daily task execution, CRM lead follow-ups, and standup reporting.
+              {selectedTeamMemberId === "ALL"
+                ? "Organization-wide operational overview for all deliverables, projects, CRM leads, and team progress."
+                : "Personalized operational queue for daily task execution, CRM lead follow-ups, and standup reporting."}
             </p>
           </div>
         </div>
