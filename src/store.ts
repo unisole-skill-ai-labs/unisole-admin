@@ -818,6 +818,8 @@ export const adminApi = createApi({
           if (arg.status && arg.status !== "ALL") params.status = arg.status;
           if (arg.priority) params.priority = arg.priority;
           if (arg.search) params.search = arg.search;
+          if (arg.hasBlockers) params.hasBlockers = "true";
+          if (arg.hasReview) params.hasReview = "true";
           if (arg.includeHidden) params.includeHidden = "true";
           if (arg.onlyHidden) params.onlyHidden = "true";
         }

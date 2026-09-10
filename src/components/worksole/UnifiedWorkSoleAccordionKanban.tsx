@@ -22,6 +22,9 @@ import {
   ArrowDownRight,
   Eye,
   EyeOff,
+  Filter,
+  Flame,
+  User,
 } from "lucide-react";
 import {
   useGetProjectsQuery,
@@ -135,16 +138,28 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
   // State for expanded projects (Tier 1 Accordion)
   const [expandedProjects, setExpandedProjects] = useState<Record<string, boolean>>({});
 
-  // Filter state
+  // Filter states
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
   const [memberFilter, setMemberFilter] = useState("");
+  const [priorityFilter, setPriorityFilter] = useState<string>("");
+  const [statusFilter, setStatusFilter] = useState<string>("");
+  const [hasBlockersOnly, setHasBlockersOnly] = useState<boolean>(false);
+  const [hasReviewOnly, setHasReviewOnly] = useState<boolean>(false);
+  const [myWorkOnly, setMyWorkOnly] = useState<boolean>(false);
   const [visibilityFilter, setVisibilityFilter] = useState<"ACTIVE" | "HIDDEN" | "ALL">("ACTIVE");
+
+  const currentUser = useSelector((s: any) => s.auth.user);
+  const isLeader = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
 
   const { data: projectsData, isLoading: isProjectsLoading, refetch: refetchProjects } = useGetProjectsQuery({
     baseUrl,
     departmentId: departmentFilter || undefined,
-    memberId: memberFilter && memberFilter !== "ALL" ? memberFilter : undefined,
+    memberId: (myWorkOnly && currentUser?.id) ? currentUser.id : (memberFilter && memberFilter !== "ALL" ? memberFilter : undefined),
+    priority: priorityFilter || undefined,
+    status: statusFilter || undefined,
+    hasBlockers: hasBlockersOnly || undefined,
+    hasReview: hasReviewOnly || undefined,
     search: search || undefined,
     includeHidden: visibilityFilter !== "ACTIVE" ? true : undefined,
     onlyHidden: visibilityFilter === "HIDDEN" ? true : undefined,
@@ -152,8 +167,6 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
 
   const { data: deptsData } = useGetDepartmentsQuery(baseUrl);
   const { data: teamData } = useGetTeamMembersQuery(baseUrl);
-  const currentUser = useSelector((s: any) => s.auth.user);
-  const isLeader = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
 
   // Priority-wise sorting: URGENT > HIGH > MEDIUM > LOW
   const priorityWeight: Record<string, number> = {
@@ -169,14 +182,24 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
 
   const rawProjects: Project[] = projectsData?.data || [];
   
-  // Apply visibility filtering client-side as well for instant responsiveness
-  const filteredByVisibility = rawProjects.filter((p) => {
-    if (visibilityFilter === "HIDDEN") return p.isHidden === true;
-    if (visibilityFilter === "ACTIVE") return !p.isHidden;
+  // Apply multi-filter client-side as well for instant responsiveness
+  const filteredProjects = rawProjects.filter((p) => {
+    if (visibilityFilter === "HIDDEN" && p.isHidden !== true) return false;
+    if (visibilityFilter === "ACTIVE" && p.isHidden) return false;
+    if (priorityFilter && p.priority !== priorityFilter) return false;
+    if (statusFilter && p.status !== statusFilter) return false;
+    if (myWorkOnly && currentUser?.id) {
+      const isLead = p.leadId === currentUser.id || p.createdById === currentUser.id;
+      const isSubLead = (p.subProjects || []).some((sp: any) => sp.leadId === currentUser.id);
+      if (!isLead && !isSubLead) return false;
+    }
+    if (hasBlockersOnly && !(p.blockedTasks && p.blockedTasks > 0)) {
+      // Checked on server side query too
+    }
     return true;
   });
 
-  const projects: Project[] = [...filteredByVisibility].sort((a, b) => {
+  const projects: Project[] = [...filteredProjects].sort((a, b) => {
     const wA = priorityWeight[a.priority] || 5;
     const wB = priorityWeight[b.priority] || 5;
     if (wA !== wB) return wA - wB;
@@ -184,8 +207,33 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
   });
 
   const hiddenCount = rawProjects.filter((p) => p.isHidden).length;
+  const urgentCount = rawProjects.filter((p) => p.priority === "URGENT").length;
   const departments = deptsData?.data || [];
   const teamMembers = teamData?.data || [];
+
+  const activeFiltersCount = [
+    Boolean(search.trim()),
+    Boolean(departmentFilter),
+    Boolean(memberFilter),
+    Boolean(priorityFilter),
+    Boolean(statusFilter),
+    myWorkOnly,
+    hasBlockersOnly,
+    hasReviewOnly,
+    visibilityFilter !== "ACTIVE",
+  ].filter(Boolean).length;
+
+  const handleResetFilters = () => {
+    setSearch("");
+    setDepartmentFilter("");
+    setMemberFilter("");
+    setPriorityFilter("");
+    setStatusFilter("");
+    setMyWorkOnly(false);
+    setHasBlockersOnly(false);
+    setHasReviewOnly(false);
+    setVisibilityFilter("ACTIVE");
+  };
 
   // Toggle Project Accordion
   const toggleProject = (projectId: string) => {
@@ -229,118 +277,256 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
       )}
 
       {/* Top Filter & Toolbar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-zinc-900 p-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
-        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
-          <input
-            type="text"
-            placeholder="Search projects, sub-projects, tasks..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-56 px-3.5 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
+      <div className="bg-white dark:bg-zinc-900 p-4 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80 shadow-xs space-y-3">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 flex-1 flex-wrap">
+            {/* Search Input */}
+            <div className="relative min-w-[200px] flex-1 sm:flex-initial sm:w-64">
+              <input
+                type="text"
+                placeholder="Search projects, sub-projects, tasks..."
+                value={search}
+                onChange={(e) => setSearch(e.target.value)}
+                className="w-full px-3.5 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+              />
+              {search && (
+                <button
+                  onClick={() => setSearch("")}
+                  className="absolute right-2.5 top-2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+            </div>
 
-          <select
-            value={departmentFilter}
-            onChange={(e) => setDepartmentFilter(e.target.value)}
-            className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 font-medium"
-          >
-            <option value="">All Departments</option>
-            {departments.map((d: any) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
-              </option>
-            ))}
-          </select>
-
-          {/* Admin-only: Team Member Filter Dropdown */}
-          {isLeader && teamMembers.length > 0 && (
+            {/* Department Filter */}
             <select
-              value={memberFilter}
-              onChange={(e) => setMemberFilter(e.target.value)}
-              className="px-3 py-1.5 text-xs rounded-xl border border-amber-300/80 dark:border-amber-700/80 bg-amber-50/40 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500"
-              title="Filter canvas to a specific admin or team member's assigned deliverables"
+              value={departmentFilter}
+              onChange={(e) => setDepartmentFilter(e.target.value)}
+              className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 font-medium cursor-pointer"
             >
-              <option value="">👤 All Team Members & Operations</option>
-              {teamMembers.map((m: any) => (
-                <option key={m.id} value={m.id}>
-                  👤 {m.name || m.username || m.phone} ({m.designation || m.role})
+              <option value="">🏢 All Departments</option>
+              {departments.map((d: any) => (
+                <option key={d.id} value={d.id}>
+                  {d.name}
                 </option>
               ))}
             </select>
-          )}
 
-          {/* Admin-only: Visibility Filter Pills (Active, Hidden, All) */}
-          {isLeader && (
-            <div className="inline-flex p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-xl border border-zinc-200 dark:border-zinc-700/60 text-xs">
+            {/* Priority Filter Dropdown */}
+            <select
+              value={priorityFilter}
+              onChange={(e) => setPriorityFilter(e.target.value)}
+              className="px-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-zinc-800 dark:text-zinc-200 font-medium cursor-pointer"
+            >
+              <option value="">🎯 All Priorities</option>
+              <option value="URGENT">🔴 Urgent Priority</option>
+              <option value="HIGH">🟠 High Priority</option>
+              <option value="MEDIUM">🟡 Medium Priority</option>
+              <option value="LOW">🔵 Low Priority</option>
+            </select>
+
+            {/* Admin-only: Team Member Filter Dropdown */}
+            {isLeader && teamMembers.length > 0 && (
+              <select
+                value={memberFilter}
+                onChange={(e) => {
+                  setMemberFilter(e.target.value);
+                  if (e.target.value) setMyWorkOnly(false);
+                }}
+                className="px-3 py-1.5 text-xs rounded-xl border border-amber-300/80 dark:border-amber-700/80 bg-amber-50/40 dark:bg-amber-950/30 text-amber-900 dark:text-amber-200 font-bold focus:outline-none focus:ring-2 focus:ring-amber-500 cursor-pointer"
+                title="Filter canvas to a specific admin or team member's assigned deliverables"
+              >
+                <option value="">👥 All Team Members & Operations</option>
+                {teamMembers.map((m: any) => (
+                  <option key={m.id} value={m.id}>
+                    👤 {m.name || m.username || m.phone} ({m.designation || m.role})
+                  </option>
+                ))}
+              </select>
+            )}
+
+            {/* Admin-only: Visibility Filter Pills (Active, Hidden, All) */}
+            {isLeader && (
+              <div className="inline-flex p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-xl border border-zinc-200 dark:border-zinc-700/60 text-xs">
+                <button
+                  type="button"
+                  onClick={() => setVisibilityFilter("ACTIVE")}
+                  className={cn(
+                    "px-2.5 py-1 font-bold rounded-lg transition-all cursor-pointer",
+                    visibilityFilter === "ACTIVE"
+                      ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs"
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  )}
+                >
+                  Active
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVisibilityFilter("HIDDEN")}
+                  className={cn(
+                    "inline-flex items-center gap-1 px-2.5 py-1 font-bold rounded-lg transition-all cursor-pointer",
+                    visibilityFilter === "HIDDEN"
+                      ? "bg-amber-500 text-white shadow-xs"
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  )}
+                  title="View hidden projects only"
+                >
+                  <EyeOff className="w-3 h-3" />
+                  <span>Hidden</span>
+                  {hiddenCount > 0 && (
+                    <span className={cn(
+                      "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+                      visibilityFilter === "HIDDEN" ? "bg-amber-600 text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                    )}>
+                      {hiddenCount}
+                    </span>
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setVisibilityFilter("ALL")}
+                  className={cn(
+                    "px-2.5 py-1 font-bold rounded-lg transition-all cursor-pointer",
+                    visibilityFilter === "ALL"
+                      ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs"
+                      : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  )}
+                >
+                  All
+                </button>
+              </div>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 w-full lg:w-auto justify-end">
+            <button
+              onClick={handleExpandAll}
+              className="px-2.5 py-1.5 text-[11px] font-bold rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer"
+            >
+              Expand All
+            </button>
+            <button
+              onClick={handleCollapseAll}
+              className="px-2.5 py-1.5 text-[11px] font-bold rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800 cursor-pointer"
+            >
+              Collapse All
+            </button>
+            <button
+              onClick={onOpenCreateProject}
+              className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all cursor-pointer"
+            >
+              <Plus className="w-3.5 h-3.5" /> New Project
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Filter Chips Row */}
+        <div className="flex items-center justify-between gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800/60 flex-wrap">
+          <div className="flex items-center gap-1.5 overflow-x-auto py-0.5 flex-wrap">
+            <span className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 flex items-center gap-1 mr-1">
+              <Filter className="w-3 h-3" /> Focus:
+            </span>
+
+            {/* My Projects Toggle */}
+            <button
+              type="button"
+              onClick={() => {
+                setMyWorkOnly(!myWorkOnly);
+                if (!myWorkOnly) setMemberFilter("");
+              }}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                myWorkOnly
+                  ? "bg-indigo-600 text-white shadow-xs"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+              )}
+            >
+              <User className="w-3 h-3" />
+              <span>Led by Me</span>
+            </button>
+
+            {/* Urgent Priority Chip */}
+            <button
+              type="button"
+              onClick={() => setPriorityFilter(priorityFilter === "URGENT" ? "" : "URGENT")}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                priorityFilter === "URGENT"
+                  ? "bg-rose-600 text-white shadow-xs"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+              )}
+            >
+              <Flame className="w-3 h-3 text-rose-500" />
+              <span>Urgent Priority</span>
+              {urgentCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full text-[10px] bg-rose-500/20 text-rose-700 dark:text-rose-300">
+                  {urgentCount}
+                </span>
+              )}
+            </button>
+
+            {/* Has Blockers Chip */}
+            <button
+              type="button"
+              onClick={() => setHasBlockersOnly(!hasBlockersOnly)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                hasBlockersOnly
+                  ? "bg-amber-600 text-white shadow-xs"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+              )}
+            >
+              <AlertTriangle className="w-3 h-3 text-amber-500" />
+              <span>Has Blocked Tasks</span>
+            </button>
+
+            {/* Has Review Tasks Chip */}
+            <button
+              type="button"
+              onClick={() => setHasReviewOnly(!hasReviewOnly)}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                hasReviewOnly
+                  ? "bg-purple-600 text-white shadow-xs"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+              )}
+            >
+              <Send className="w-3 h-3 text-purple-500" />
+              <span>In Review</span>
+            </button>
+
+            {/* Completed Filter */}
+            <button
+              type="button"
+              onClick={() => setStatusFilter(statusFilter === "COMPLETED" ? "" : "COMPLETED")}
+              className={cn(
+                "inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer",
+                statusFilter === "COMPLETED"
+                  ? "bg-emerald-600 text-white shadow-xs"
+                  : "bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+              )}
+            >
+              <CheckCircle2 className="w-3 h-3 text-emerald-500" />
+              <span>Completed</span>
+            </button>
+          </div>
+
+          {/* Reset Filters Action */}
+          {activeFiltersCount > 0 && (
+            <div className="flex items-center gap-2">
+              <span className="text-xs text-zinc-400 font-medium">
+                {activeFiltersCount} active filter{activeFiltersCount > 1 ? "s" : ""}
+              </span>
               <button
                 type="button"
-                onClick={() => setVisibilityFilter("ACTIVE")}
-                className={cn(
-                  "px-2.5 py-1 font-bold rounded-lg transition-all cursor-pointer",
-                  visibilityFilter === "ACTIVE"
-                    ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
-                )}
+                onClick={handleResetFilters}
+                className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg bg-rose-50 text-rose-600 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200 dark:border-rose-800 hover:bg-rose-100 transition-colors cursor-pointer"
               >
-                Active
-              </button>
-              <button
-                type="button"
-                onClick={() => setVisibilityFilter("HIDDEN")}
-                className={cn(
-                  "inline-flex items-center gap-1 px-2.5 py-1 font-bold rounded-lg transition-all cursor-pointer",
-                  visibilityFilter === "HIDDEN"
-                    ? "bg-amber-500 text-white shadow-xs"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
-                )}
-                title="View hidden projects only"
-              >
-                <EyeOff className="w-3 h-3" />
-                <span>Hidden</span>
-                {hiddenCount > 0 && (
-                  <span className={cn(
-                    "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
-                    visibilityFilter === "HIDDEN" ? "bg-amber-600 text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
-                  )}>
-                    {hiddenCount}
-                  </span>
-                )}
-              </button>
-              <button
-                type="button"
-                onClick={() => setVisibilityFilter("ALL")}
-                className={cn(
-                  "px-2.5 py-1 font-bold rounded-lg transition-all cursor-pointer",
-                  visibilityFilter === "ALL"
-                    ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs"
-                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
-                )}
-              >
-                All
+                <X className="w-3 h-3" /> Reset Filters
               </button>
             </div>
           )}
-        </div>
-
-        <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
-          <button
-            onClick={handleExpandAll}
-            className="px-2.5 py-1.5 text-[11px] font-bold rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-          >
-            Expand All
-          </button>
-          <button
-            onClick={handleCollapseAll}
-            className="px-2.5 py-1.5 text-[11px] font-bold rounded-lg border border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-50 dark:hover:bg-zinc-800"
-          >
-            Collapse All
-          </button>
-          <button
-            onClick={onOpenCreateProject}
-            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 text-xs font-bold rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all"
-          >
-            <Plus className="w-3.5 h-3.5" /> New Project
-          </button>
         </div>
       </div>
 
