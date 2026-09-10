@@ -294,9 +294,7 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
       }
     }
 
-    const list = Array.from(projectMap.values()).filter(
-      (p) => p.unassignedTasks.length > 0 || p.subProjects.some((sp) => sp.tasks.length > 0)
-    );
+    const list = Array.from(projectMap.values());
 
     if (unassignedBucket.unassignedTasks.length > 0 && !list.some((p) => p.id === "unassigned")) {
       list.push(unassignedBucket);
@@ -1215,15 +1213,46 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
             </div>
 
             <div className="flex items-center gap-2 flex-wrap">
+              {/* Executive Team Member / Staff Switcher (Admins only) */}
+              {isAdminOrSuperAdmin && teamMembers.length > 0 && (
+                <div className="relative min-w-[210px]">
+                  <select
+                    value={selectedTeamMemberId}
+                    onChange={(e) => setSelectedTeamMemberId(e.target.value)}
+                    className="w-full appearance-none pl-8 pr-8 py-1.5 text-xs font-semibold rounded-xl border border-amber-300 dark:border-amber-700/80 bg-amber-50/50 dark:bg-amber-950/40 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer shadow-2xs"
+                  >
+                    <option value="">👥 All Team Members & Operations</option>
+                    <option value={currentUser?.id}>👤 My Personal Tasks Only</option>
+                    <optgroup label="Team Staff">
+                      {teamMembers.map((m: any) => (
+                        <option key={m.id} value={m.id}>
+                          {m.name} ({m.role || "Staff"}) - {m.activeTasksCount || 0} active
+                        </option>
+                      ))}
+                    </optgroup>
+                  </select>
+                  <Users className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400 absolute left-2.5 top-2.5 pointer-events-none" />
+                  <ChevronDown className="w-3.5 h-3.5 text-zinc-400 absolute right-2.5 top-2.5 pointer-events-none" />
+                </div>
+              )}
+
+              {/* Non-Admin Personal Badge */}
+              {!isAdminOrSuperAdmin && (
+                <div className="flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl bg-indigo-50/80 dark:bg-indigo-950/50 text-indigo-700 dark:text-indigo-300 border border-indigo-200/80 dark:border-indigo-800">
+                  <UserCheck className="w-3.5 h-3.5" />
+                  <span>Assigned Work Only</span>
+                </div>
+              )}
+
               {/* Project Filter Dropdown */}
               {allProjects.length > 0 && (
-                <div className="relative min-w-[180px]">
+                <div className="relative min-w-[170px]">
                   <select
                     value={selectedProjectId}
                     onChange={(e) => setSelectedProjectId(e.target.value)}
                     className="w-full appearance-none pl-3 pr-8 py-1.5 text-xs font-semibold rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
                   >
-                    <option value="">📁 All Projects ({allTasks.length})</option>
+                    <option value="">📁 All Projects ({allProjects.length})</option>
                     {allProjects.map((p) => (
                       <option key={p.id} value={p.id}>
                         {p.code ? `[${p.code}] ` : ""}{p.name}
@@ -1297,7 +1326,7 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
               <Clock className="w-8 h-8 text-zinc-400 animate-spin mx-auto mb-2" />
               <p className="text-xs text-zinc-500">Loading deliverables...</p>
             </div>
-          ) : filteredTasks.length === 0 ? (
+          ) : (viewMode === "HIERARCHY" ? hierarchyTree.length === 0 : filteredTasks.length === 0) ? (
             <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
               <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
               <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200">
@@ -1525,6 +1554,13 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
                               </span>
                             </h4>
                             {proj.unassignedTasks.map((task: TaskItem) => renderTaskCard(task, true))}
+                          </div>
+                        )}
+
+                        {/* Empty Project Fallback */}
+                        {proj.subProjects.length === 0 && proj.unassignedTasks.length === 0 && (
+                          <div className="p-4 text-center bg-white/40 dark:bg-zinc-900/40 rounded-xl border border-dashed border-zinc-200 dark:border-zinc-800">
+                            <p className="text-xs text-zinc-400 italic">No tasks created in this workstream milestone yet.</p>
                           </div>
                         )}
                       </div>
