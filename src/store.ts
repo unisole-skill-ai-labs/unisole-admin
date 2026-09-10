@@ -817,6 +817,8 @@ export const adminApi = createApi({
           if (arg.status && arg.status !== "ALL") params.status = arg.status;
           if (arg.priority) params.priority = arg.priority;
           if (arg.search) params.search = arg.search;
+          if (arg.includeHidden) params.includeHidden = "true";
+          if (arg.onlyHidden) params.onlyHidden = "true";
         }
         return {
           url: `${baseUrl}/api/admin/projects`,

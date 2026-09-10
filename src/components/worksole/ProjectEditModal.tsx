@@ -1,9 +1,10 @@
 import React, { useState, useEffect } from "react";
 import Modal from "../ui/Modal";
 import { useUpdateProjectMutation, useGetDepartmentsQuery, useGetTeamMembersQuery } from "../../store";
-import { Folder, Palette, Trash2, Edit2, Shield } from "lucide-react";
+import { Folder, Palette, Trash2, Edit2, Shield, EyeOff, Eye } from "lucide-react";
 import { DatePicker } from "../ui/DatePicker";
 import { Project, ProjectStatus } from "../../types";
+import { useSelector } from "react-redux";
 
 interface ProjectEditModalProps {
   isOpen: boolean;
@@ -31,6 +32,9 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({
   project,
   onSuccess,
 }) => {
+  const currentUser = useSelector((s: any) => s.auth.user);
+  const isAdmin = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
+
   const [name, setName] = useState("");
   const [code, setCode] = useState("");
   const [description, setDescription] = useState("");
@@ -38,6 +42,7 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({
   const [leadId, setLeadId] = useState("");
   const [priority, setPriority] = useState<"LOW" | "MEDIUM" | "HIGH" | "URGENT">("MEDIUM");
   const [status, setStatus] = useState<ProjectStatus>("ACTIVE");
+  const [isHidden, setIsHidden] = useState(false);
   const [startDate, setStartDate] = useState("");
   const [targetEndDate, setTargetEndDate] = useState("");
   const [color, setColor] = useState("#6366f1");
@@ -59,6 +64,7 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({
       setLeadId(project.leadId || "");
       setPriority(project.priority || "MEDIUM");
       setStatus(project.status || "ACTIVE");
+      setIsHidden(!!project.isHidden);
       setStartDate(project.startDate ? new Date(project.startDate).toISOString().slice(0, 10) : "");
       setTargetEndDate(project.targetEndDate ? new Date(project.targetEndDate).toISOString().slice(0, 10) : "");
       setColor(project.color || "#6366f1");
@@ -86,6 +92,7 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({
           leadId: leadId || null,
           priority,
           status,
+          isHidden,
           startDate: startDate ? new Date(startDate).toISOString() : null,
           targetEndDate: targetEndDate ? new Date(targetEndDate).toISOString() : null,
           color,
@@ -240,6 +247,31 @@ export const ProjectEditModal: React.FC<ProjectEditModalProps> = ({
             />
           </div>
         </div>
+
+        {isAdmin && (
+          <div className="p-3.5 rounded-xl border border-amber-200/80 dark:border-amber-900/40 bg-amber-50/50 dark:bg-amber-950/20 flex items-center justify-between">
+            <div className="flex items-center gap-2.5">
+              <EyeOff className="w-4 h-4 text-amber-600 dark:text-amber-400" />
+              <div>
+                <div className="text-xs font-bold text-zinc-900 dark:text-white">
+                  Hide Project from WorkSole Canvas
+                </div>
+                <div className="text-[11px] text-zinc-500 dark:text-zinc-400">
+                  When hidden, only Admins can view this project via the "Show Hidden Projects" button.
+                </div>
+              </div>
+            </div>
+            <label className="relative inline-flex items-center cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isHidden}
+                onChange={(e) => setIsHidden(e.target.checked)}
+                className="sr-only peer"
+              />
+              <div className="w-9 h-5 bg-zinc-200 peer-focus:outline-none rounded-full peer dark:bg-zinc-800 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-zinc-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-600"></div>
+            </label>
+          </div>
+        )}
 
         <div>
           <label className="block text-xs font-bold uppercase tracking-wider text-zinc-600 dark:text-zinc-400 mb-2">

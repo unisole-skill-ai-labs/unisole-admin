@@ -256,6 +256,7 @@ export interface Project {
   };
   status: ProjectStatus;
   priority: TaskPriority;
+  isHidden?: boolean;
   startDate?: string;
   targetEndDate?: string;
   completedAt?: string;
