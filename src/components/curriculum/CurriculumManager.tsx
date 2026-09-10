@@ -181,7 +181,14 @@ function CoursesSection({ baseUrl }: { baseUrl: string }) {
                   return (
                     <tr key={c.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
                       <td className="py-3.5 px-4">
-                        <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">{c.title}</div>
+                        <div className="flex items-center gap-2 flex-wrap mb-1">
+                          {c.metadata?.badge && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-extrabold uppercase tracking-wider bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 border border-violet-200/60 dark:border-violet-800/60">
+                              {c.metadata.badge}
+                            </span>
+                          )}
+                          <span className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">{c.title}</span>
+                        </div>
                         <div className="text-[11px] text-zinc-500 dark:text-zinc-400 font-mono mt-0.5">/{c.slug} · ID: {c.id}</div>
                       </td>
                       <td className="py-3.5 px-4">
