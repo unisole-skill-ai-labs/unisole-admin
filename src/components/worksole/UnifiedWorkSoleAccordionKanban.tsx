@@ -137,13 +137,14 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
   // Filter state
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
-  const [showHidden, setShowHidden] = useState(false);
+  const [visibilityFilter, setVisibilityFilter] = useState<"ACTIVE" | "HIDDEN" | "ALL">("ACTIVE");
 
-  const { data: projectsData, isLoading: isProjectsLoading } = useGetProjectsQuery({
+  const { data: projectsData, isLoading: isProjectsLoading, refetch: refetchProjects } = useGetProjectsQuery({
     baseUrl,
     departmentId: departmentFilter || undefined,
     search: search || undefined,
-    includeHidden: showHidden ? true : undefined,
+    includeHidden: visibilityFilter !== "ACTIVE" ? true : undefined,
+    onlyHidden: visibilityFilter === "HIDDEN" ? true : undefined,
   });
 
   const { data: deptsData } = useGetDepartmentsQuery(baseUrl);
@@ -160,14 +161,22 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
   };
 
   const rawProjects: Project[] = projectsData?.data || [];
-  const projects: Project[] = [...rawProjects].sort((a, b) => {
+  
+  // Apply visibility filtering client-side as well for instant responsiveness
+  const filteredByVisibility = rawProjects.filter((p) => {
+    if (visibilityFilter === "HIDDEN") return p.isHidden === true;
+    if (visibilityFilter === "ACTIVE") return !p.isHidden;
+    return true;
+  });
+
+  const projects: Project[] = [...filteredByVisibility].sort((a, b) => {
     const wA = priorityWeight[a.priority] || 5;
     const wB = priorityWeight[b.priority] || 5;
     if (wA !== wB) return wA - wB;
     return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
   });
 
-  const hiddenProjectsCount = rawProjects.filter((p) => p.isHidden).length;
+  const hiddenCount = rawProjects.filter((p) => p.isHidden).length;
   const departments = deptsData?.data || [];
   const teamMembers = teamData?.data || [];
 
@@ -202,7 +211,7 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
             placeholder="Search projects, sub-projects, tasks..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-72 px-3.5 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full sm:w-64 px-3.5 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
 
           <select
@@ -218,26 +227,56 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
             ))}
           </select>
 
-          {/* Admin-only: Toggle View Hidden Projects */}
+          {/* Admin-only: Visibility Filter Pills (Active, Hidden, All) */}
           {isLeader && (
-            <button
-              onClick={() => setShowHidden(!showHidden)}
-              className={cn(
-                "inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-bold rounded-xl border transition-all cursor-pointer",
-                showHidden
-                  ? "bg-amber-500 text-white border-amber-500 shadow-sm shadow-amber-500/20"
-                  : "bg-zinc-50 dark:bg-zinc-800/60 border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              )}
-              title={showHidden ? "Hide hidden/archived projects from canvas" : "Click to view hidden projects in WorkSole"}
-            >
-              {showHidden ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5 text-amber-500" />}
-              <span>{showHidden ? "Showing Hidden" : "Show Hidden"}</span>
-              {showHidden && hiddenProjectsCount > 0 && (
-                <span className="px-1.5 py-0.2 rounded-full text-[10px] font-mono bg-amber-600 text-white">
-                  {hiddenProjectsCount}
-                </span>
-              )}
-            </button>
+            <div className="inline-flex p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-xl border border-zinc-200 dark:border-zinc-700/60 text-xs">
+              <button
+                type="button"
+                onClick={() => setVisibilityFilter("ACTIVE")}
+                className={cn(
+                  "px-2.5 py-1 font-bold rounded-lg transition-all cursor-pointer",
+                  visibilityFilter === "ACTIVE"
+                    ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                )}
+              >
+                Active
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibilityFilter("HIDDEN")}
+                className={cn(
+                  "inline-flex items-center gap-1 px-2.5 py-1 font-bold rounded-lg transition-all cursor-pointer",
+                  visibilityFilter === "HIDDEN"
+                    ? "bg-amber-500 text-white shadow-xs"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                )}
+                title="View hidden projects only"
+              >
+                <EyeOff className="w-3 h-3" />
+                <span>Hidden</span>
+                {hiddenCount > 0 && (
+                  <span className={cn(
+                    "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+                    visibilityFilter === "HIDDEN" ? "bg-amber-600 text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                  )}>
+                    {hiddenCount}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibilityFilter("ALL")}
+                className={cn(
+                  "px-2.5 py-1 font-bold rounded-lg transition-all cursor-pointer",
+                  visibilityFilter === "ALL"
+                    ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                )}
+              >
+                All
+              </button>
+            </div>
           )}
         </div>
 
@@ -271,17 +310,35 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
         </div>
       ) : projects.length === 0 ? (
         <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-          <Folder className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200">No Projects Found</h3>
-          <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 mb-4">
-            Create your first project to start cascading sub-projects and task Kanban boards.
-          </p>
-          <button
-            onClick={onOpenCreateProject}
-            className="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white shadow-sm"
-          >
-            + Create First Project
-          </button>
+          {visibilityFilter === "HIDDEN" ? (
+            <>
+              <EyeOff className="w-12 h-12 text-amber-500/50 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200">No Hidden Projects</h3>
+              <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 mb-4">
+                No projects are currently hidden from WorkSole. To hide a project, click the Hide icon on any project.
+              </p>
+              <button
+                onClick={() => setVisibilityFilter("ACTIVE")}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-zinc-800 text-white shadow-sm"
+              >
+                View Active Projects
+              </button>
+            </>
+          ) : (
+            <>
+              <Folder className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200">No Projects Found</h3>
+              <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 mb-4">
+                Create your first project to start cascading sub-projects and task Kanban boards.
+              </p>
+              <button
+                onClick={onOpenCreateProject}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white shadow-sm"
+              >
+                + Create First Project
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
