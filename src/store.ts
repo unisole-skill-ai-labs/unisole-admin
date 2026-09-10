@@ -747,12 +747,12 @@ export const adminApi = createApi({
       invalidatesTags: ["Leads", "LeadAnalytics", "LeadMeta"],
     }),
     updateLead: build.mutation({
-      query: ({ baseUrl, id, data }) => ({
+      query: ({ baseUrl, id, body, data }) => ({
         url: `${baseUrl}/api/admin/leads/${id}`,
         method: "PATCH",
-        body: data,
+        body: body || data,
       }),
-      invalidatesTags: (_res, _err, { id }) => [{ type: "Leads", id }, "Leads", "LeadAnalytics"],
+      invalidatesTags: (_res, _err, { id }) => [{ type: "Leads", id }, "Leads", "LeadAnalytics", "MyWork"],
     }),
     deleteLead: build.mutation({
       query: ({ baseUrl, id }) => ({
@@ -793,12 +793,12 @@ export const adminApi = createApi({
       invalidatesTags: ["Leads", "LeadAnalytics", "LeadMeta"],
     }),
     logLeadCall: build.mutation({
-      query: ({ baseUrl, leadId, data }) => ({
+      query: ({ baseUrl, leadId, body }) => ({
         url: `${baseUrl}/api/admin/leads/${leadId}/calls`,
         method: "POST",
-        body: data,
+        body,
       }),
-      invalidatesTags: (_res, _err, { leadId }) => [{ type: "Leads", id: leadId }, "Leads", "LeadAnalytics"],
+      invalidatesTags: (_res, _err, { leadId }) => [{ type: "Leads", id: leadId }, "Leads", "LeadAnalytics", "MyWork"],
     }),
     getLeadCallLogs: build.query({
       query: ({ baseUrl, leadId }) => ({

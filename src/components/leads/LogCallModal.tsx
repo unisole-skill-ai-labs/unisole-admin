@@ -84,7 +84,7 @@ export default function LogCallModal({ lead, baseUrl, onClose, onSuccess }: LogC
       await logCall({
         baseUrl,
         leadId: lead.id,
-        data: {
+        body: {
           outcome,
           notes: notes.trim(),
           callDurationSeconds: durationMinutes * 60,
