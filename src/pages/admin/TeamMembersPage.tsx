@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import {
   useGetTeamMembersQuery,
   useGetDepartmentsQuery,
@@ -7,6 +8,7 @@ import {
   useUpdateTeamMemberMutation,
   useUpdateTeamMemberPermissionsMutation,
   useDeleteTeamMemberMutation,
+  useGetMyWorkSummaryQuery,
 } from "../../store";
 import {
   UsersRound,
@@ -40,9 +42,16 @@ import {
   CheckSquare,
   Square,
   AlertCircle,
+  Clock,
+  ArrowRight,
+  AlertTriangle,
+  Folder,
+  Calendar,
+  ExternalLink,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
+import { cn } from "../../lib/utils";
 import { DepartmentsManagerModal } from "../../components/admin/DepartmentsManagerModal";
 import {
   ALL_PERMISSIONS,
@@ -73,6 +82,7 @@ export default function TeamMembersPage() {
   const [isPasswordModalOpen, setIsPasswordModalOpen] = useState(false);
   const [isCapabilitiesModalOpen, setIsCapabilitiesModalOpen] = useState(false);
   const [isDepartmentsManagerOpen, setIsDepartmentsManagerOpen] = useState(false);
+  const [tasksModalMember, setTasksModalMember] = useState<any | null>(null);
 
   // Active Member State for Modals
   const [activeMember, setActiveMember] = useState<any | null>(null);
@@ -787,11 +797,25 @@ export default function TeamMembersPage() {
 
                         {/* Assigned Workload */}
                         <td className="py-4 px-4 align-top">
-                          <div className="flex flex-col gap-1">
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 px-2 py-0.5 rounded-lg border border-indigo-200/60 dark:border-indigo-800/60 w-fit">
-                              <span>{m.activeTasksCount || 0}</span> Active Tasks
-                            </span>
-                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-lg border border-emerald-200/60 dark:border-emerald-800/60 w-fit">
+                          <div className="flex flex-col gap-1.5">
+                            <button
+                              type="button"
+                              onClick={() => setTasksModalMember(m)}
+                              className="inline-flex items-center gap-1.5 text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 px-2.5 py-1 rounded-lg border border-indigo-200/60 dark:border-indigo-800/60 w-fit transition-all cursor-pointer shadow-2xs group"
+                              title="Click to inspect active tasks and deliverables"
+                            >
+                              <Clock className="w-3 h-3 text-indigo-500" />
+                              <span>{m.activeTasksCount || 0}</span>
+                              <span>Active Tasks</span>
+                              <ArrowRight className="w-2.5 h-2.5 opacity-0 group-hover:opacity-100 transition-opacity" />
+                            </button>
+                            {(m.blockedTasksCount || 0) > 0 && (
+                              <span className="inline-flex items-center gap-1 text-[10px] font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/60 px-2 py-0.5 rounded-lg border border-rose-200/60 dark:border-rose-800/60 w-fit">
+                                <AlertTriangle className="w-2.5 h-2.5 text-rose-500" />
+                                {m.blockedTasksCount} Blocked
+                              </span>
+                            )}
+                            <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2.5 py-1 rounded-lg border border-emerald-200/60 dark:border-emerald-800/60 w-fit">
                               <span>{m.assignedLeadsCount || 0}</span> CRM Leads
                             </span>
                           </div>
@@ -1913,6 +1937,273 @@ export default function TeamMembersPage() {
         onClose={() => setIsDepartmentsManagerOpen(false)}
         baseUrl={baseUrl}
       />
+
+      {/* ─── 9. Member Active Tasks & Workload Modal ───────────────────────── */}
+      {tasksModalMember && (
+        <MemberTasksModal
+          member={tasksModalMember}
+          baseUrl={baseUrl}
+          onClose={() => setTasksModalMember(null)}
+        />
+      )}
     </div>
   );
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Member Active Tasks & Deliverables Quick Modal Component
+// ─────────────────────────────────────────────────────────────────────────────
+interface MemberTasksModalProps {
+  member: any;
+  baseUrl: string;
+  onClose: () => void;
+}
+
+const MemberTasksModal: React.FC<MemberTasksModalProps> = ({ member, baseUrl, onClose }) => {
+  const navigate = useNavigate();
+  const currentUser = useSelector((s: any) => s.auth.user);
+  const { data: workRes, isLoading } = useGetMyWorkSummaryQuery({
+    baseUrl,
+    authUserId: currentUser?.id,
+    userId: member.id,
+  });
+
+  const summary = workRes?.data;
+  const tasks = summary?.tasks || [];
+  const projects = summary?.projects || [];
+  const activeTasks = tasks.filter((t: any) => t.status !== "COMPLETED");
+  const completedTasks = tasks.filter((t: any) => t.status === "COMPLETED");
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
+      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl w-full max-w-3xl max-h-[85vh] overflow-hidden flex flex-col shadow-2xl animate-scale-in">
+        {/* Header */}
+        <div className="p-5 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-950/50">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-indigo-600 text-white flex items-center justify-center font-bold text-sm shadow-md">
+              {(member.name || member.username || "U").charAt(0).toUpperCase()}
+            </div>
+            <div>
+              <div className="flex items-center gap-2 flex-wrap">
+                <h2 className="text-base font-black text-zinc-900 dark:text-zinc-100">
+                  {member.name || member.username}
+                </h2>
+                <Badge variant="brand" size="sm" className="font-bold">
+                  {member.role}
+                </Badge>
+                {member.departmentName && (
+                  <span
+                    className="text-[10px] font-bold px-2 py-0.5 rounded-full"
+                    style={{
+                      backgroundColor: `${member.departmentColor || "#6366f1"}18`,
+                      color: member.departmentColor || "#6366f1",
+                    }}
+                  >
+                    {member.departmentName}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-zinc-500">
+                {member.designation || "Staff Member"} • @{member.username}
+              </p>
+            </div>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => {
+                onClose();
+                navigate("/my-work");
+              }}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/50 text-indigo-600 dark:text-indigo-400 text-xs font-bold border border-indigo-200 dark:border-indigo-800 transition-colors"
+            >
+              <ExternalLink className="w-3.5 h-3.5" />
+              <span>Inspect Workspace</span>
+            </button>
+            <button
+              onClick={onClose}
+              className="p-1.5 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 rounded-xl hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+            >
+              <X className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+
+        {/* Quick Stats Strip */}
+        <div className="grid grid-cols-4 gap-2 p-4 bg-zinc-50/50 dark:bg-zinc-950/20 border-b border-zinc-100 dark:border-zinc-800">
+          <div className="p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 text-center">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Active Tasks</span>
+            <span className="text-lg font-black text-indigo-600 dark:text-indigo-400 font-mono">
+              {isLoading ? "..." : activeTasks.length}
+            </span>
+          </div>
+          <div className="p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 text-center">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Projects</span>
+            <span className="text-lg font-black text-zinc-900 dark:text-zinc-100 font-mono">
+              {isLoading ? "..." : projects.length}
+            </span>
+          </div>
+          <div className="p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 text-center">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">Completed</span>
+            <span className="text-lg font-black text-emerald-600 dark:text-emerald-400 font-mono">
+              {isLoading ? "..." : completedTasks.length}
+            </span>
+          </div>
+          <div className="p-3 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200/80 dark:border-zinc-800 text-center">
+            <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-wider block">CRM Leads</span>
+            <span className="text-lg font-black text-amber-600 dark:text-amber-400 font-mono">
+              {isLoading ? "..." : summary?.leads?.length || 0}
+            </span>
+          </div>
+        </div>
+
+        {/* Body Content */}
+        <div className="p-5 overflow-y-auto space-y-4 flex-1">
+          {isLoading ? (
+            <div className="text-center py-12 space-y-2">
+              <div className="w-8 h-8 border-3 border-indigo-600 border-t-transparent rounded-full animate-spin mx-auto" />
+              <p className="text-xs text-zinc-500 font-semibold">Loading member deliverables...</p>
+            </div>
+          ) : activeTasks.length === 0 ? (
+            <div className="text-center py-12 border-2 border-dashed border-zinc-200 dark:border-zinc-800 rounded-2xl">
+              <CheckCircle2 className="w-10 h-10 text-emerald-500 mx-auto mb-2 opacity-80" />
+              <h4 className="text-sm font-bold text-zinc-800 dark:text-zinc-200">No Active Tasks</h4>
+              <p className="text-xs text-zinc-500 mt-1 max-w-sm mx-auto">
+                This team member currently has no pending or in-progress deliverables in their queue.
+              </p>
+            </div>
+          ) : (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <h4 className="text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                  <Clock className="w-3.5 h-3.5 text-indigo-500" />
+                  Active Deliverables & Task Queue ({activeTasks.length})
+                </h4>
+              </div>
+
+              <div className="space-y-2">
+                {activeTasks.map((t: any) => {
+                  const subtasks = t.subtasks || [];
+                  const completedSubtasks = subtasks.filter((s: any) => s.isCompleted).length;
+                  return (
+                    <div
+                      key={t.id}
+                      className="p-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-950/40 hover:border-indigo-300 dark:hover:border-indigo-700 transition-all space-y-2"
+                    >
+                      <div className="flex items-start justify-between gap-3">
+                        <div className="space-y-1 min-w-0 flex-1">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            {t.projectName && (
+                              <span
+                                className="text-[10px] font-bold px-2 py-0.5 rounded-md text-white flex items-center gap-1"
+                                style={{ backgroundColor: t.projectColor || "#6366f1" }}
+                              >
+                                <Folder className="w-2.5 h-2.5" />
+                                {t.projectCode ? `[${t.projectCode}] ` : ""}
+                                {t.projectName}
+                              </span>
+                            )}
+                            <span
+                              className={cn(
+                                "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
+                                t.priority === "URGENT"
+                                  ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                                  : t.priority === "HIGH"
+                                  ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                                  : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                              )}
+                            >
+                              {t.priority}
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 uppercase">
+                              {t.status.replace(/_/g, " ")}
+                            </span>
+                          </div>
+
+                          <h5 className="text-xs font-bold text-zinc-900 dark:text-zinc-100">
+                            {t.title}
+                          </h5>
+
+                          {t.description && (
+                            <p className="text-[11px] text-zinc-500 line-clamp-1">
+                              {t.description}
+                            </p>
+                          )}
+                        </div>
+
+                        {t.dueDate && (
+                          <span className="text-[10px] text-zinc-400 font-medium flex items-center gap-1 shrink-0">
+                            <Calendar className="w-3 h-3" />
+                            {new Date(t.dueDate).toLocaleDateString("en-US", {
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </span>
+                        )}
+                      </div>
+
+                      {/* Subtasks summary */}
+                      {subtasks.length > 0 && (
+                        <div className="pt-2 border-t border-zinc-200/60 dark:border-zinc-800/60 flex items-center justify-between text-[10px] text-zinc-500">
+                          <span className="font-semibold">
+                            Subtasks: {completedSubtasks}/{subtasks.length} Completed
+                          </span>
+                          <div className="w-24 h-1.5 bg-zinc-200 dark:bg-zinc-800 rounded-full overflow-hidden">
+                            <div
+                              className="h-full bg-emerald-500 rounded-full"
+                              style={{ width: `${Math.round((completedSubtasks / subtasks.length) * 100)}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
+          {/* Associated Projects Section */}
+          {projects.length > 0 && (
+            <div className="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-800">
+              <h4 className="text-xs font-black uppercase tracking-wider text-zinc-500 dark:text-zinc-400 flex items-center gap-1.5">
+                <Folder className="w-3.5 h-3.5 text-indigo-500" />
+                Associated Projects ({projects.length})
+              </h4>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                {projects.map((p: any) => (
+                  <div
+                    key={p.id}
+                    className="p-3 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 space-y-1.5"
+                  >
+                    <div className="flex items-center justify-between">
+                      <span className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                        {p.code ? `[${p.code}] ` : ""}{p.name}
+                      </span>
+                      <span className="text-[10px] font-mono font-bold text-zinc-500">
+                        {p.progressPercentage || 0}%
+                      </span>
+                    </div>
+                    <div className="w-full h-1 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                      <div
+                        className="h-full bg-indigo-600 rounded-full"
+                        style={{ width: `${p.progressPercentage || 0}%` }}
+                      />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Footer */}
+        <div className="p-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-end bg-zinc-50 dark:bg-zinc-950/50">
+          <Button variant="outline" size="sm" onClick={onClose}>
+            Close
+          </Button>
+        </div>
+      </div>
+    </div>
+  );
+};
