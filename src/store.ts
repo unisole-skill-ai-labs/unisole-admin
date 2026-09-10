@@ -338,6 +338,13 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Courses"],
     }),
+    deleteCourse: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/courses/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Courses"],
+    }),
     getCourseModules: build.query({
       query: ({ baseUrl, id }) => ({ url: `${baseUrl}/api/admin/courses/${id}/modules` }),
       providesTags: (_res, _err, { id }) => [{ type: "Courses", id: `${id}-modules` }],
@@ -1243,6 +1250,7 @@ export const {
   useGetCoursesQuery,
   useCreateCourseMutation,
   useUpdateCourseMutation,
+  useDeleteCourseMutation,
   useGetCourseModulesQuery,
   useAttachCourseModuleMutation,
   useDetachCourseModuleMutation,
