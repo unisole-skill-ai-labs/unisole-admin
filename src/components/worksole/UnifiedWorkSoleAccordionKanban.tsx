@@ -47,6 +47,7 @@ import { QuickDateBadge } from "../ui/DatePicker";
 import { AssigneeBadge, TeamMemberOption } from "../ui/AssigneeBadge";
 import { useSelector } from "react-redux";
 import { HierarchyItemType } from "./HierarchyShiftModal";
+import Modal from "../ui/Modal";
 
 interface UnifiedWorkSoleProps {
   baseUrl: string;
@@ -159,6 +160,10 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
     MEDIUM: 3,
     LOW: 4,
   };
+
+  const [projectToToggleVisibility, setProjectToToggleVisibility] = useState<Project | null>(null);
+  const [isTogglingVisibility, setIsTogglingVisibility] = useState(false);
+  const [updateProjectMutation] = useUpdateProjectMutation();
 
   const rawProjects: Project[] = projectsData?.data || [];
   
@@ -357,9 +362,83 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
               onEditSubProject={onEditSubProject}
               onOpenTask={onOpenTask}
               onShiftHierarchy={onShiftHierarchy}
+              onRequestToggleVisibility={(p) => setProjectToToggleVisibility(p)}
             />
           ))}
         </div>
+      )}
+
+      {/* In-App Project Visibility Confirmation Modal */}
+      {projectToToggleVisibility && (
+        <Modal
+          isOpen={!!projectToToggleVisibility}
+          onClose={() => !isTogglingVisibility && setProjectToToggleVisibility(null)}
+          title={projectToToggleVisibility.isHidden ? "Unhide Project in WorkSole" : "Hide Project from WorkSole Canvas"}
+          size="sm"
+        >
+          <div className="p-2 space-y-4">
+            <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                {projectToToggleVisibility.isHidden ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+              </div>
+              <div className="text-xs">
+                <div className="font-bold text-zinc-900 dark:text-white text-sm">
+                  {projectToToggleVisibility.name} ({projectToToggleVisibility.code})
+                </div>
+                <div className="text-zinc-600 dark:text-zinc-400 mt-1 leading-relaxed">
+                  {projectToToggleVisibility.isHidden
+                    ? "This project will be restored to the active WorkSole canvas and will be visible to all authorized team members."
+                    : "This project will be hidden from the standard WorkSole canvas. Only Administrators can view it under the 'Hidden' tab; non-admin members cannot view or access it."}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                type="button"
+                disabled={isTogglingVisibility}
+                onClick={() => setProjectToToggleVisibility(null)}
+                className="px-4 py-2 text-xs font-bold rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isTogglingVisibility}
+                onClick={async () => {
+                  setIsTogglingVisibility(true);
+                  try {
+                    await updateProjectMutation({
+                      baseUrl,
+                      id: projectToToggleVisibility.id,
+                      body: { isHidden: !projectToToggleVisibility.isHidden },
+                    }).unwrap();
+                    setProjectToToggleVisibility(null);
+                  } catch (err: any) {
+                    console.error("Failed to update project visibility:", err);
+                  } finally {
+                    setIsTogglingVisibility(false);
+                  }
+                }}
+                className={cn(
+                  "px-4 py-2 text-xs font-bold rounded-xl text-white shadow-sm transition-all cursor-pointer flex items-center gap-1.5",
+                  projectToToggleVisibility.isHidden
+                    ? "bg-indigo-600 hover:bg-indigo-700"
+                    : "bg-amber-600 hover:bg-amber-700"
+                )}
+              >
+                {isTogglingVisibility ? (
+                  <Clock className="w-3.5 h-3.5 animate-spin" />
+                ) : projectToToggleVisibility.isHidden ? (
+                  <Eye className="w-3.5 h-3.5" />
+                ) : (
+                  <EyeOff className="w-3.5 h-3.5" />
+                )}
+                <span>{projectToToggleVisibility.isHidden ? "Unhide Project" : "Hide Project"}</span>
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
@@ -381,6 +460,7 @@ interface ProjectAccordionItemProps {
   onEditSubProject?: (subProject: SubProject) => void;
   onOpenTask?: (task: TaskItem) => void;
   onShiftHierarchy?: (params: { itemType: HierarchyItemType; item: any; parentItem?: any }) => void;
+  onRequestToggleVisibility?: (project: Project) => void;
 }
 
 const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
@@ -396,6 +476,7 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
   onEditSubProject,
   onOpenTask,
   onShiftHierarchy,
+  onRequestToggleVisibility,
 }) => {
   // Query hierarchy for this project when expanded
   const { data: hierarchyData, isLoading } = useGetProjectHierarchyQuery(
@@ -590,25 +671,12 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
 
           <div className="flex items-center gap-1.5">
             {/* Admin-only: Toggle Project Visibility (Hide/Unhide) */}
-            {isLeader && (
+            {isLeader && onRequestToggleVisibility && (
               <button
-                onClick={async (e) => {
+                type="button"
+                onClick={(e) => {
                   e.stopPropagation();
-                  const nextHidden = !project.isHidden;
-                  const confirmMsg = nextHidden
-                    ? `Hide project "${project.name}" from the standard WorkSole canvas?`
-                    : `Unhide project "${project.name}" and restore it to the standard WorkSole canvas?`;
-                  if (window.confirm(confirmMsg)) {
-                    try {
-                      await updateProject({
-                        baseUrl,
-                        id: project.id,
-                        body: { isHidden: nextHidden },
-                      }).unwrap();
-                    } catch (err: any) {
-                      alert(err?.data?.error || "Failed to update project visibility");
-                    }
-                  }
+                  onRequestToggleVisibility(project);
                 }}
                 className={cn(
                   "p-1.5 rounded-lg border transition-colors cursor-pointer",
