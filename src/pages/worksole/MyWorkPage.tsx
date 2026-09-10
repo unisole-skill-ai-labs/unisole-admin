@@ -17,6 +17,7 @@ import {
   PhoneCall,
   PhoneForwarded,
   Users,
+  User,
   GraduationCap,
   Building2,
   ChevronDown,
@@ -31,6 +32,10 @@ import {
   MessageSquare,
   Tag,
   AlertCircle,
+  Briefcase,
+  CheckSquare,
+  LayoutList,
+  Grid,
 } from "lucide-react";
 import {
   useGetMyWorkSummaryQuery,
@@ -60,8 +65,10 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
   // Tab State: "TASKS" | "LEADS" | "STANDUP"
   const [activeTab, setActiveTab] = useState<"TASKS" | "LEADS" | "STANDUP">("TASKS");
 
-  // Tasks Filter & Drawer
+  // Tasks Filter, Project Filter & Drawer
   const [taskStatusFilter, setTaskStatusFilter] = useState<string>("ACTIVE");
+  const [selectedProjectId, setSelectedProjectId] = useState<string>("");
+  const [groupByProject, setGroupByProject] = useState<boolean>(false);
   const [taskSearch, setTaskSearch] = useState<string>("");
   const [selectedTaskForDrawer, setSelectedTaskForDrawer] = useState<TaskItem | null>(null);
 
@@ -117,8 +124,10 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
     assignedLeadsCount: 0,
     callbacksDueTodayCount: 0,
     hasSubmittedTodayEod: false,
+    projectsCount: 0,
   };
 
+  const allProjects: any[] = summaryData?.projects || [];
   const allTasks: TaskItem[] = summaryData?.tasks || [];
   const allLeads: any[] = summaryData?.leads || [];
   const todayEod = summaryData?.todayEod || null;
@@ -128,11 +137,16 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
   // Filter Tasks
   const filteredTasks = useMemo(() => {
     return allTasks.filter((t) => {
+      if (selectedProjectId && t.projectId !== selectedProjectId) {
+        return false;
+      }
       if (taskSearch.trim()) {
         const q = taskSearch.toLowerCase();
         const matchTitle = t.title.toLowerCase().includes(q);
         const matchDesc = t.description?.toLowerCase().includes(q);
-        if (!matchTitle && !matchDesc) return false;
+        const matchProj = t.projectName?.toLowerCase().includes(q) || t.projectCode?.toLowerCase().includes(q);
+        const matchAssignee = t.assigneeName?.toLowerCase().includes(q) || t.assignee?.name?.toLowerCase().includes(q);
+        if (!matchTitle && !matchDesc && !matchProj && !matchAssignee) return false;
       }
       if (taskStatusFilter === "ACTIVE") return t.status !== "COMPLETED";
       if (taskStatusFilter === "URGENT")
@@ -141,7 +155,41 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
       if (taskStatusFilter === "COMPLETED") return t.status === "COMPLETED";
       return true;
     });
-  }, [allTasks, taskStatusFilter, taskSearch]);
+  }, [allTasks, taskStatusFilter, taskSearch, selectedProjectId]);
+
+  // Group Tasks by Project for Grouped View
+  const tasksByProject = useMemo(() => {
+    const groups: Record<
+      string,
+      {
+        id: string;
+        name: string;
+        code?: string;
+        color?: string;
+        priority?: string;
+        leadName?: string;
+        tasks: TaskItem[];
+      }
+    > = {};
+
+    for (const t of filteredTasks) {
+      const pId = t.projectId || "unassigned";
+      if (!groups[pId]) {
+        const pObj = allProjects.find((p) => p.id === pId);
+        groups[pId] = {
+          id: pId,
+          name: t.projectName || pObj?.name || (pId === "unassigned" ? "Standalone Deliverables" : "Project"),
+          code: t.projectCode || pObj?.code,
+          color: t.projectColor || pObj?.color || "#6366f1",
+          priority: pObj?.priority,
+          leadName: pObj?.leadName || pObj?.lead?.name,
+          tasks: [],
+        };
+      }
+      groups[pId].tasks.push(t);
+    }
+    return Object.values(groups);
+  }, [filteredTasks, allProjects]);
 
   // Filter Leads
   const filteredLeads = useMemo(() => {
@@ -614,10 +662,113 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
       {/* TAB 1: MY TASKS */}
       {/* ========================================================================= */}
       {activeTab === "TASKS" && (
-        <div className="space-y-4">
+        <div className="space-y-5">
+          {/* Projects & Initiatives Overview Banner */}
+          {allProjects.length > 0 && (
+            <div className="space-y-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Briefcase className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                  <h2 className="text-xs font-black uppercase tracking-wider text-zinc-700 dark:text-zinc-300">
+                    My Associated Projects & Initiatives ({allProjects.length})
+                  </h2>
+                </div>
+                {selectedProjectId && (
+                  <button
+                    onClick={() => setSelectedProjectId("")}
+                    className="text-xs text-indigo-600 dark:text-indigo-400 hover:underline font-bold"
+                  >
+                    Clear Project Filter (Show All)
+                  </button>
+                )}
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {allProjects.map((proj) => {
+                  const isSelected = selectedProjectId === proj.id;
+                  const leadName = proj.leadName || proj.lead?.name;
+                  return (
+                    <div
+                      key={proj.id}
+                      onClick={() => setSelectedProjectId(isSelected ? "" : proj.id)}
+                      className={cn(
+                        "p-3.5 rounded-2xl border transition-all cursor-pointer shadow-xs relative overflow-hidden group",
+                        isSelected
+                          ? "bg-indigo-50/80 dark:bg-indigo-950/50 border-indigo-400 dark:border-indigo-600 ring-2 ring-indigo-500/20"
+                          : "bg-white dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800 hover:border-zinc-300 dark:hover:border-zinc-700"
+                      )}
+                    >
+                      <div className="flex items-start justify-between gap-2 mb-2">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <span
+                            className="w-2.5 h-2.5 rounded-full flex-shrink-0"
+                            style={{ backgroundColor: proj.color || "#6366f1" }}
+                          />
+                          <span className="text-[10px] font-black uppercase tracking-wider px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                            {proj.code || "PROJ"}
+                          </span>
+                          <h3 className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate">
+                            {proj.name}
+                          </h3>
+                        </div>
+                        <span
+                          className={cn(
+                            "text-[9px] font-bold px-1.5 py-0.5 rounded-full flex-shrink-0",
+                            proj.priority === "URGENT"
+                              ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                              : proj.priority === "HIGH"
+                              ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                              : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                          )}
+                        >
+                          {proj.priority}
+                        </span>
+                      </div>
+
+                      {/* Lead and Progress */}
+                      <div className="space-y-2 mt-2">
+                        <div className="flex items-center justify-between text-[10px] text-zinc-500 dark:text-zinc-400">
+                          <span className="flex items-center gap-1 truncate">
+                            <User className="w-3 h-3 text-zinc-400 flex-shrink-0" />
+                            Lead: <strong className="text-zinc-700 dark:text-zinc-300">{leadName || "Unassigned"}</strong>
+                          </span>
+                          <span className="font-bold text-zinc-700 dark:text-zinc-300 flex-shrink-0">
+                            {proj.completedTasks || 0}/{proj.totalTasks || 0} Tasks ({proj.progressPercentage || 0}%)
+                          </span>
+                        </div>
+
+                        {/* Progress Bar */}
+                        <div className="w-full h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                          <div
+                            className="h-full bg-indigo-600 rounded-full transition-all duration-300"
+                            style={{ width: `${proj.progressPercentage || 0}%` }}
+                          />
+                        </div>
+
+                        <div className="flex items-center justify-between text-[10px] text-zinc-400 pt-0.5">
+                          <span>
+                            {proj.myTasksCount ? `${proj.myTasksCount} deliverables for you` : "Associated Project"}
+                          </span>
+                          <span
+                            className={cn(
+                              "font-bold text-[10px]",
+                              isSelected ? "text-indigo-600 dark:text-indigo-400" : "text-zinc-400 group-hover:text-zinc-600 dark:group-hover:text-zinc-300"
+                            )}
+                          >
+                            {isSelected ? "Filtered ✓" : "Click to filter"}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+
           {/* Tasks Filter Toolbar */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 bg-white dark:bg-zinc-900 p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
-            <div className="flex items-center gap-1.5 overflow-x-auto">
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-3 bg-white dark:bg-zinc-900 p-3 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
+            <div className="flex items-center gap-1.5 overflow-x-auto flex-wrap">
               {[
                 { key: "ACTIVE", label: "Active Queue" },
                 { key: "ALL", label: "All Tasks" },
@@ -640,43 +791,384 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
               ))}
             </div>
 
-            <div className="relative min-w-[200px]">
-              <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
-              <input
-                type="text"
-                placeholder="Search tasks..."
-                value={taskSearch}
-                onChange={(e) => setTaskSearch(e.target.value)}
-                className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
-              />
+            <div className="flex items-center gap-2 flex-wrap">
+              {/* Project Filter Dropdown */}
+              {allProjects.length > 0 && (
+                <div className="relative min-w-[180px]">
+                  <select
+                    value={selectedProjectId}
+                    onChange={(e) => setSelectedProjectId(e.target.value)}
+                    className="w-full appearance-none pl-3 pr-8 py-1.5 text-xs font-semibold rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 cursor-pointer"
+                  >
+                    <option value="">📁 All Projects ({allTasks.length})</option>
+                    {allProjects.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.code ? `[${p.code}] ` : ""}{p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <ChevronDown className="w-3.5 h-3.5 text-zinc-400 absolute right-2.5 top-2.5 pointer-events-none" />
+                </div>
+              )}
+
+              {/* View Switcher: Flat List vs Group by Project */}
+              <div className="flex items-center border border-zinc-200 dark:border-zinc-800 rounded-xl overflow-hidden bg-zinc-50 dark:bg-zinc-950 p-0.5">
+                <button
+                  onClick={() => setGroupByProject(false)}
+                  className={cn(
+                    "flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg transition-all",
+                    !groupByProject
+                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs"
+                      : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  )}
+                  title="Flat Deliverables List"
+                >
+                  <LayoutList className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">List</span>
+                </button>
+                <button
+                  onClick={() => setGroupByProject(true)}
+                  className={cn(
+                    "flex items-center gap-1 px-2.5 py-1 text-xs font-bold rounded-lg transition-all",
+                    groupByProject
+                      ? "bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs"
+                      : "text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
+                  )}
+                  title="Group deliverables by Project"
+                >
+                  <Grid className="w-3.5 h-3.5" />
+                  <span className="hidden sm:inline">Group by Project</span>
+                </button>
+              </div>
+
+              {/* Search Bar */}
+              <div className="relative min-w-[180px]">
+                <Search className="w-3.5 h-3.5 text-zinc-400 absolute left-3 top-2.5" />
+                <input
+                  type="text"
+                  placeholder="Search tasks, project, assignee..."
+                  value={taskSearch}
+                  onChange={(e) => setTaskSearch(e.target.value)}
+                  className="w-full pl-8 pr-3 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                />
+              </div>
             </div>
           </div>
 
-          {/* Task Cards List */}
-          <div className="space-y-3">
-            {isLoading ? (
-              <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                <Clock className="w-8 h-8 text-zinc-400 animate-spin mx-auto mb-2" />
-                <p className="text-xs text-zinc-500">Loading deliverables...</p>
-              </div>
-            ) : filteredTasks.length === 0 ? (
-              <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-                <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
-                <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200">
-                  {taskStatusFilter === "ACTIVE" ? "All deliverables completed!" : "No tasks found"}
-                </h3>
-                <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1">
-                  {taskStatusFilter === "ACTIVE"
-                    ? "You have no active deliverables in this queue. Great execution!"
-                    : "No matching tasks in this view filter."}
-                </p>
-              </div>
-            ) : (
-              filteredTasks.map((task) => {
+          {/* Task Cards List (Flat or Grouped View) */}
+          {isLoading ? (
+            <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+              <Clock className="w-8 h-8 text-zinc-400 animate-spin mx-auto mb-2" />
+              <p className="text-xs text-zinc-500">Loading deliverables...</p>
+            </div>
+          ) : filteredTasks.length === 0 ? (
+            <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
+              <CheckCircle2 className="w-12 h-12 text-emerald-500 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200">
+                {taskStatusFilter === "ACTIVE" ? "All deliverables completed!" : "No tasks found"}
+              </h3>
+              <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1">
+                {taskStatusFilter === "ACTIVE"
+                  ? "You have no active deliverables in this queue. Great execution!"
+                  : "No matching tasks in this view filter."}
+              </p>
+              {selectedProjectId && (
+                <button
+                  onClick={() => setSelectedProjectId("")}
+                  className="mt-3 px-3 py-1.5 text-xs font-bold rounded-xl bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800"
+                >
+                  Clear Project Filter
+                </button>
+              )}
+            </div>
+          ) : groupByProject ? (
+            /* GROUPED BY PROJECT VIEW */
+            <div className="space-y-6">
+              {tasksByProject.map((group) => (
+                <div
+                  key={group.id}
+                  className="space-y-3 bg-zinc-50/50 dark:bg-zinc-950/30 p-4 rounded-3xl border border-zinc-200/80 dark:border-zinc-800/80"
+                >
+                  <div className="flex items-center justify-between gap-3 pb-2 border-b border-zinc-200/60 dark:border-zinc-800/60">
+                    <div className="flex items-center gap-2.5">
+                      <span
+                        className="w-3 h-3 rounded-full flex-shrink-0"
+                        style={{ backgroundColor: group.color || "#6366f1" }}
+                      />
+                      <Folder className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+                      <div>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <h3 className="text-sm font-black text-zinc-900 dark:text-zinc-100">
+                            {group.code ? `[${group.code}] ` : ""}
+                            {group.name}
+                          </h3>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-zinc-200 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
+                            {group.tasks.length} Deliverables
+                          </span>
+                        </div>
+                        {group.leadName && (
+                          <p className="text-[11px] text-zinc-500 flex items-center gap-1 mt-0.5">
+                            <User className="w-3 h-3 text-zinc-400" />
+                            Project Lead: <strong className="text-zinc-700 dark:text-zinc-300">{group.leadName}</strong>
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="space-y-3">
+                    {group.tasks.map((task) => {
+                      const subtasks = task.subtasks || [];
+                      const hasSubtasks = subtasks.length > 0;
+                      const isOverdue =
+                        task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "COMPLETED";
+                      const assigneeDisplayName = task.assigneeName || task.assignee?.name || (targetUser?.name || "Assigned");
+                      const assigneeRoleName = task.assigneeDesignation || task.assigneeRole || task.assignee?.role || targetUser?.designation || targetUser?.role;
+                      const subtasksCompletedCount = task.subtasksCompleted !== undefined 
+                        ? task.subtasksCompleted 
+                        : subtasks.filter((s) => s.isCompleted).length;
+                      const subtasksPct = hasSubtasks ? Math.round((subtasksCompletedCount / subtasks.length) * 100) : 0;
+
+                      return (
+                        <div
+                          key={task.id}
+                          className={cn(
+                            "bg-white dark:bg-zinc-900 border rounded-2xl p-4 transition-all shadow-xs hover:border-indigo-300 dark:hover:border-indigo-700",
+                            task.status === "BLOCKED"
+                              ? "border-rose-300 dark:border-rose-900/60 bg-rose-50/20 dark:bg-rose-950/10"
+                              : "border-zinc-200 dark:border-zinc-800"
+                          )}
+                        >
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-start gap-3 flex-1 min-w-0">
+                              <button
+                                onClick={() =>
+                                  handleQuickStatusChange(
+                                    task,
+                                    task.status === "COMPLETED" ? "TODO" : "COMPLETED"
+                                  )
+                                }
+                                className="mt-0.5 text-zinc-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors"
+                              >
+                                {task.status === "COMPLETED" ? (
+                                  <CheckCircle2 className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                                ) : (
+                                  <Circle className="w-5 h-5" />
+                                )}
+                              </button>
+
+                              <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 flex-wrap mb-1.5">
+                                  {task.subProjectName && (
+                                    <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
+                                      <Layers className="w-3 h-3 text-zinc-500" />
+                                      {task.subProjectName}
+                                    </span>
+                                  )}
+
+                                  {/* Assigned Person Pill */}
+                                  <div className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60">
+                                    <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-bold">
+                                      {assigneeDisplayName.charAt(0).toUpperCase()}
+                                    </span>
+                                    <span className="font-semibold">{assigneeDisplayName}</span>
+                                    {assigneeRoleName && (
+                                      <span className="text-[9px] text-zinc-400">({assigneeRoleName})</span>
+                                    )}
+                                  </div>
+
+                                  <span
+                                    className={cn(
+                                      "text-[10px] font-bold px-2 py-0.5 rounded-full",
+                                      task.priority === "URGENT"
+                                        ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                                        : task.priority === "HIGH"
+                                        ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
+                                        : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
+                                    )}
+                                  >
+                                    {task.priority}
+                                  </span>
+                                  <span
+                                    className={cn(
+                                      "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
+                                      task.status === "COMPLETED"
+                                        ? "bg-emerald-500/10 text-emerald-600 border border-emerald-500/20"
+                                        : task.status === "IN_PROGRESS"
+                                        ? "bg-indigo-500/10 text-indigo-600 border border-indigo-500/20"
+                                        : task.status === "SUBMITTED_FOR_REVIEW"
+                                        ? "bg-purple-500/10 text-purple-600 border border-purple-500/20"
+                                        : task.status === "BLOCKED"
+                                        ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
+                                        : "bg-zinc-500/10 text-zinc-600 border border-zinc-500/20"
+                                    )}
+                                  >
+                                    {task.status.replace(/_/g, " ")}
+                                  </span>
+                                </div>
+
+                                <h3
+                                  onClick={() => setSelectedTaskForDrawer(task)}
+                                  className={cn(
+                                    "text-sm font-bold cursor-pointer hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors",
+                                    task.status === "COMPLETED"
+                                      ? "line-through text-zinc-400 dark:text-zinc-500"
+                                      : "text-zinc-900 dark:text-zinc-100"
+                                  )}
+                                >
+                                  {task.title}
+                                </h3>
+
+                                {task.description && (
+                                  <p className="text-xs text-zinc-500 dark:text-zinc-400 line-clamp-1 mt-0.5">
+                                    {task.description}
+                                  </p>
+                                )}
+
+                                {task.blockedReason && (
+                                  <div className="mt-2 text-xs p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 text-rose-700 dark:text-rose-300 flex items-start gap-1.5">
+                                    <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0 mt-0.5" />
+                                    <span>
+                                      <strong>Blocker:</strong> {task.blockedReason}
+                                    </span>
+                                  </div>
+                                )}
+                              </div>
+                            </div>
+
+                            {/* Task Quick Actions */}
+                            <div className="flex items-center gap-2 sm:ml-auto flex-wrap">
+                              {task.dueDate && (
+                                <span
+                                  className={cn(
+                                    "text-xs flex items-center gap-1 mr-2 font-medium",
+                                    isOverdue ? "text-rose-600 dark:text-rose-400 font-bold" : "text-zinc-400"
+                                  )}
+                                >
+                                  <Calendar className="w-3 h-3" />
+                                  {new Date(task.dueDate).toLocaleDateString("en-US", {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
+                                  {isOverdue && " (Overdue)"}
+                                </span>
+                              )}
+
+                              {task.status === "TODO" && (
+                                <button
+                                  onClick={() => handleQuickStatusChange(task, "IN_PROGRESS")}
+                                  className="px-2.5 py-1 text-xs font-bold rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 hover:bg-indigo-100 transition-colors"
+                                >
+                                  Start Task ▶
+                                </button>
+                              )}
+
+                              {task.status === "IN_PROGRESS" && (
+                                <button
+                                  onClick={(e) => handleOpenProofModal(e, task)}
+                                  className="px-2.5 py-1 text-xs font-bold rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-800 hover:bg-purple-100 transition-colors"
+                                >
+                                  Submit Proof 📤
+                                </button>
+                              )}
+
+                              {task.status !== "BLOCKED" && task.status !== "COMPLETED" && (
+                                <button
+                                  onClick={(e) => handleOpenBlockModal(e, task)}
+                                  className="px-2.5 py-1 text-xs font-semibold rounded-xl text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-rose-200/60 dark:border-rose-900/60 transition-colors"
+                                >
+                                  I'm Blocked ⚠️
+                                </button>
+                              )}
+
+                              {task.status === "BLOCKED" && (
+                                <button
+                                  onClick={() => handleQuickStatusChange(task, "IN_PROGRESS")}
+                                  className="px-2.5 py-1 text-xs font-bold rounded-xl bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800 hover:bg-emerald-100 transition-colors"
+                                >
+                                  Unblock & Resume ✓
+                                </button>
+                              )}
+
+                              <button
+                                onClick={() => setSelectedTaskForDrawer(task)}
+                                className="p-1.5 text-zinc-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                title="Open full task drawer"
+                              >
+                                <ExternalLink className="w-4 h-4" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Sub-Tasks Checklist */}
+                          {hasSubtasks && (
+                            <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2 pl-8">
+                              <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                                <div className="flex items-center gap-1.5">
+                                  <CheckSquare className="w-3.5 h-3.5 text-indigo-500" />
+                                  <span>Sub-Tasks Checklist</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                  <div className="w-20 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                                    <div
+                                      className="h-full bg-emerald-500 transition-all duration-300"
+                                      style={{ width: `${subtasksPct}%` }}
+                                    />
+                                  </div>
+                                  <span className="text-zinc-600 dark:text-zinc-300">
+                                    {subtasksCompletedCount}/{subtasks.length} Done ({subtasksPct}%)
+                                  </span>
+                                </div>
+                              </div>
+
+                              <div className="space-y-1 bg-zinc-50/60 dark:bg-zinc-950/40 p-2 rounded-xl border border-zinc-100 dark:border-zinc-800/50">
+                                {subtasks.map((st) => (
+                                  <div
+                                    key={st.id}
+                                    onClick={(e) => handleSubtaskToggle(e, task.id, st)}
+                                    className="flex items-center gap-2 text-xs py-1.5 px-2 rounded-lg hover:bg-white dark:hover:bg-zinc-900 cursor-pointer select-none transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800"
+                                  >
+                                    {st.isCompleted ? (
+                                      <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                                    ) : (
+                                      <Circle className="w-4 h-4 text-zinc-400 hover:text-indigo-500 flex-shrink-0" />
+                                    )}
+                                    <span
+                                      className={cn(
+                                        "flex-1 font-medium",
+                                        st.isCompleted
+                                          ? "line-through text-zinc-400 dark:text-zinc-500"
+                                          : "text-zinc-800 dark:text-zinc-200"
+                                      )}
+                                    >
+                                      {st.title}
+                                    </span>
+                                  </div>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : (
+            /* FLAT DELIVERABLES LIST VIEW */
+            <div className="space-y-3">
+              {filteredTasks.map((task) => {
                 const subtasks = task.subtasks || [];
                 const hasSubtasks = subtasks.length > 0;
                 const isOverdue =
                   task.dueDate && new Date(task.dueDate) < new Date() && task.status !== "COMPLETED";
+                const assigneeDisplayName = task.assigneeName || task.assignee?.name || (targetUser?.name || "Assigned");
+                const assigneeRoleName = task.assigneeDesignation || task.assigneeRole || task.assignee?.role || targetUser?.designation || targetUser?.role;
+                const subtasksCompletedCount = task.subtasksCompleted !== undefined 
+                  ? task.subtasksCompleted 
+                  : subtasks.filter((s) => s.isCompleted).length;
+                const subtasksPct = hasSubtasks ? Math.round((subtasksCompletedCount / subtasks.length) * 100) : 0;
 
                 return (
                   <div
@@ -707,19 +1199,40 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
                         </button>
 
                         <div className="flex-1 min-w-0">
-                          <div className="flex items-center gap-2 flex-wrap mb-1">
+                          {/* Project, SubProject, Assignee, Priority & Status Badges */}
+                          <div className="flex items-center gap-2 flex-wrap mb-1.5">
                             {task.projectName && (
-                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1">
-                                <Folder className="w-3 h-3" />
-                                {task.projectName}
-                              </span>
+                              <button
+                                onClick={() => setSelectedProjectId(task.projectId || "")}
+                                className="text-[11px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 flex items-center gap-1.5 hover:bg-indigo-100 transition-colors cursor-pointer"
+                                title="Filter by this project"
+                              >
+                                <Folder className="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400" />
+                                <span>
+                                  {task.projectCode ? `[${task.projectCode}] ` : ""}
+                                  {task.projectName}
+                                </span>
+                              </button>
                             )}
+
                             {task.subProjectName && (
-                              <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
-                                <Layers className="w-3 h-3" />
+                              <span className="text-[10px] font-semibold uppercase tracking-wider px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 flex items-center gap-1">
+                                <Layers className="w-3 h-3 text-zinc-500" />
                                 {task.subProjectName}
                               </span>
                             )}
+
+                            {/* Assigned Person Pill */}
+                            <div className="inline-flex items-center gap-1.5 text-[11px] font-medium px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60">
+                              <span className="w-4 h-4 rounded-full bg-indigo-600 text-white flex items-center justify-center text-[9px] font-bold">
+                                {assigneeDisplayName.charAt(0).toUpperCase()}
+                              </span>
+                              <span className="font-semibold">{assigneeDisplayName}</span>
+                              {assigneeRoleName && (
+                                <span className="text-[9px] text-zinc-400">({assigneeRoleName})</span>
+                              )}
+                            </div>
+
                             <span
                               className={cn(
                                 "text-[10px] font-bold px-2 py-0.5 rounded-full",
@@ -732,6 +1245,7 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
                             >
                               {task.priority}
                             </span>
+
                             <span
                               className={cn(
                                 "text-[10px] font-bold px-2 py-0.5 rounded-full uppercase",
@@ -845,43 +1359,57 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
 
                     {/* Sub-Tasks Checklist */}
                     {hasSubtasks && (
-                      <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-1.5 pl-8">
-                        <div className="text-[11px] font-bold uppercase tracking-wider text-zinc-400 mb-1 flex items-center justify-between">
-                          <span>Sub-Tasks Checklist</span>
-                          <span>
-                            {task.subtasksCompleted || 0}/{subtasks.length} Done
-                          </span>
-                        </div>
-                        {subtasks.map((st) => (
-                          <div
-                            key={st.id}
-                            onClick={(e) => handleSubtaskToggle(e, task.id, st)}
-                            className="flex items-center gap-2 text-xs py-1 px-2 rounded-lg hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer select-none"
-                          >
-                            {st.isCompleted ? (
-                              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
-                            ) : (
-                              <Circle className="w-3.5 h-3.5 text-zinc-400 flex-shrink-0" />
-                            )}
-                            <span
-                              className={cn(
-                                "flex-1",
-                                st.isCompleted
-                                  ? "line-through text-zinc-400 dark:text-zinc-500"
-                                  : "text-zinc-700 dark:text-zinc-300"
-                              )}
-                            >
-                              {st.title}
+                      <div className="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800/80 space-y-2 pl-8">
+                        <div className="flex items-center justify-between text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
+                          <div className="flex items-center gap-1.5">
+                            <CheckSquare className="w-3.5 h-3.5 text-indigo-500" />
+                            <span>Sub-Tasks Checklist</span>
+                          </div>
+                          <div className="flex items-center gap-2">
+                            <div className="w-20 h-1.5 bg-zinc-100 dark:bg-zinc-800 rounded-full overflow-hidden">
+                              <div
+                                className="h-full bg-emerald-500 transition-all duration-300"
+                                style={{ width: `${subtasksPct}%` }}
+                              />
+                            </div>
+                            <span className="text-zinc-600 dark:text-zinc-300">
+                              {subtasksCompletedCount}/{subtasks.length} Done ({subtasksPct}%)
                             </span>
                           </div>
-                        ))}
+                        </div>
+
+                        <div className="space-y-1 bg-zinc-50/60 dark:bg-zinc-950/40 p-2 rounded-xl border border-zinc-100 dark:border-zinc-800/50">
+                          {subtasks.map((st) => (
+                            <div
+                              key={st.id}
+                              onClick={(e) => handleSubtaskToggle(e, task.id, st)}
+                              className="flex items-center gap-2 text-xs py-1.5 px-2 rounded-lg hover:bg-white dark:hover:bg-zinc-900 cursor-pointer select-none transition-colors border border-transparent hover:border-zinc-200 dark:hover:border-zinc-800"
+                            >
+                              {st.isCompleted ? (
+                                <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400 flex-shrink-0" />
+                              ) : (
+                                <Circle className="w-4 h-4 text-zinc-400 hover:text-indigo-500 flex-shrink-0" />
+                              )}
+                              <span
+                                className={cn(
+                                  "flex-1 font-medium",
+                                  st.isCompleted
+                                    ? "line-through text-zinc-400 dark:text-zinc-500"
+                                    : "text-zinc-800 dark:text-zinc-200"
+                                )}
+                              >
+                                {st.title}
+                              </span>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
                 );
-              })
-            )}
-          </div>
+              })}
+            </div>
+          )}
         </div>
       )}
 
