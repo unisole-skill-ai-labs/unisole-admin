@@ -20,6 +20,8 @@ import {
   GripVertical,
   ArrowUpRight,
   ArrowDownRight,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   useGetProjectsQuery,
@@ -45,6 +47,7 @@ import { QuickDateBadge } from "../ui/DatePicker";
 import { AssigneeBadge, TeamMemberOption } from "../ui/AssigneeBadge";
 import { useSelector } from "react-redux";
 import { HierarchyItemType } from "./HierarchyShiftModal";
+import Modal from "../ui/Modal";
 
 interface UnifiedWorkSoleProps {
   baseUrl: string;
@@ -135,11 +138,14 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
   // Filter state
   const [search, setSearch] = useState("");
   const [departmentFilter, setDepartmentFilter] = useState("");
+  const [visibilityFilter, setVisibilityFilter] = useState<"ACTIVE" | "HIDDEN" | "ALL">("ACTIVE");
 
-  const { data: projectsData, isLoading: isProjectsLoading } = useGetProjectsQuery({
+  const { data: projectsData, isLoading: isProjectsLoading, refetch: refetchProjects } = useGetProjectsQuery({
     baseUrl,
     departmentId: departmentFilter || undefined,
     search: search || undefined,
+    includeHidden: visibilityFilter !== "ACTIVE" ? true : undefined,
+    onlyHidden: visibilityFilter === "HIDDEN" ? true : undefined,
   });
 
   const { data: deptsData } = useGetDepartmentsQuery(baseUrl);
@@ -147,7 +153,35 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
   const currentUser = useSelector((s: any) => s.auth.user);
   const isLeader = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
 
-  const projects: Project[] = projectsData?.data || [];
+  // Priority-wise sorting: URGENT > HIGH > MEDIUM > LOW
+  const priorityWeight: Record<string, number> = {
+    URGENT: 1,
+    HIGH: 2,
+    MEDIUM: 3,
+    LOW: 4,
+  };
+
+  const [projectToToggleVisibility, setProjectToToggleVisibility] = useState<Project | null>(null);
+  const [isTogglingVisibility, setIsTogglingVisibility] = useState(false);
+  const [updateProjectMutation] = useUpdateProjectMutation();
+
+  const rawProjects: Project[] = projectsData?.data || [];
+  
+  // Apply visibility filtering client-side as well for instant responsiveness
+  const filteredByVisibility = rawProjects.filter((p) => {
+    if (visibilityFilter === "HIDDEN") return p.isHidden === true;
+    if (visibilityFilter === "ACTIVE") return !p.isHidden;
+    return true;
+  });
+
+  const projects: Project[] = [...filteredByVisibility].sort((a, b) => {
+    const wA = priorityWeight[a.priority] || 5;
+    const wB = priorityWeight[b.priority] || 5;
+    if (wA !== wB) return wA - wB;
+    return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+  });
+
+  const hiddenCount = rawProjects.filter((p) => p.isHidden).length;
   const departments = deptsData?.data || [];
   const teamMembers = teamData?.data || [];
 
@@ -176,13 +210,13 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
     <div className="w-full space-y-4">
       {/* Top Filter & Toolbar */}
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white dark:bg-zinc-900 p-3.5 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
-        <div className="flex items-center gap-2 w-full sm:w-auto">
+        <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
           <input
             type="text"
             placeholder="Search projects, sub-projects, tasks..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            className="w-full sm:w-72 px-3.5 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full sm:w-64 px-3.5 py-1.5 text-xs rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950 text-zinc-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-500"
           />
 
           <select
@@ -197,6 +231,58 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
               </option>
             ))}
           </select>
+
+          {/* Admin-only: Visibility Filter Pills (Active, Hidden, All) */}
+          {isLeader && (
+            <div className="inline-flex p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-xl border border-zinc-200 dark:border-zinc-700/60 text-xs">
+              <button
+                type="button"
+                onClick={() => setVisibilityFilter("ACTIVE")}
+                className={cn(
+                  "px-2.5 py-1 font-bold rounded-lg transition-all cursor-pointer",
+                  visibilityFilter === "ACTIVE"
+                    ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                )}
+              >
+                Active
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibilityFilter("HIDDEN")}
+                className={cn(
+                  "inline-flex items-center gap-1 px-2.5 py-1 font-bold rounded-lg transition-all cursor-pointer",
+                  visibilityFilter === "HIDDEN"
+                    ? "bg-amber-500 text-white shadow-xs"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                )}
+                title="View hidden projects only"
+              >
+                <EyeOff className="w-3 h-3" />
+                <span>Hidden</span>
+                {hiddenCount > 0 && (
+                  <span className={cn(
+                    "px-1.5 py-0.2 rounded-full text-[10px] font-mono",
+                    visibilityFilter === "HIDDEN" ? "bg-amber-600 text-white" : "bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300"
+                  )}>
+                    {hiddenCount}
+                  </span>
+                )}
+              </button>
+              <button
+                type="button"
+                onClick={() => setVisibilityFilter("ALL")}
+                className={cn(
+                  "px-2.5 py-1 font-bold rounded-lg transition-all cursor-pointer",
+                  visibilityFilter === "ALL"
+                    ? "bg-white dark:bg-zinc-900 text-zinc-900 dark:text-white shadow-xs"
+                    : "text-zinc-500 dark:text-zinc-400 hover:text-zinc-800 dark:hover:text-zinc-200"
+                )}
+              >
+                All
+              </button>
+            </div>
+          )}
         </div>
 
         <div className="flex items-center gap-2 w-full sm:w-auto justify-end">
@@ -229,17 +315,35 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
         </div>
       ) : projects.length === 0 ? (
         <div className="text-center py-16 bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800">
-          <Folder className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
-          <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200">No Projects Found</h3>
-          <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 mb-4">
-            Create your first project to start cascading sub-projects and task Kanban boards.
-          </p>
-          <button
-            onClick={onOpenCreateProject}
-            className="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white shadow-sm"
-          >
-            + Create First Project
-          </button>
+          {visibilityFilter === "HIDDEN" ? (
+            <>
+              <EyeOff className="w-12 h-12 text-amber-500/50 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200">No Hidden Projects</h3>
+              <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 mb-4">
+                No projects are currently hidden from WorkSole. To hide a project, click the Hide icon on any project.
+              </p>
+              <button
+                onClick={() => setVisibilityFilter("ACTIVE")}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-zinc-800 text-white shadow-sm"
+              >
+                View Active Projects
+              </button>
+            </>
+          ) : (
+            <>
+              <Folder className="w-12 h-12 text-zinc-300 dark:text-zinc-600 mx-auto mb-3" />
+              <h3 className="text-base font-bold text-zinc-800 dark:text-zinc-200">No Projects Found</h3>
+              <p className="text-xs text-zinc-500 max-w-sm mx-auto mt-1 mb-4">
+                Create your first project to start cascading sub-projects and task Kanban boards.
+              </p>
+              <button
+                onClick={onOpenCreateProject}
+                className="px-4 py-2 text-xs font-bold rounded-xl bg-indigo-600 text-white shadow-sm"
+              >
+                + Create First Project
+              </button>
+            </>
+          )}
         </div>
       ) : (
         <div className="space-y-3">
@@ -258,9 +362,83 @@ export const UnifiedWorkSoleAccordionKanban: React.FC<UnifiedWorkSoleProps> = ({
               onEditSubProject={onEditSubProject}
               onOpenTask={onOpenTask}
               onShiftHierarchy={onShiftHierarchy}
+              onRequestToggleVisibility={(p) => setProjectToToggleVisibility(p)}
             />
           ))}
         </div>
+      )}
+
+      {/* In-App Project Visibility Confirmation Modal */}
+      {projectToToggleVisibility && (
+        <Modal
+          isOpen={!!projectToToggleVisibility}
+          onClose={() => !isTogglingVisibility && setProjectToToggleVisibility(null)}
+          title={projectToToggleVisibility.isHidden ? "Unhide Project in WorkSole" : "Hide Project from WorkSole Canvas"}
+          size="sm"
+        >
+          <div className="p-2 space-y-4">
+            <div className="flex items-start gap-3.5 p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-900/50">
+              <div className="w-9 h-9 rounded-xl bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                {projectToToggleVisibility.isHidden ? <Eye className="w-5 h-5" /> : <EyeOff className="w-5 h-5" />}
+              </div>
+              <div className="text-xs">
+                <div className="font-bold text-zinc-900 dark:text-white text-sm">
+                  {projectToToggleVisibility.name} ({projectToToggleVisibility.code})
+                </div>
+                <div className="text-zinc-600 dark:text-zinc-400 mt-1 leading-relaxed">
+                  {projectToToggleVisibility.isHidden
+                    ? "This project will be restored to the active WorkSole canvas and will be visible to all authorized team members."
+                    : "This project will be hidden from the standard WorkSole canvas. Only Administrators can view it under the 'Hidden' tab; non-admin members cannot view or access it."}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex items-center justify-end gap-2.5 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+              <button
+                type="button"
+                disabled={isTogglingVisibility}
+                onClick={() => setProjectToToggleVisibility(null)}
+                className="px-4 py-2 text-xs font-bold rounded-xl text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                disabled={isTogglingVisibility}
+                onClick={async () => {
+                  setIsTogglingVisibility(true);
+                  try {
+                    await updateProjectMutation({
+                      baseUrl,
+                      id: projectToToggleVisibility.id,
+                      body: { isHidden: !projectToToggleVisibility.isHidden },
+                    }).unwrap();
+                    setProjectToToggleVisibility(null);
+                  } catch (err: any) {
+                    console.error("Failed to update project visibility:", err);
+                  } finally {
+                    setIsTogglingVisibility(false);
+                  }
+                }}
+                className={cn(
+                  "px-4 py-2 text-xs font-bold rounded-xl text-white shadow-sm transition-all cursor-pointer flex items-center gap-1.5",
+                  projectToToggleVisibility.isHidden
+                    ? "bg-indigo-600 hover:bg-indigo-700"
+                    : "bg-amber-600 hover:bg-amber-700"
+                )}
+              >
+                {isTogglingVisibility ? (
+                  <Clock className="w-3.5 h-3.5 animate-spin" />
+                ) : projectToToggleVisibility.isHidden ? (
+                  <Eye className="w-3.5 h-3.5" />
+                ) : (
+                  <EyeOff className="w-3.5 h-3.5" />
+                )}
+                <span>{projectToToggleVisibility.isHidden ? "Unhide Project" : "Hide Project"}</span>
+              </button>
+            </div>
+          </div>
+        </Modal>
       )}
     </div>
   );
@@ -282,6 +460,7 @@ interface ProjectAccordionItemProps {
   onEditSubProject?: (subProject: SubProject) => void;
   onOpenTask?: (task: TaskItem) => void;
   onShiftHierarchy?: (params: { itemType: HierarchyItemType; item: any; parentItem?: any }) => void;
+  onRequestToggleVisibility?: (project: Project) => void;
 }
 
 const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
@@ -297,6 +476,7 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
   onEditSubProject,
   onOpenTask,
   onShiftHierarchy,
+  onRequestToggleVisibility,
 }) => {
   // Query hierarchy for this project when expanded
   const { data: hierarchyData, isLoading } = useGetProjectHierarchyQuery(
@@ -407,6 +587,36 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
                   {project.department.name}
                 </span>
               )}
+              {/* Priority Badge */}
+              {project.priority && (
+                <span
+                  className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1",
+                    project.priority === "URGENT" && "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-900",
+                    project.priority === "HIGH" && "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-900",
+                    project.priority === "MEDIUM" && "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-900",
+                    project.priority === "LOW" && "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      project.priority === "URGENT" && "bg-rose-600 animate-pulse",
+                      project.priority === "HIGH" && "bg-amber-500",
+                      project.priority === "MEDIUM" && "bg-blue-500",
+                      project.priority === "LOW" && "bg-zinc-400"
+                    )}
+                  />
+                  {project.priority}
+                </span>
+              )}
+              {/* Hidden Status Badge */}
+              {project.isHidden && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                  <EyeOff className="w-3 h-3" />
+                  Hidden in WorkSole
+                </span>
+              )}
             </div>
             {project.description && (
               <p className="text-xs text-zinc-500 dark:text-zinc-400 truncate mt-0.5 max-w-xl">
@@ -460,6 +670,26 @@ const ProjectAccordionItem: React.FC<ProjectAccordionItemProps> = ({
           </span>
 
           <div className="flex items-center gap-1.5">
+            {/* Admin-only: Toggle Project Visibility (Hide/Unhide) */}
+            {isLeader && onRequestToggleVisibility && (
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRequestToggleVisibility(project);
+                }}
+                className={cn(
+                  "p-1.5 rounded-lg border transition-colors cursor-pointer",
+                  project.isHidden
+                    ? "border-amber-300 dark:border-amber-800 bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 hover:bg-amber-100"
+                    : "border-zinc-200 dark:border-zinc-800 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800"
+                )}
+                title={project.isHidden ? "Unhide Project (Make Visible)" : "Hide Project in WorkSole"}
+              >
+                {project.isHidden ? <Eye className="w-3.5 h-3.5" /> : <EyeOff className="w-3.5 h-3.5" />}
+              </button>
+            )}
+
             {isLeader && onShiftHierarchy && (
               <button
                 onClick={(e) => {

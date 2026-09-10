@@ -20,6 +20,7 @@ import {
   X,
   Sparkles,
   ArrowUpRight,
+  EyeOff,
 } from "lucide-react";
 import { HierarchyItemType, ProjectHierarchy, SubProject, TaskItem, TaskSubtask } from "../../types";
 import {
@@ -169,6 +170,34 @@ export const ProjectHierarchyTree: React.FC<ProjectHierarchyTreeProps> = ({
               {project.department && (
                 <span className="text-xs font-medium px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
                   {project.department.name}
+                </span>
+              )}
+              {project.priority && (
+                <span
+                  className={cn(
+                    "text-[10px] font-bold px-2 py-0.5 rounded-md uppercase tracking-wider flex items-center gap-1",
+                    project.priority === "URGENT" && "bg-rose-100 dark:bg-rose-950/60 text-rose-700 dark:text-rose-400 border border-rose-300 dark:border-rose-900",
+                    project.priority === "HIGH" && "bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-400 border border-amber-300 dark:border-amber-900",
+                    project.priority === "MEDIUM" && "bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-400 border border-blue-300 dark:border-blue-900",
+                    project.priority === "LOW" && "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-300 dark:border-zinc-700"
+                  )}
+                >
+                  <span
+                    className={cn(
+                      "w-1.5 h-1.5 rounded-full",
+                      project.priority === "URGENT" && "bg-rose-600 animate-pulse",
+                      project.priority === "HIGH" && "bg-amber-500",
+                      project.priority === "MEDIUM" && "bg-blue-500",
+                      project.priority === "LOW" && "bg-zinc-400"
+                    )}
+                  />
+                  {project.priority}
+                </span>
+              )}
+              {project.isHidden && (
+                <span className="inline-flex items-center gap-1 text-[10px] font-bold px-2 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                  <EyeOff className="w-3 h-3" />
+                  Hidden in WorkSole
                 </span>
               )}
             </div>
