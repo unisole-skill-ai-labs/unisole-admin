@@ -57,8 +57,9 @@ interface MyWorkPageProps {
 
 export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
   const currentUser = useSelector((s: any) => s.auth.user);
-  const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
-  const isAdminOrSuperAdmin = currentUser?.role === "SUPER_ADMIN" || currentUser?.role === "ADMIN";
+  const userRole = String(currentUser?.role || "").toUpperCase();
+  const isSuperAdmin = userRole === "SUPER_ADMIN";
+  const isAdminOrSuperAdmin = userRole === "SUPER_ADMIN" || userRole === "ADMIN";
 
   // Executive Team Member Switcher
   const [selectedTeamMemberId, setSelectedTeamMemberId] = useState<string>("");
@@ -139,12 +140,6 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
   // Filter Tasks
   const filteredTasks = useMemo(() => {
     return allTasks.filter((t) => {
-      // Non-admins must strictly only see their own assigned tasks
-      if (!isAdminOrSuperAdmin) {
-        if (t.assigneeId && currentUser?.id && t.assigneeId !== currentUser.id) {
-          return false;
-        }
-      }
       if (selectedProjectId && t.projectId !== selectedProjectId) {
         return false;
       }
@@ -163,7 +158,7 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
       if (taskStatusFilter === "COMPLETED") return t.status === "COMPLETED";
       return true;
     });
-  }, [allTasks, taskStatusFilter, taskSearch, selectedProjectId, isAdminOrSuperAdmin, currentUser?.id]);
+  }, [allTasks, taskStatusFilter, taskSearch, selectedProjectId]);
 
   // Group Tasks by Project for Grouped View
   const tasksByProject = useMemo(() => {
@@ -196,6 +191,7 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
       }
       groups[pId].tasks.push(t);
     }
+
     return Object.values(groups);
   }, [filteredTasks, allProjects]);
 
@@ -205,12 +201,6 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
     endOfToday.setHours(23, 59, 59, 999);
 
     return allLeads.filter((l) => {
-      // Non-admins must strictly only see their own assigned leads
-      if (!isAdminOrSuperAdmin) {
-        if (l.assignedToUserId && currentUser?.id && l.assignedToUserId !== currentUser.id) {
-          return false;
-        }
-      }
       if (leadSearch.trim()) {
         const q = leadSearch.toLowerCase();
         const matchName = l.name?.toLowerCase().includes(q);
@@ -235,7 +225,7 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
 
       return true;
     });
-  }, [allLeads, leadStatusFilter, leadSearch, isAdminOrSuperAdmin, currentUser?.id]);
+  }, [allLeads, leadStatusFilter, leadSearch]);
 
   // Task Actions Handlers
   const handleSubtaskToggle = async (e: React.MouseEvent, taskId: string, subtask: TaskSubtask) => {
