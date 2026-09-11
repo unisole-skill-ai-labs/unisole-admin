@@ -736,7 +736,9 @@ export default function LeadsManagementPage() {
                       <th className="p-3 whitespace-nowrap">Stage & SLA Schedule</th>
                       <th className="p-3">Assigned Counselor</th>
                       <th className="p-3">Status</th>
-                      <th className="p-3 text-right">Quick Actions</th>
+                      <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-950/95 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[170px]">
+                        Quick Actions
+                      </th>
                     </tr>
                   </thead>
 
@@ -886,9 +888,42 @@ export default function LeadsManagementPage() {
                             </select>
                           </td>
 
-                          {/* Quick Actions */}
-                          <td className="p-3 text-right">
-                            <div className="flex items-center justify-end gap-1">
+                          {/* Quick Actions (Sticky on right so always visible!) */}
+                          <td
+                            className={`p-3 text-right sticky right-0 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800/80 shadow-2xs whitespace-nowrap min-w-[170px] ${
+                              isSelected ? "bg-indigo-50/95 dark:bg-zinc-900" : "bg-white/95 dark:bg-zinc-900/95"
+                            }`}
+                          >
+                            <div className="flex items-center justify-end gap-1.5">
+                              {/* Log Call Notes */}
+                              <button
+                                onClick={() => setSelectedLeadForCall(lead)}
+                                title="Log Call Note"
+                                className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
+                              >
+                                <FileText className="w-3.5 h-3.5" />
+                              </button>
+
+                              {/* Call Directly */}
+                              <a
+                                href={`tel:${lead.phone}`}
+                                title="Call directly"
+                                className="p-1.5 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-500/20 transition-colors"
+                              >
+                                <Phone className="w-3.5 h-3.5" />
+                              </a>
+
+                              {/* Chat on WhatsApp */}
+                              <a
+                                href={whatsappUrl}
+                                target="_blank"
+                                rel="noreferrer"
+                                title="Chat on WhatsApp"
+                                className="p-1.5 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-500/20 transition-colors"
+                              >
+                                <MessageCircle className="w-3.5 h-3.5" />
+                              </a>
+
                               {/* Quick Mark / Unmark Non-Lead */}
                               {lead.status === "NOT_A_LEAD" ? (
                                 <button
@@ -902,42 +937,17 @@ export default function LeadsManagementPage() {
                                 <button
                                   onClick={() => handleInlineStatus(lead.id, "NOT_A_LEAD")}
                                   title="Mark as Non-Lead"
-                                  className="p-1.5 rounded-lg text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors"
+                                  className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors"
                                 >
                                   <UserX className="w-3.5 h-3.5" />
                                 </button>
                               )}
 
-                              <a
-                                href={whatsappUrl}
-                                target="_blank"
-                                rel="noreferrer"
-                                title="Chat on WhatsApp"
-                                className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 transition-colors"
-                              >
-                                <MessageCircle className="w-3.5 h-3.5" />
-                              </a>
-
-                              <a
-                                href={`tel:${lead.phone}`}
-                                title="Call directly"
-                                className="p-1.5 rounded-lg text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/60 transition-colors"
-                              >
-                                <Phone className="w-3.5 h-3.5" />
-                              </a>
-
-                              <button
-                                onClick={() => setSelectedLeadForCall(lead)}
-                                title="Log call notes"
-                                className="p-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
-                              >
-                                <FileText className="w-3.5 h-3.5" />
-                              </button>
-
+                              {/* View Profile & Full Drawer */}
                               <button
                                 onClick={() => setDetailLeadId(lead.id)}
                                 title="View profile & full timeline"
-                                className="p-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                                className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                               >
                                 <Eye className="w-3.5 h-3.5" />
                               </button>

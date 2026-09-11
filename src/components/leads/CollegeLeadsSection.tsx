@@ -645,7 +645,9 @@ export default function CollegeLeadsSection({
                   <th className="p-3 whitespace-nowrap">Stage & SLA Schedule</th>
                   <th className="p-3">Assigned Rep / Staff</th>
                   <th className="p-3">Status</th>
-                  <th className="p-3 text-right">Actions</th>
+                  <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-900 z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[150px]">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-xs">
@@ -799,7 +801,11 @@ export default function CollegeLeadsSection({
                       </td>
 
                       {/* Actions */}
-                      <td className="p-3 text-right">
+                      <td
+                        className={`p-3 text-right sticky right-0 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[150px] ${
+                          isSelected ? "bg-indigo-50/95 dark:bg-zinc-900" : "bg-white/95 dark:bg-zinc-900/95"
+                        }`}
+                      >
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setSelectedLeadForCall(lead)}
