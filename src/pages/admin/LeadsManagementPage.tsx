@@ -733,7 +733,7 @@ export default function LeadsManagementPage() {
                       <th className="p-3">College & Branch</th>
                       <th className="p-3">Quality Tier</th>
                       <th className="p-3">Call Velocity</th>
-                      <th className="p-3">Stage & SLA Schedule</th>
+                      <th className="p-3 whitespace-nowrap">Stage & SLA Schedule</th>
                       <th className="p-3">Assigned Counselor</th>
                       <th className="p-3">Status</th>
                       <th className="p-3 text-right">Quick Actions</th>
@@ -838,7 +838,7 @@ export default function LeadsManagementPage() {
                           </td>
 
                           {/* Stage & SLA Schedule */}
-                          <td className="p-3">
+                          <td className="p-3 whitespace-nowrap">
                             <LeadSlaBadge lead={lead} showStage={true} />
                           </td>
 

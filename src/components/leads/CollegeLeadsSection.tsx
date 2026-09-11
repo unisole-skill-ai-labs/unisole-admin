@@ -642,7 +642,7 @@ export default function CollegeLeadsSection({
                   <th className="p-3">Branch</th>
                   <th className="p-3">Quality</th>
                   <th className="p-3">Calls</th>
-                  <th className="p-3">Stage & SLA Schedule</th>
+                  <th className="p-3 whitespace-nowrap">Stage & SLA Schedule</th>
                   <th className="p-3">Assigned Rep / Staff</th>
                   <th className="p-3">Status</th>
                   <th className="p-3 text-right">Actions</th>
@@ -750,7 +750,7 @@ export default function CollegeLeadsSection({
                       </td>
 
                       {/* Stage & SLA Schedule */}
-                      <td className="p-3">
+                      <td className="p-3 whitespace-nowrap">
                         <LeadSlaBadge lead={lead} showStage={true} />
                       </td>
 

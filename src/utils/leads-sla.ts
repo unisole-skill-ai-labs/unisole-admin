@@ -36,14 +36,14 @@ export function getLeadSlaInfo(lead: {
   if (isTerminal) {
     return {
       isFirstContact: false,
-      stageLabel: lead.status === "CONVERTED" ? "Converted 🎉" : "Closed",
+      stageLabel: "",
       isBreached: false,
       isOverdue: false,
       isDueSoon: false,
       timeRemainingMs: 0,
-      countdownText: lead.status === "CONVERTED" ? "Converted" : "Archived",
+      countdownText: "—",
       formattedTargetTime: "",
-      badgeClass: "bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700",
+      badgeClass: "",
       textClass: "text-zinc-400",
       statusType: "TERMINAL",
     };
@@ -61,6 +61,7 @@ export function getLeadSlaInfo(lead: {
     const mins = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
 
     if (isBreached) {
+      const breachStr = hours > 24 ? `+${Math.floor(hours / 24)}d ${hours % 24}h` : `+${hours}h ${mins}m`;
       return {
         isFirstContact: true,
         stageLabel: "1st Contact",
@@ -68,15 +69,21 @@ export function getLeadSlaInfo(lead: {
         isOverdue: true,
         isDueSoon: false,
         timeRemainingMs: diff,
-        countdownText: hours > 24 ? `Breached by ${Math.floor(hours / 24)}d ${hours % 24}h` : `Breached by ${hours}h ${mins}m`,
-        formattedTargetTime: new Date(deadline).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
-        badgeClass: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/40 animate-pulse font-black",
-        textClass: "text-rose-600 dark:text-rose-400 font-bold",
+        countdownText: breachStr,
+        formattedTargetTime: new Date(deadline).toLocaleString("en-IN", {
+          day: "numeric",
+          month: "short",
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
+        badgeClass: "bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20",
+        textClass: "text-rose-600 dark:text-rose-400 font-medium",
         statusType: "FIRST_CONTACT_BREACHED",
       };
     }
 
     const isDueSoon = hours < 4;
+    const leftStr = hours > 0 ? `${hours}h left` : `${mins}m left`;
     return {
       isFirstContact: true,
       stageLabel: "1st Contact",
@@ -84,11 +91,16 @@ export function getLeadSlaInfo(lead: {
       isOverdue: false,
       isDueSoon,
       timeRemainingMs: diff,
-      countdownText: `${hours}h ${mins}m left`,
-      formattedTargetTime: new Date(deadline).toLocaleTimeString("en-IN", { hour: "2-digit", minute: "2-digit" }),
+      countdownText: leftStr,
+      formattedTargetTime: new Date(deadline).toLocaleString("en-IN", {
+        day: "numeric",
+        month: "short",
+        hour: "2-digit",
+        minute: "2-digit",
+      }),
       badgeClass: isDueSoon
-        ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 font-bold"
-        : "bg-purple-500/15 text-purple-700 dark:text-purple-300 border-purple-500/30 font-semibold",
+        ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+        : "bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/20",
       textClass: isDueSoon ? "text-amber-600 dark:text-amber-400" : "text-purple-600 dark:text-purple-400",
       statusType: "FIRST_CONTACT_ACTIVE",
     };
@@ -105,9 +117,9 @@ export function getLeadSlaInfo(lead: {
       isOverdue: false,
       isDueSoon: false,
       timeRemainingMs: 0,
-      countdownText: "No follow-up set",
+      countdownText: "No schedule",
       formattedTargetTime: "",
-      badgeClass: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700 font-medium",
+      badgeClass: "bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700",
       textClass: "text-zinc-400",
       statusType: "NO_SCHEDULE",
     };
@@ -121,7 +133,7 @@ export function getLeadSlaInfo(lead: {
   const mins = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
   const days = Math.floor(hours / 24);
 
-  const formattedTargetTime = new Date(nextCallTime).toLocaleDateString("en-IN", {
+  const formattedTargetTime = new Date(nextCallTime).toLocaleString("en-IN", {
     day: "numeric",
     month: "short",
     hour: "2-digit",
@@ -129,7 +141,7 @@ export function getLeadSlaInfo(lead: {
   });
 
   if (isOverdue) {
-    const timeStr = days > 0 ? `${days}d ${hours % 24}h overdue` : `${hours}h ${mins}m overdue`;
+    const overdueStr = days > 0 ? `${days}d overdue` : hours > 0 ? `${hours}h overdue` : `${mins}m overdue`;
     return {
       isFirstContact: false,
       stageLabel,
@@ -137,16 +149,16 @@ export function getLeadSlaInfo(lead: {
       isOverdue: true,
       isDueSoon: false,
       timeRemainingMs: diff,
-      countdownText: timeStr,
+      countdownText: overdueStr,
       formattedTargetTime,
-      badgeClass: "bg-rose-500/15 text-rose-700 dark:text-rose-300 border-rose-500/30 font-bold",
-      textClass: "text-rose-600 dark:text-rose-400 font-semibold",
+      badgeClass: "bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20",
+      textClass: "text-rose-600 dark:text-rose-400 font-medium",
       statusType: "FOLLOW_UP_OVERDUE",
     };
   }
 
   const isDueSoon = hours < 6;
-  const timeStr = days > 0 ? `in ${days}d ${hours % 24}h` : `in ${hours}h ${mins}m`;
+  const activeStr = days > 0 ? `in ${days}d ${hours % 24}h` : hours > 0 ? `in ${hours}h` : `in ${mins}m`;
   return {
     isFirstContact: false,
     stageLabel,
@@ -154,12 +166,12 @@ export function getLeadSlaInfo(lead: {
     isOverdue: false,
     isDueSoon,
     timeRemainingMs: diff,
-    countdownText: timeStr,
+    countdownText: activeStr,
     formattedTargetTime,
     badgeClass: isDueSoon
-      ? "bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30 font-semibold"
-      : "bg-indigo-500/15 text-indigo-700 dark:text-indigo-300 border-indigo-500/30 font-semibold",
-    textClass: isDueSoon ? "text-amber-600 dark:text-amber-400" : "text-indigo-600 dark:text-indigo-400",
+      ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
+      : "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 border-zinc-200 dark:border-zinc-700/60",
+    textClass: isDueSoon ? "text-amber-600 dark:text-amber-400" : "text-zinc-700 dark:text-zinc-300",
     statusType: "FOLLOW_UP_ACTIVE",
   };
 }

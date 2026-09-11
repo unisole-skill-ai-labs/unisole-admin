@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { getLeadSlaInfo, LeadSlaInfo } from "../../utils/leads-sla";
-import { Clock, AlertTriangle, AlertCircle, Calendar, PhoneCall, CheckCircle2 } from "lucide-react";
+import { Clock, AlertTriangle, AlertCircle, Calendar } from "lucide-react";
 
 interface LeadSlaBadgeProps {
   lead: {
@@ -26,89 +26,60 @@ export default function LeadSlaBadge({ lead, showStage = true }: LeadSlaBadgePro
   }, [lead.createdAt, lead.callCount, lead.lastCallAt, lead.nextCallAt, lead.status]);
 
   if (sla.statusType === "TERMINAL") {
+    return <span className="text-zinc-400 dark:text-zinc-600 font-mono text-xs select-none">—</span>;
+  }
+
+  if (sla.statusType === "FIRST_CONTACT_BREACHED") {
     return (
-      <div className="flex flex-col items-start gap-1">
-        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
-          <CheckCircle2 className="w-3 h-3" />
-          <span>{sla.stageLabel}</span>
-        </span>
-      </div>
+      <span
+        title={sla.formattedTargetTime ? `Target was ${sla.formattedTargetTime}` : "24h SLA breached"}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 whitespace-nowrap"
+      >
+        <AlertTriangle className="w-3.5 h-3.5 text-rose-500 shrink-0 animate-pulse" />
+        <span>SLA Breached ({sla.countdownText})</span>
+      </span>
+    );
+  }
+
+  if (sla.statusType === "FIRST_CONTACT_ACTIVE") {
+    return (
+      <span
+        title={`Target: ${sla.formattedTargetTime}`}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-purple-500/10 text-purple-600 dark:text-purple-300 border border-purple-500/20 whitespace-nowrap"
+      >
+        <Clock className="w-3.5 h-3.5 text-purple-500 dark:text-purple-400 shrink-0" />
+        <span>1st Contact • {sla.countdownText}</span>
+      </span>
+    );
+  }
+
+  if (sla.statusType === "FOLLOW_UP_OVERDUE") {
+    return (
+      <span
+        title={`Scheduled: ${sla.formattedTargetTime}`}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-semibold bg-rose-500/10 text-rose-600 dark:text-rose-400 border border-rose-500/20 whitespace-nowrap"
+      >
+        <AlertCircle className="w-3.5 h-3.5 text-rose-500 shrink-0" />
+        <span>{sla.stageLabel} • {sla.countdownText}</span>
+      </span>
+    );
+  }
+
+  if (sla.statusType === "FOLLOW_UP_ACTIVE") {
+    return (
+      <span
+        title={`Scheduled: ${sla.formattedTargetTime}`}
+        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800/80 text-zinc-700 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700/60 whitespace-nowrap"
+      >
+        <Calendar className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+        <span>{sla.stageLabel} • {sla.countdownText}</span>
+      </span>
     );
   }
 
   return (
-    <div className="flex flex-col items-start gap-1">
-      {/* 1. Contact Stage Indicator */}
-      {showStage && (
-        <div className="flex items-center gap-1.5">
-          {sla.isFirstContact ? (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-extrabold uppercase tracking-wider bg-purple-500/10 text-purple-700 dark:text-purple-400 border border-purple-500/20 font-mono">
-              <PhoneCall className="w-2.5 h-2.5" />
-              <span>1st Contact</span>
-            </span>
-          ) : (
-            <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[10px] font-extrabold uppercase tracking-wider bg-sky-500/10 text-sky-700 dark:text-sky-400 border border-sky-500/20 font-mono">
-              <span>{sla.stageLabel}</span>
-            </span>
-          )}
-        </div>
-      )}
-
-      {/* 2. SLA Countdown & Breach Pill */}
-      {sla.statusType === "FIRST_CONTACT_BREACHED" && (
-        <div className="flex flex-col items-start gap-0.5 animate-pulse">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-black bg-rose-500/20 text-rose-700 dark:text-rose-300 border border-rose-500/40">
-            <AlertTriangle className="w-3 h-3 text-rose-600 dark:text-rose-400 shrink-0" />
-            <span>SLA BREACHED</span>
-          </span>
-          <span className="text-[10px] font-black text-rose-600 dark:text-rose-400 tracking-tight">
-            🚨 Contact Immediately!
-          </span>
-          <span className="text-[9px] text-zinc-400 font-mono">
-            {sla.countdownText}
-          </span>
-        </div>
-      )}
-
-      {sla.statusType === "FIRST_CONTACT_ACTIVE" && (
-        <div className="flex flex-col items-start gap-0.5">
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] border ${sla.badgeClass}`}>
-            <Clock className="w-3 h-3 shrink-0" />
-            <span>⏳ 24h SLA: {sla.countdownText}</span>
-          </span>
-          <span className="text-[10px] text-zinc-400 font-mono">
-            Target: {sla.formattedTargetTime}
-          </span>
-        </div>
-      )}
-
-      {sla.statusType === "FOLLOW_UP_OVERDUE" && (
-        <div className="flex flex-col items-start gap-0.5">
-          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-rose-500/15 text-rose-700 dark:text-rose-300 border border-rose-500/30">
-            <AlertCircle className="w-3 h-3 text-rose-600 dark:text-rose-400 shrink-0" />
-            <span>⚠️ Overdue Follow-up</span>
-          </span>
-          <span className="text-[10px] font-semibold text-rose-600 dark:text-rose-400 font-mono">
-            {sla.countdownText}
-          </span>
-        </div>
-      )}
-
-      {sla.statusType === "FOLLOW_UP_ACTIVE" && (
-        <div className="flex flex-col items-start gap-0.5">
-          <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] border ${sla.badgeClass}`}>
-            <Calendar className="w-3 h-3 shrink-0" />
-            <span>📅 {sla.countdownText}</span>
-          </span>
-          <span className="text-[10px] text-zinc-400 font-mono">
-            {sla.formattedTargetTime}
-          </span>
-        </div>
-      )}
-
-      {sla.statusType === "NO_SCHEDULE" && (
-        <span className="text-[11px] text-zinc-400">Not scheduled</span>
-      )}
-    </div>
+    <span className="text-[11px] text-zinc-400 dark:text-zinc-500 select-none whitespace-nowrap">
+      {showStage && lead.callCount ? sla.stageLabel : "Not scheduled"}
+    </span>
   );
 }
