@@ -49,6 +49,7 @@ import LeadDetailDrawer from "../../components/leads/LeadDetailDrawer";
 import LeadFormModal from "../../components/leads/LeadFormModal";
 import LeadImportModal from "../../components/leads/LeadImportModal";
 import LeadAnalyticsDashboard from "../../components/leads/LeadAnalyticsDashboard";
+import LeadSlaBadge from "../../components/leads/LeadSlaBadge";
 
 const QUALITY_BADGES: Record<string, { label: string; icon: any; cls: string }> = {
   HOT: { label: "HOT", icon: Flame, cls: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30" },
@@ -609,7 +610,9 @@ export default function LeadsManagementPage() {
                   className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
                 >
                   <option value="">All Schedules</option>
-                  <option value="overdue">🚨 Overdue Only</option>
+                  <option value="breached">🚨 SLA Breached (24h Exceeded)</option>
+                  <option value="first_contact">⏳ 1st Contact Due (Within 24h)</option>
+                  <option value="overdue">⚠️ Overdue Follow-ups</option>
                   <option value="today">📅 Due Today</option>
                   <option value="upcoming">⏳ Upcoming (Next 7 Days)</option>
                   <option value="none">⚪ Unscheduled</option>
@@ -730,7 +733,7 @@ export default function LeadsManagementPage() {
                       <th className="p-3">College & Branch</th>
                       <th className="p-3">Quality Tier</th>
                       <th className="p-3">Call Velocity</th>
-                      <th className="p-3">Next Call Time</th>
+                      <th className="p-3">Stage & SLA Schedule</th>
                       <th className="p-3">Assigned Counselor</th>
                       <th className="p-3">Status</th>
                       <th className="p-3 text-right">Quick Actions</th>
@@ -834,31 +837,9 @@ export default function LeadsManagementPage() {
                             </div>
                           </td>
 
-                          {/* Next Call Time */}
+                          {/* Stage & SLA Schedule */}
                           <td className="p-3">
-                            {nextCallDate ? (
-                              <div
-                                className={`text-[11px] font-semibold flex items-center gap-1 ${
-                                  isOverdue
-                                    ? "text-rose-600 dark:text-rose-400 font-bold"
-                                    : "text-zinc-700 dark:text-zinc-300"
-                                }`}
-                              >
-                                <Clock className="w-3 h-3 shrink-0" />
-                                <span>
-                                  {nextCallDate.toLocaleDateString("en-IN", {
-                                    day: "numeric",
-                                    month: "short",
-                                  })}{" "}
-                                  {nextCallDate.toLocaleTimeString("en-IN", {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  })}
-                                </span>
-                              </div>
-                            ) : (
-                              <span className="text-[11px] text-zinc-400">Not set</span>
-                            )}
+                            <LeadSlaBadge lead={lead} showStage={true} />
                           </td>
 
                           {/* Assigned Rep / Staff */}

@@ -31,6 +31,8 @@ import {
 } from "../../store";
 import { formatTeamMemberLabel } from "../../utils/permissions";
 import LogCallModal from "./LogCallModal";
+import { getLeadSlaInfo } from "../../utils/leads-sla";
+import LeadSlaBadge from "./LeadSlaBadge";
 
 interface LeadDetailDrawerProps {
   leadId: string | null;
@@ -134,6 +136,7 @@ export default function LeadDetailDrawer({
   const qualityInfo = QUALITY_CONFIG[lead?.quality || "WARM"] || QUALITY_CONFIG.WARM;
   const QualityIcon = qualityInfo.icon;
 
+  const sla = lead ? getLeadSlaInfo(lead) : null;
   const nextCallDate = lead?.nextCallAt ? new Date(lead.nextCallAt) : null;
   const isOverdue =
     nextCallDate &&
@@ -187,6 +190,9 @@ export default function LeadDetailDrawer({
                   >
                     {lead?.status?.replace(/_/g, " ") || "NEW"}
                   </span>
+
+                  {/* Stage & SLA Schedule Pill */}
+                  {lead && <LeadSlaBadge lead={lead} showStage={true} />}
                 </div>
               </div>
             </div>
@@ -331,35 +337,55 @@ export default function LeadDetailDrawer({
                   </div>
                 )}
 
-                {/* Next Call Schedule Alert Box */}
-                {nextCallDate && (
+                {/* SLA & Schedule Alert Box */}
+                {sla && sla.statusType !== "TERMINAL" && sla.statusType !== "NO_SCHEDULE" && (
                   <div
-                    className={`p-3 rounded-xl border flex items-center justify-between ${
-                      isOverdue
-                        ? "bg-rose-500/10 border-rose-500/30 text-rose-600 dark:text-rose-400"
-                        : "bg-indigo-500/10 border-indigo-500/30 text-indigo-600 dark:text-indigo-400"
+                    className={`p-3.5 rounded-xl border flex items-center justify-between gap-3 ${
+                      sla.isBreached || sla.isOverdue
+                        ? "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300"
+                        : sla.isFirstContact
+                        ? "bg-purple-500/10 border-purple-500/30 text-purple-700 dark:text-purple-300"
+                        : "bg-indigo-500/10 border-indigo-500/30 text-indigo-700 dark:text-indigo-300"
                     }`}
                   >
-                    <div className="flex items-center gap-2">
-                      <Clock className="w-4 h-4" />
+                    <div className="flex items-center gap-2.5">
+                      {sla.isBreached ? (
+                        <AlertTriangle className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 animate-bounce" />
+                      ) : (
+                        <Clock className="w-5 h-5 shrink-0" />
+                      )}
                       <div>
-                        <span className="text-xs font-bold block">
-                          {isOverdue ? "Overdue Follow-Up Call" : "Next Scheduled Call"}
-                        </span>
-                        <span className="text-[11px] font-mono">
-                          {nextCallDate.toLocaleString("en-IN", {
-                            dateStyle: "medium",
-                            timeStyle: "short",
-                          })}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-xs font-black">
+                            {sla.statusType === "FIRST_CONTACT_BREACHED"
+                              ? "🚨 SLA BREACHED: 24h Window Expired"
+                              : sla.statusType === "FIRST_CONTACT_ACTIVE"
+                              ? "⏳ 24h First Contact SLA Active"
+                              : sla.statusType === "FOLLOW_UP_OVERDUE"
+                              ? "⚠️ Overdue Follow-up Call"
+                              : "📅 Scheduled Follow-up"}
+                          </span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.2 rounded bg-white/60 dark:bg-zinc-900/60 font-bold">
+                            {sla.countdownText}
+                          </span>
+                        </div>
+                        <span className="text-[11px] opacity-80 block mt-0.5 font-mono">
+                          {sla.isFirstContact
+                            ? `Target: Contact within 24h of arrival (${sla.formattedTargetTime})`
+                            : `Due: ${sla.formattedTargetTime}`}
                         </span>
                       </div>
                     </div>
 
                     <button
                       onClick={() => setShowLogCall(true)}
-                      className="px-2.5 py-1 rounded-lg text-xs font-bold bg-white dark:bg-zinc-900 shadow-xs border border-current"
+                      className={`px-3 py-1.5 rounded-xl text-xs font-black shadow-xs shrink-0 transition-transform active:scale-95 ${
+                        sla.isBreached || sla.isOverdue
+                          ? "bg-rose-600 hover:bg-rose-700 text-white animate-pulse"
+                          : "bg-white dark:bg-zinc-900 border border-current hover:opacity-80"
+                      }`}
                     >
-                      Call Now
+                      {sla.isFirstContact ? "Contact Now" : "Call Now"}
                     </button>
                   </div>
                 )}
