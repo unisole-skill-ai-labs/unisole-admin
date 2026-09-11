@@ -192,7 +192,9 @@ export default function LeadDetailDrawer({
                   </span>
 
                   {/* Stage & SLA Schedule Pill */}
-                  {lead && <LeadSlaBadge lead={lead} showStage={true} />}
+                  {lead && !["CONVERTED", "LOST", "JUNK", "NOT_A_LEAD"].includes(lead.status) && (
+                    <LeadSlaBadge lead={lead} showStage={true} />
+                  )}
                 </div>
               </div>
             </div>

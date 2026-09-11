@@ -18,6 +18,36 @@ export interface LeadSlaInfo {
     | "TERMINAL";
 }
 
+export function formatLeadDateTime(dateObj: Date): string {
+  const now = new Date();
+  const isToday =
+    dateObj.getDate() === now.getDate() &&
+    dateObj.getMonth() === now.getMonth() &&
+    dateObj.getFullYear() === now.getFullYear();
+
+  const tomorrow = new Date(now);
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  const isTomorrow =
+    dateObj.getDate() === tomorrow.getDate() &&
+    dateObj.getMonth() === tomorrow.getMonth() &&
+    dateObj.getFullYear() === tomorrow.getFullYear();
+
+  const timePart = dateObj.toLocaleTimeString("en-IN", {
+    hour: "numeric",
+    minute: "2-digit",
+    hour12: true,
+  });
+
+  if (isToday) return `Today, ${timePart}`;
+  if (isTomorrow) return `Tomorrow, ${timePart}`;
+
+  const datePart = dateObj.toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+  });
+  return `${datePart}, ${timePart}`;
+}
+
 /**
  * Calculates real-time 24-hour SLA and Follow-up progression for a lead
  */
@@ -70,12 +100,7 @@ export function getLeadSlaInfo(lead: {
         isDueSoon: false,
         timeRemainingMs: diff,
         countdownText: breachStr,
-        formattedTargetTime: new Date(deadline).toLocaleString("en-IN", {
-          day: "numeric",
-          month: "short",
-          hour: "2-digit",
-          minute: "2-digit",
-        }),
+        formattedTargetTime: formatLeadDateTime(new Date(deadline)),
         badgeClass: "bg-rose-500/10 text-rose-500 dark:text-rose-400 border-rose-500/20",
         textClass: "text-rose-600 dark:text-rose-400 font-medium",
         statusType: "FIRST_CONTACT_BREACHED",
@@ -92,12 +117,7 @@ export function getLeadSlaInfo(lead: {
       isDueSoon,
       timeRemainingMs: diff,
       countdownText: leftStr,
-      formattedTargetTime: new Date(deadline).toLocaleString("en-IN", {
-        day: "numeric",
-        month: "short",
-        hour: "2-digit",
-        minute: "2-digit",
-      }),
+      formattedTargetTime: formatLeadDateTime(new Date(deadline)),
       badgeClass: isDueSoon
         ? "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20"
         : "bg-purple-500/10 text-purple-600 dark:text-purple-300 border-purple-500/20",
@@ -133,12 +153,7 @@ export function getLeadSlaInfo(lead: {
   const mins = Math.floor((absDiff % (1000 * 60 * 60)) / (1000 * 60));
   const days = Math.floor(hours / 24);
 
-  const formattedTargetTime = new Date(nextCallTime).toLocaleString("en-IN", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
+  const formattedTargetTime = formatLeadDateTime(new Date(nextCallTime));
 
   if (isOverdue) {
     const overdueStr = days > 0 ? `${days}d overdue` : hours > 0 ? `${hours}h overdue` : `${mins}m overdue`;
