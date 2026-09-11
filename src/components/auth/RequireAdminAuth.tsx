@@ -1,7 +1,7 @@
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useState, useCallback, useRef } from "react";
 import { Navigate, Outlet } from "react-router-dom";
 import { useDispatch, useSelector } from "react-redux";
-import { logout } from "../../store/auth-slice";
+import { logout, updateUser } from "../../store/auth-slice";
 import { Activity } from "lucide-react";
 
 export default function RequireAdminAuth() {
@@ -9,6 +9,48 @@ export default function RequireAdminAuth() {
   const { token, isAuthenticated } = useSelector((s: any) => s.auth);
   const dispatch = useDispatch();
   const [authChecked, setAuthChecked] = useState(!token);
+  const isVerifyingRef = useRef(false);
+
+  const verifySession = useCallback(
+    async (isInitial = false) => {
+      if (!token || isVerifyingRef.current) return;
+      isVerifyingRef.current = true;
+
+      try {
+        const response = await fetch(`${baseUrl}/api/auth/me`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+
+        if (response.status === 401 || response.status === 403) {
+          dispatch(logout());
+          if (isInitial) setAuthChecked(true);
+          return;
+        }
+
+        if (!response.ok) {
+          if (isInitial) setAuthChecked(true);
+          return;
+        }
+
+        const resData = await response.json();
+        const freshUser = resData?.data || resData;
+        const role = freshUser?.role;
+        if (role && !["SUPER_ADMIN", "ADMIN", "MEMBER", "SALES"].includes(role)) {
+          dispatch(logout());
+        } else if (freshUser) {
+          dispatch(updateUser(freshUser));
+        }
+      } catch {
+        // Network failure / temporary connection hiccup -> keep local session valid!
+      } finally {
+        isVerifyingRef.current = false;
+        if (isInitial) {
+          setAuthChecked(true);
+        }
+      }
+    },
+    [token, baseUrl, dispatch]
+  );
 
   useEffect(() => {
     if (!token) {
@@ -16,46 +58,19 @@ export default function RequireAdminAuth() {
       return;
     }
 
-    let cancelled = false;
+    // Initial check on mount / page reload
+    verifySession(true);
 
-    fetch(`${baseUrl}/api/auth/me`, {
-      headers: { Authorization: `Bearer ${token}` },
-    })
-      .then((response) => {
-        if (response.status === 401 || response.status === 403) {
-          if (!cancelled) {
-            dispatch(logout());
-            setAuthChecked(true);
-          }
-          return null;
-        }
-        if (!response.ok) {
-          // Other status (e.g. 500 / 502 / restarting) - keep local session intact
-          if (!cancelled) setAuthChecked(true);
-          return null;
-        }
-        return response.json();
-      })
-      .then((resData) => {
-        if (!resData || cancelled) return;
-        const user = resData.data || resData;
-        const role = user?.role;
-        if (role && !["SUPER_ADMIN", "ADMIN", "MEMBER", "SALES"].includes(role)) {
-          dispatch(logout());
-        }
-        setAuthChecked(true);
-      })
-      .catch(() => {
-        // Network failure / temporary connection hiccup -> DO NOT log out, keep session valid!
-        if (!cancelled) {
-          setAuthChecked(true);
-        }
-      });
-
-    return () => {
-      cancelled = true;
+    // Auto-sync session and permissions when window/tab regains focus
+    const handleFocus = () => {
+      verifySession(false);
     };
-  }, [token, baseUrl, dispatch]);
+
+    window.addEventListener("focus", handleFocus);
+    return () => {
+      window.removeEventListener("focus", handleFocus);
+    };
+  }, [token, verifySession]);
 
   if (!token) {
     return <Navigate to="/login" replace />;
