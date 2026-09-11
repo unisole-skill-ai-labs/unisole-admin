@@ -42,6 +42,7 @@ import LogCallModal from "./LogCallModal";
 import LeadDetailDrawer from "./LeadDetailDrawer";
 import LeadFormModal from "./LeadFormModal";
 import LeadImportModal from "./LeadImportModal";
+import LeadSlaBadge from "./LeadSlaBadge";
 
 interface CollegeLeadsSectionProps {
   collegeId: string;
@@ -536,10 +537,12 @@ export default function CollegeLeadsSection({
             <select
               value={callDueFilter}
               onChange={(e) => setCallDueFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100"
+              className="w-full px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100 font-medium"
             >
               <option value="ALL">All Schedules</option>
-              <option value="overdue">🚨 Overdue Only</option>
+              <option value="breached">🚨 SLA Breached (24h Exceeded)</option>
+              <option value="first_contact">⏳ 1st Contact Due (Within 24h)</option>
+              <option value="overdue">⚠️ Overdue Follow-ups</option>
               <option value="today">📅 Due Today</option>
               <option value="upcoming">⏳ Upcoming</option>
             </select>
@@ -639,10 +642,12 @@ export default function CollegeLeadsSection({
                   <th className="p-3">Branch</th>
                   <th className="p-3">Quality</th>
                   <th className="p-3">Calls</th>
-                  <th className="p-3">Next Call Time</th>
+                  <th className="p-3 whitespace-nowrap">Stage & SLA Schedule</th>
                   <th className="p-3">Assigned Rep / Staff</th>
                   <th className="p-3">Status</th>
-                  <th className="p-3 text-right">Actions</th>
+                  <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-900 z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[150px]">
+                    Actions
+                  </th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-xs">
@@ -746,36 +751,9 @@ export default function CollegeLeadsSection({
                         </button>
                       </td>
 
-                      {/* Next Call Time */}
-                      <td className="p-3">
-                        {nextCallDate ? (
-                          <div
-                            className={`text-[11px] font-semibold flex items-center gap-1 ${
-                              isOverdue
-                                ? "text-rose-600 dark:text-rose-400 font-bold"
-                                : "text-zinc-700 dark:text-zinc-300"
-                            }`}
-                          >
-                            <Clock className="w-3 h-3 shrink-0" />
-                            <span>
-                              {nextCallDate.toLocaleDateString("en-IN", {
-                                day: "numeric",
-                                month: "short",
-                              })}{" "}
-                              {nextCallDate.toLocaleTimeString("en-IN", {
-                                hour: "2-digit",
-                                minute: "2-digit",
-                              })}
-                            </span>
-                            {isOverdue && (
-                              <span className="text-[9px] px-1 py-0.2 rounded bg-rose-100 dark:bg-rose-950 text-rose-600 dark:text-rose-400 font-black">
-                                OVERDUE
-                              </span>
-                            )}
-                          </div>
-                        ) : (
-                          <span className="text-[11px] text-zinc-400">Not set</span>
-                        )}
+                      {/* Stage & SLA Schedule */}
+                      <td className="p-3 whitespace-nowrap">
+                        <LeadSlaBadge lead={lead} showStage={true} />
                       </td>
 
                       {/* Assigned Rep / Staff */}
@@ -823,7 +801,11 @@ export default function CollegeLeadsSection({
                       </td>
 
                       {/* Actions */}
-                      <td className="p-3 text-right">
+                      <td
+                        className={`p-3 text-right sticky right-0 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[150px] ${
+                          isSelected ? "bg-indigo-50/95 dark:bg-zinc-900" : "bg-white/95 dark:bg-zinc-900/95"
+                        }`}
+                      >
                         <div className="flex items-center justify-end gap-1">
                           <button
                             onClick={() => setSelectedLeadForCall(lead)}
