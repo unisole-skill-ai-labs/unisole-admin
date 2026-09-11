@@ -105,6 +105,9 @@ export default function CollegeLeadsSection({
   onSelectBranch,
 }: CollegeLeadsSectionProps) {
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
+  const currentUser = useSelector((s: any) => s.auth.user);
+  const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
+  const isAdmin = currentUser?.role === "ADMIN" || isSuperAdmin;
 
   // Filters state
   const [search, setSearch] = useState("");
@@ -138,11 +141,11 @@ export default function CollegeLeadsSection({
       search: search.trim() || undefined,
       quality: qualityFilter !== "ALL" ? qualityFilter : undefined,
       status: statusFilter !== "ALL" ? statusFilter : undefined,
-      assignedToUserId: counselorFilter !== "ALL" ? counselorFilter : undefined,
+      assignedToUserId: isAdmin ? (counselorFilter !== "ALL" ? counselorFilter : undefined) : currentUser?.id,
       nextCallDue: callDueFilter !== "ALL" ? (callDueFilter as any) : undefined,
       excludeNonLeads: scope === "active" ? true : undefined,
     };
-  }, [baseUrl, collegeId, effectiveBranch, search, qualityFilter, statusFilter, counselorFilter, callDueFilter, scope]);
+  }, [baseUrl, collegeId, effectiveBranch, search, qualityFilter, statusFilter, counselorFilter, callDueFilter, scope, isAdmin, currentUser?.id]);
 
   const { data: leadsData, isLoading, isFetching, refetch } = useGetLeadsQuery(queryParams);
   const { data: metaData } = useGetLeadsMetaQuery({ baseUrl });
@@ -511,20 +514,22 @@ export default function CollegeLeadsSection({
           </div>
 
           {/* Assigned Rep Filter */}
-          <div>
-            <select
-              value={counselorFilter}
-              onChange={(e) => setCounselorFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100 font-medium"
-            >
-              <option value="ALL">All Assigned Reps / Staff</option>
-              {meta.teamMembers.map((m: any) => (
-                <option key={m.id} value={m.id}>
-                  {formatTeamMemberLabel(m)}
-                </option>
-              ))}
-            </select>
-          </div>
+          {isAdmin && (
+            <div>
+              <select
+                value={counselorFilter}
+                onChange={(e) => setCounselorFilter(e.target.value)}
+                className="w-full px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100 font-medium"
+              >
+                <option value="ALL">All Assigned Reps / Staff</option>
+                {meta.teamMembers.map((m: any) => (
+                  <option key={m.id} value={m.id}>
+                    {formatTeamMemberLabel(m)}
+                  </option>
+                ))}
+              </select>
+            </div>
+          )}
 
           {/* Next Call Due Filter */}
           <div>
@@ -548,26 +553,30 @@ export default function CollegeLeadsSection({
               {selectedLeadIds.length} lead{selectedLeadIds.length > 1 ? "s" : ""} selected
             </span>
             <div className="flex items-center gap-2">
-              <select
-                value={bulkAssignCounselor}
-                onChange={(e) => setBulkAssignCounselor(e.target.value)}
-                className="px-2 py-1 rounded-lg border border-indigo-300 dark:border-indigo-800 bg-white dark:bg-zinc-900 text-xs font-medium text-zinc-900 dark:text-zinc-100"
-              >
-                <option value="">Assign To Team Member / Sales Rep...</option>
-                <option value="UNASSIGNED">Unassign</option>
-                {meta.teamMembers.map((m: any) => (
-                  <option key={m.id} value={m.id}>
-                    {formatTeamMemberLabel(m)}
-                  </option>
-                ))}
-              </select>
-              <button
-                onClick={handleBulkAssign}
-                disabled={!bulkAssignCounselor}
-                className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg disabled:opacity-50 cursor-pointer"
-              >
-                Apply
-              </button>
+              {isAdmin && (
+                <>
+                  <select
+                    value={bulkAssignCounselor}
+                    onChange={(e) => setBulkAssignCounselor(e.target.value)}
+                    className="px-2 py-1 rounded-lg border border-indigo-300 dark:border-indigo-800 bg-white dark:bg-zinc-900 text-xs font-medium text-zinc-900 dark:text-zinc-100"
+                  >
+                    <option value="">Assign To Team Member / Sales Rep...</option>
+                    <option value="UNASSIGNED">Unassign</option>
+                    {meta.teamMembers.map((m: any) => (
+                      <option key={m.id} value={m.id}>
+                        {formatTeamMemberLabel(m)}
+                      </option>
+                    ))}
+                  </select>
+                  <button
+                    onClick={handleBulkAssign}
+                    disabled={!bulkAssignCounselor}
+                    className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg disabled:opacity-50 cursor-pointer"
+                  >
+                    Apply
+                  </button>
+                </>
+              )}
               <button
                 onClick={handleBulkMarkNonLead}
                 className="px-2.5 py-1 bg-zinc-200 hover:bg-zinc-300 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-800 dark:text-zinc-200 font-bold rounded-lg cursor-pointer"
@@ -771,18 +780,24 @@ export default function CollegeLeadsSection({
 
                       {/* Assigned Rep / Staff */}
                       <td className="p-3">
-                        <select
-                          value={lead.assignedToUserId || ""}
-                          onChange={(e) => handleInlineAssignee(lead.id, e.target.value)}
-                          className="text-xs font-semibold px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 max-w-[150px]"
-                        >
-                          <option value="">Unassigned</option>
-                          {meta.teamMembers.map((m: any) => (
-                            <option key={m.id} value={m.id}>
-                              {formatTeamMemberLabel(m)}
-                            </option>
-                          ))}
-                        </select>
+                        {!isAdmin ? (
+                          <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                            {lead.assignedToUser?.name || currentUser?.name || "Assigned to You"}
+                          </span>
+                        ) : (
+                          <select
+                            value={lead.assignedToUserId || ""}
+                            onChange={(e) => handleInlineAssignee(lead.id, e.target.value)}
+                            className="text-xs font-semibold px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 max-w-[150px]"
+                          >
+                            <option value="">Unassigned</option>
+                            {meta.teamMembers.map((m: any) => (
+                              <option key={m.id} value={m.id}>
+                                {formatTeamMemberLabel(m)}
+                              </option>
+                            ))}
+                          </select>
+                        )}
                       </td>
 
                       {/* Status */}

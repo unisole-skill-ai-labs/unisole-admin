@@ -118,7 +118,7 @@ export default function LeadsManagementPage() {
     search: search.trim() || undefined,
     collegeId: collegeId || undefined,
     branch: branch || undefined,
-    assignedToUserId: isSales ? undefined : (assignedToUserId || undefined),
+    assignedToUserId: isAdmin ? (assignedToUserId || undefined) : currentUser?.id,
     quality: quality || undefined,
     status: effectiveStatus,
     excludeNonLeads: scopeFilter === "ACTIVE" && !status ? true : undefined,
@@ -324,17 +324,17 @@ export default function LeadsManagementPage() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
-                  {isSales ? "My Assigned Leads" : "Lead Management CRM"}
+                  {!isAdmin ? "My Assigned Leads" : "Lead Management CRM"}
                 </h1>
-                {isSales && (
+                {!isAdmin && (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
                     <UserCheck className="w-3.5 h-3.5" />
-                    <span>Sales Rep: {currentUser?.name || currentUser?.phone || "Mokta"}</span>
+                    <span>Assigned to: {currentUser?.name || currentUser?.phone || "Me"}</span>
                   </span>
                 )}
               </div>
               <p className="text-xs text-zinc-500 dark:text-zinc-400">
-                {isSales
+                {!isAdmin
                   ? "Access your assigned prospective students, log calling notes, and update disposition status."
                   : "Counselor assignments, quality scoring, call logging & conversion tracking"}
               </p>
@@ -373,7 +373,7 @@ export default function LeadsManagementPage() {
             </button>
           </div>
 
-          {!isSales && (
+          {isAdmin && (
             <button
               onClick={handleSyncUsers}
               disabled={isSyncingUsers}
@@ -385,7 +385,7 @@ export default function LeadsManagementPage() {
             </button>
           )}
 
-          {!isSales && (
+          {isAdmin && (
             <button
               onClick={() => setShowImportModal(true)}
               className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-700 dark:text-zinc-300 text-xs font-bold hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors shadow-xs cursor-pointer"
@@ -440,7 +440,7 @@ export default function LeadsManagementPage() {
           baseUrl={baseUrl}
           collegeId={collegeId || undefined}
           branch={branch || undefined}
-          assignedToUserId={assignedToUserId || undefined}
+          assignedToUserId={isAdmin ? (assignedToUserId || undefined) : currentUser?.id}
         />
       ) : (
         <div className="space-y-4">
@@ -544,7 +544,7 @@ export default function LeadsManagementPage() {
               </div>
 
               {/* Assigned Rep / Team Member Filter (Admins Only) */}
-              {!isSales && (
+              {isAdmin && (
                 <div>
                   <select
                     value={assignedToUserId}
@@ -629,7 +629,7 @@ export default function LeadsManagementPage() {
 
               <div className="flex items-center gap-2 flex-wrap">
                 {/* Bulk Assign (Admins Only) */}
-                {!isSales && (
+                {isAdmin && (
                   <select
                     value={bulkAssignee}
                     onChange={(e) => {
@@ -863,9 +863,9 @@ export default function LeadsManagementPage() {
 
                           {/* Assigned Rep / Staff */}
                           <td className="p-3">
-                            {isSales ? (
+                            {!isAdmin ? (
                               <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                                {lead.assignedToUser?.name || "Assigned"}
+                                {lead.assignedToUser?.name || currentUser?.name || "Assigned to You"}
                               </span>
                             ) : (
                               <select

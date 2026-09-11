@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import { useSelector } from "react-redux";
 import {
   X,
   UserPlus,
@@ -42,6 +43,10 @@ export default function LeadFormModal({
   initialCollegeName,
   initialBranch,
 }: LeadFormModalProps) {
+  const currentUser = useSelector((s: any) => s.auth.user);
+  const isSuperAdmin = currentUser?.role === "SUPER_ADMIN";
+  const isAdmin = currentUser?.role === "ADMIN" || isSuperAdmin;
+
   const [createLead, { isLoading: isCreating }] = useCreateLeadMutation();
   const [updateLead, { isLoading: isUpdating }] = useUpdateLeadMutation();
 
@@ -55,7 +60,9 @@ export default function LeadFormModal({
   const [branch, setBranch] = useState(lead?.branch || initialBranch || "");
   const [customBranch, setCustomBranch] = useState("");
   const [yearOfStudy, setYearOfStudy] = useState(lead?.yearOfStudy || "1st yr");
-  const [assignedToUserId, setAssignedToUserId] = useState(lead?.assignedToUserId || "");
+  const [assignedToUserId, setAssignedToUserId] = useState(
+    lead?.assignedToUserId || (!isAdmin ? currentUser?.id : "") || ""
+  );
   const [quality, setQuality] = useState(lead?.quality || "WARM");
   const [status, setStatus] = useState(lead?.status || "NEW");
   const [source, setSource] = useState(lead?.source || "COLLEGE_DRIVE");
@@ -95,7 +102,7 @@ export default function LeadFormModal({
       collegeName: collegeName || undefined,
       branch: finalBranch || undefined,
       yearOfStudy: yearOfStudy || undefined,
-      assignedToUserId: assignedToUserId || undefined,
+      assignedToUserId: isAdmin ? (assignedToUserId || undefined) : (currentUser?.id || undefined),
       quality,
       status,
       source,
@@ -282,18 +289,25 @@ export default function LeadFormModal({
               <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
                 Assign to Team Member / Sales Rep
               </label>
-              <select
-                value={assignedToUserId}
-                onChange={(e) => setAssignedToUserId(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100"
-              >
-                <option value="">Unassigned</option>
-                {teamMembers.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {formatTeamMemberLabel(m)}
-                  </option>
-                ))}
-              </select>
+              {!isAdmin ? (
+                <div className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-100 dark:bg-zinc-800/60 text-xs text-zinc-700 dark:text-zinc-300 font-semibold flex items-center gap-2">
+                  <User className="w-3.5 h-3.5 text-indigo-500" />
+                  <span>{currentUser?.name || currentUser?.phone || "Assigned to You"}</span>
+                </div>
+              ) : (
+                <select
+                  value={assignedToUserId}
+                  onChange={(e) => setAssignedToUserId(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100"
+                >
+                  <option value="">Unassigned</option>
+                  {teamMembers.map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {formatTeamMemberLabel(m)}
+                    </option>
+                  ))}
+                </select>
+              )}
             </div>
           </div>
 
