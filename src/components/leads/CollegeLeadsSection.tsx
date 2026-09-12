@@ -75,7 +75,7 @@ export default function CollegeLeadsSection({
   const [activeBranchFilter, setActiveBranchFilter] = useState<string>(branch || "ALL");
   const [scope, setScope] = useState<"active" | "non_leads" | "all">("active");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
-  const [counselorFilter, setCounselorFilter] = useState<string>("ALL");
+  const [counselorFilter, setCounselorFilter] = useState<string>("MY_LEADS");
   const [callDueFilter, setCallDueFilter] = useState<string>("ALL");
 
   // Selection state for bulk operations
@@ -93,6 +93,19 @@ export default function CollegeLeadsSection({
   // RTK Query hooks
   const effectiveBranch = branch || (activeBranchFilter !== "ALL" ? activeBranchFilter : undefined);
 
+  const effectiveAssignedToUserId = useMemo(() => {
+    if (!isAdmin) {
+      return currentUser?.id;
+    }
+    if (counselorFilter === "MY_LEADS") {
+      return currentUser?.id || undefined;
+    }
+    if (counselorFilter === "ALL" || !counselorFilter) {
+      return undefined;
+    }
+    return counselorFilter;
+  }, [isAdmin, counselorFilter, currentUser?.id]);
+
   const queryParams = useMemo(() => {
     const effectiveStatus =
       statusFilter !== "ALL" && SIMPLIFIED_STATUS_MAP[statusFilter]
@@ -107,11 +120,11 @@ export default function CollegeLeadsSection({
       branch: effectiveBranch,
       search: search.trim() || undefined,
       status: effectiveStatus,
-      assignedToUserId: isAdmin ? (counselorFilter !== "ALL" ? counselorFilter : undefined) : currentUser?.id,
+      assignedToUserId: effectiveAssignedToUserId,
       nextCallDue: callDueFilter !== "ALL" ? (callDueFilter as any) : undefined,
       excludeNonLeads: scope === "active" ? true : undefined,
     };
-  }, [baseUrl, collegeId, effectiveBranch, search, statusFilter, counselorFilter, callDueFilter, scope, isAdmin, currentUser?.id]);
+  }, [baseUrl, collegeId, effectiveBranch, search, statusFilter, effectiveAssignedToUserId, callDueFilter, scope]);
 
   const { data: leadsData, isLoading, isFetching, refetch } = useGetLeadsQuery(queryParams);
   const { data: metaData } = useGetLeadsMetaQuery({ baseUrl });
@@ -467,12 +480,16 @@ export default function CollegeLeadsSection({
                 onChange={(e) => setCounselorFilter(e.target.value)}
                 className="w-full px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100 font-medium"
               >
-                <option value="ALL">All Assigned Reps / Staff</option>
-                {meta.teamMembers.map((m: any) => (
-                  <option key={m.id} value={m.id}>
-                    {formatTeamMemberLabel(m)}
-                  </option>
-                ))}
+                <option value="MY_LEADS">👤 My Assigned Leads (Default)</option>
+                <option value="ALL">🌐 All Assigned Reps / Staff</option>
+                <option value="unassigned">⚠️ Unassigned Leads</option>
+                <optgroup label="Filter by Team Member">
+                  {meta.teamMembers.map((m: any) => (
+                    <option key={m.id} value={m.id}>
+                      {m.id === currentUser?.id ? `👤 ${formatTeamMemberLabel(m)} (You)` : formatTeamMemberLabel(m)}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </div>
           )}
