@@ -56,6 +56,8 @@ import {
   getSimplifiedLeadStatus,
   getSimplifiedStatusConfig,
   getStatusUpdatePayload,
+  OBJECTION_REASON_OPTIONS,
+  getObjectionReasonConfig,
 } from "../../utils/leadStatus";
 
 export default function LeadsManagementPage() {
@@ -75,6 +77,7 @@ export default function LeadsManagementPage() {
   const [branch, setBranch] = useState("");
   const [assignedToUserId, setAssignedToUserId] = useState<string>("MY_LEADS");
   const [status, setStatus] = useState("");
+  const [subStatus, setSubStatus] = useState("");
   const [nextCallDue, setNextCallDue] = useState<any>("");
 
   // Sync Notification Banner
@@ -124,6 +127,7 @@ export default function LeadsManagementPage() {
     branch: branch || undefined,
     assignedToUserId: effectiveAssignedToUserId,
     status: effectiveStatus,
+    subStatus: subStatus || undefined,
     excludeNonLeads: scopeFilter === "ACTIVE" && !status ? true : undefined,
     nextCallDue: nextCallDue || undefined,
   });
@@ -291,7 +295,7 @@ export default function LeadsManagementPage() {
   };
 
   const hasActiveFilters = Boolean(
-    search || collegeId || branch || (isAdmin ? assignedToUserId !== "MY_LEADS" : false) || status || nextCallDue
+    search || collegeId || branch || (isAdmin ? assignedToUserId !== "MY_LEADS" : false) || status || subStatus || nextCallDue
   );
 
   const clearFilters = () => {
@@ -300,6 +304,7 @@ export default function LeadsManagementPage() {
     setBranch("");
     setAssignedToUserId(isAdmin ? "MY_LEADS" : "");
     setStatus("");
+    setSubStatus("");
     setNextCallDue("");
   };
 
@@ -598,8 +603,8 @@ export default function LeadsManagementPage() {
               )}
             </div>
 
-            {/* Sub-Filters: Status & Next Call Due */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
+            {/* Sub-Filters: Status, Objection & Next Call Due */}
+            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
               {/* Status Filter */}
               <div>
                 <select
@@ -609,6 +614,22 @@ export default function LeadsManagementPage() {
                 >
                   <option value="">All Lead Statuses</option>
                   {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.key} value={opt.key}>
+                      {opt.emoji} {opt.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Objection / Reason Filter */}
+              <div>
+                <select
+                  value={subStatus}
+                  onChange={(e) => setSubStatus(e.target.value)}
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200 font-medium"
+                >
+                  <option value="">All Objections / Reasons</option>
+                  {OBJECTION_REASON_OPTIONS.map((opt) => (
                     <option key={opt.key} value={opt.key}>
                       {opt.emoji} {opt.label}
                     </option>
@@ -836,7 +857,7 @@ export default function LeadsManagementPage() {
                             )}
                           </td>
 
-                          {/* Unified Status Dropdown */}
+                          {/* Unified Status Dropdown & Objection */}
                           <td className="p-3 whitespace-nowrap">
                             <select
                               value={currentSimplifiedKey}
@@ -849,6 +870,19 @@ export default function LeadsManagementPage() {
                                 </option>
                               ))}
                             </select>
+                            {lead.subStatus && (
+                              <div className="mt-1">
+                                <span
+                                  className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                                    getObjectionReasonConfig(lead.subStatus)?.badgeCls || "bg-zinc-100 text-zinc-700 border-zinc-200"
+                                  }`}
+                                  title={getObjectionReasonConfig(lead.subStatus)?.label || lead.subStatus}
+                                >
+                                  <span>{getObjectionReasonConfig(lead.subStatus)?.emoji || "📌"}</span>
+                                  <span className="truncate max-w-[130px]">{getObjectionReasonConfig(lead.subStatus)?.label || lead.subStatus}</span>
+                                </span>
+                              </div>
+                            )}
                           </td>
 
                           {/* Quick Actions (Non-sticky: natural table layout, zero overlap) */}

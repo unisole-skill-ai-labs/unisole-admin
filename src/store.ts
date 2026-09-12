@@ -686,6 +686,7 @@ export const adminApi = createApi({
           if (arg.status) params.status = arg.status;
           if (arg.source) params.source = arg.source;
           if (arg.nextCallDue) params.nextCallDue = arg.nextCallDue;
+          if (arg.subStatus) params.subStatus = arg.subStatus;
           if (arg.excludeNonLeads !== undefined) params.excludeNonLeads = String(arg.excludeNonLeads);
           if (arg.dateFrom) params.dateFrom = arg.dateFrom;
           if (arg.dateTo) params.dateTo = arg.dateTo;

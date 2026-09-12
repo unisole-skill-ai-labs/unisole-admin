@@ -48,6 +48,8 @@ import {
   SIMPLIFIED_STATUS_OPTIONS,
   getSimplifiedLeadStatus,
   getStatusUpdatePayload,
+  OBJECTION_REASON_OPTIONS,
+  getObjectionReasonConfig,
 } from "../../utils/leadStatus";
 
 interface CollegeLeadsSectionProps {
@@ -77,6 +79,7 @@ export default function CollegeLeadsSection({
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [counselorFilter, setCounselorFilter] = useState<string>("MY_LEADS");
   const [callDueFilter, setCallDueFilter] = useState<string>("ALL");
+  const [objectionFilter, setObjectionFilter] = useState<string>("ALL");
 
   // Selection state for bulk operations
   const [selectedLeadIds, setSelectedLeadIds] = useState<string[]>([]);
@@ -120,11 +123,12 @@ export default function CollegeLeadsSection({
       branch: effectiveBranch,
       search: search.trim() || undefined,
       status: effectiveStatus,
+      subStatus: objectionFilter !== "ALL" ? objectionFilter : undefined,
       assignedToUserId: effectiveAssignedToUserId,
       nextCallDue: callDueFilter !== "ALL" ? (callDueFilter as any) : undefined,
       excludeNonLeads: scope === "active" ? true : undefined,
     };
-  }, [baseUrl, collegeId, effectiveBranch, search, statusFilter, effectiveAssignedToUserId, callDueFilter, scope]);
+  }, [baseUrl, collegeId, effectiveBranch, search, statusFilter, objectionFilter, effectiveAssignedToUserId, callDueFilter, scope]);
 
   const { data: leadsData, isLoading, isFetching, refetch } = useGetLeadsQuery(queryParams);
   const { data: metaData } = useGetLeadsMetaQuery({ baseUrl });
@@ -509,6 +513,22 @@ export default function CollegeLeadsSection({
               <option value="upcoming">⏳ Upcoming</option>
             </select>
           </div>
+
+          {/* Objection / Reason Filter */}
+          <div>
+            <select
+              value={objectionFilter}
+              onChange={(e) => setObjectionFilter(e.target.value)}
+              className="w-full px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100 font-medium"
+            >
+              <option value="ALL">All Objections / Reasons</option>
+              {OBJECTION_REASON_OPTIONS.map((opt) => (
+                <option key={opt.key} value={opt.key}>
+                  {opt.emoji} {opt.label}
+                </option>
+              ))}
+            </select>
+          </div>
         </div>
 
         {/* Bulk Action Strip */}
@@ -711,7 +731,7 @@ export default function CollegeLeadsSection({
                         )}
                       </td>
 
-                      {/* Status */}
+                      {/* Status & Objection */}
                       <td className="p-3 whitespace-nowrap">
                         <select
                           value={currentSimplifiedKey}
@@ -724,6 +744,19 @@ export default function CollegeLeadsSection({
                             </option>
                           ))}
                         </select>
+                        {lead.subStatus && (
+                          <div className="mt-1">
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                                getObjectionReasonConfig(lead.subStatus)?.badgeCls || "bg-zinc-100 text-zinc-700 border-zinc-200"
+                              }`}
+                              title={getObjectionReasonConfig(lead.subStatus)?.label || lead.subStatus}
+                            >
+                              <span>{getObjectionReasonConfig(lead.subStatus)?.emoji || "📌"}</span>
+                              <span className="truncate max-w-[130px]">{getObjectionReasonConfig(lead.subStatus)?.label || lead.subStatus}</span>
+                            </span>
+                          </div>
+                        )}
                       </td>
 
                       {/* Actions */}

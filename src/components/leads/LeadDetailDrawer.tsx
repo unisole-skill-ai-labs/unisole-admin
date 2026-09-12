@@ -38,6 +38,7 @@ import {
   SIMPLIFIED_STATUS_OPTIONS,
   getSimplifiedLeadStatus,
   getStatusUpdatePayload,
+  getObjectionReasonConfig,
 } from "../../utils/leadStatus";
 
 interface LeadDetailDrawerProps {
@@ -156,6 +157,18 @@ export default function LeadDetailDrawer({
                     <span>{currentStatusCfg.emoji}</span>
                     <span>{currentStatusCfg.label}</span>
                   </span>
+
+                  {/* Objection / Drop-off Reason Pill */}
+                  {lead?.subStatus && (
+                    <span
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border ${
+                        getObjectionReasonConfig(lead.subStatus)?.badgeCls || "bg-zinc-100 text-zinc-700 border-zinc-200"
+                      }`}
+                    >
+                      <span>{getObjectionReasonConfig(lead.subStatus)?.emoji || "📌"}</span>
+                      <span>{getObjectionReasonConfig(lead.subStatus)?.label || lead.subStatus}</span>
+                    </span>
+                  )}
 
                   {/* Stage & SLA Schedule Pill */}
                   {lead && !["CONVERTED", "LOST", "JUNK", "NOT_A_LEAD"].includes(lead.status) && (
@@ -426,11 +439,21 @@ export default function LeadDetailDrawer({
                           </span>
                         </div>
 
-                        {/* Outcome Badge */}
-                        <div>
+                        {/* Outcome & Objection Badge */}
+                        <div className="flex items-center gap-2 flex-wrap">
                           <span className="inline-block px-2 py-0.5 rounded-md text-[10px] font-bold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60">
                             {log.outcome?.replace(/_/g, " ")}
                           </span>
+                          {log.subStatus && (
+                            <span
+                              className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-bold border ${
+                                getObjectionReasonConfig(log.subStatus)?.badgeCls || "bg-zinc-100 text-zinc-700 border-zinc-200"
+                              }`}
+                            >
+                              <span>{getObjectionReasonConfig(log.subStatus)?.emoji || "📌"}</span>
+                              <span>{getObjectionReasonConfig(log.subStatus)?.label || log.subStatus}</span>
+                            </span>
+                          )}
                         </div>
 
                         {/* Notes Content */}
