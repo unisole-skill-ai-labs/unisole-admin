@@ -54,6 +54,12 @@ import { TaskItem, TaskSubtask } from "../../types";
 import TaskDrawer from "../../components/tasks/TaskDrawer";
 import Modal from "../../components/ui/Modal";
 import { cn } from "../../lib/utils";
+import {
+  SIMPLIFIED_STATUS_MAP,
+  SIMPLIFIED_STATUS_OPTIONS,
+  getSimplifiedLeadStatus,
+  getStatusUpdatePayload,
+} from "../../utils/leadStatus";
 
 interface MyWorkPageProps {
   baseUrl: string;
@@ -516,12 +522,13 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
     }
   };
 
-  const handleQuickLeadStatusChange = async (leadId: string, status: string) => {
+  const handleQuickLeadStatusChange = async (leadId: string, statusKey: string) => {
     try {
+      const payload = getStatusUpdatePayload(statusKey);
       await updateLead({
         baseUrl,
         id: leadId,
-        body: { status },
+        body: payload,
       }).unwrap();
       refetch();
     } catch (err) {
@@ -1731,35 +1738,27 @@ export const MyWorkPage: React.FC<MyWorkPageProps> = ({ baseUrl }) => {
                           <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
                             {lead.name}
                           </h3>
-                          <span
-                            className={cn(
-                              "text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1",
-                              lead.quality === "HOT"
-                                ? "bg-rose-500/10 text-rose-600 border border-rose-500/20"
-                                : lead.quality === "WARM"
-                                ? "bg-amber-500/10 text-amber-600 border border-amber-500/20"
-                                : "bg-blue-500/10 text-blue-600 border border-blue-500/20"
-                            )}
-                          >
-                            {lead.quality === "HOT" && <Flame className="w-3 h-3 text-rose-500" />}
-                            {lead.quality}
-                          </span>
 
-                          <select
-                            value={lead.status}
-                            onChange={(e) => handleQuickLeadStatusChange(lead.id, e.target.value)}
-                            className="text-[10px] font-bold px-2 py-0.5 rounded-full border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-1 focus:ring-indigo-500 cursor-pointer"
-                          >
-                            <option value="NEW">NEW</option>
-                            <option value="ATTEMPTED">ATTEMPTED</option>
-                            <option value="CONTACTED">CONTACTED</option>
-                            <option value="INTERESTED">INTERESTED</option>
-                            <option value="FOLLOW_UP_SCHEDULED">FOLLOW UP SCHEDULED</option>
-                            <option value="DEMO_GIVEN">DEMO GIVEN</option>
-                            <option value="CONVERTED">CONVERTED</option>
-                            <option value="LOST">LOST</option>
-                            <option value="NOT_A_LEAD">NOT A LEAD</option>
-                          </select>
+                          {(() => {
+                            const currKey = getSimplifiedLeadStatus(lead.status, lead.quality);
+                            const cfg = SIMPLIFIED_STATUS_MAP[currKey] || SIMPLIFIED_STATUS_MAP.NEW;
+                            return (
+                              <select
+                                value={currKey}
+                                onChange={(e) => handleQuickLeadStatusChange(lead.id, e.target.value)}
+                                className={cn(
+                                  "text-[10px] font-bold px-2 py-0.5 rounded-full border cursor-pointer",
+                                  cfg.badgeCls
+                                )}
+                              >
+                                {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
+                                  <option key={opt.key} value={opt.key}>
+                                    {opt.emoji} {opt.label}
+                                  </option>
+                                ))}
+                              </select>
+                            );
+                          })()}
 
                           {lead.source && (
                             <span className="text-[10px] font-mono text-zinc-400 font-semibold px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800">

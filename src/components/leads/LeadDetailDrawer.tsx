@@ -33,6 +33,12 @@ import { formatTeamMemberLabel } from "../../utils/permissions";
 import LogCallModal from "./LogCallModal";
 import { getLeadSlaInfo } from "../../utils/leads-sla";
 import LeadSlaBadge from "./LeadSlaBadge";
+import {
+  SIMPLIFIED_STATUS_MAP,
+  SIMPLIFIED_STATUS_OPTIONS,
+  getSimplifiedLeadStatus,
+  getStatusUpdatePayload,
+} from "../../utils/leadStatus";
 
 interface LeadDetailDrawerProps {
   leadId: string | null;
@@ -41,26 +47,6 @@ interface LeadDetailDrawerProps {
   onEditLead?: (lead: any) => void;
   teamMembers?: Array<any>;
 }
-
-const QUALITY_CONFIG: Record<string, { label: string; icon: any; badgeClass: string }> = {
-  HOT: { label: "Hot Lead", icon: Flame, badgeClass: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20" },
-  WARM: { label: "Warm Lead", icon: Sun, badgeClass: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20" },
-  COLD: { label: "Cold Lead", icon: Snowflake, badgeClass: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20" },
-  POOR: { label: "Poor Fit", icon: AlertTriangle, badgeClass: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20" },
-  UNQUALIFIED: { label: "Unqualified", icon: AlertTriangle, badgeClass: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20" },
-};
-
-const STATUS_COLORS: Record<string, string> = {
-  NEW: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/20",
-  ATTEMPTED: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/20",
-  CONTACTED: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/20",
-  INTERESTED: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20",
-  FOLLOW_UP_SCHEDULED: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/20",
-  DEMO_GIVEN: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/20",
-  CONVERTED: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20",
-  LOST: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/20",
-  JUNK: "bg-zinc-500/10 text-zinc-500 dark:text-zinc-500 border-zinc-500/20",
-};
 
 export default function LeadDetailDrawer({
   leadId,
@@ -83,6 +69,9 @@ export default function LeadDetailDrawer({
 
   if (!leadId) return null;
 
+  const currentSimplifiedKey = getSimplifiedLeadStatus(lead?.status, lead?.quality);
+  const currentStatusCfg = SIMPLIFIED_STATUS_MAP[currentSimplifiedKey] || SIMPLIFIED_STATUS_MAP.NEW;
+
   const handleAssigneeChange = async (userId: string) => {
     try {
       await updateLead({
@@ -95,24 +84,13 @@ export default function LeadDetailDrawer({
     }
   };
 
-  const handleQualityChange = async (quality: string) => {
+  const handleUnifiedStatusChange = async (statusKey: string) => {
     try {
+      const payload = getStatusUpdatePayload(statusKey);
       await updateLead({
         baseUrl,
         id: leadId,
-        data: { quality },
-      }).unwrap();
-    } catch (err) {
-      console.error("Failed to update quality:", err);
-    }
-  };
-
-  const handleStatusChange = async (status: string) => {
-    try {
-      await updateLead({
-        baseUrl,
-        id: leadId,
-        data: { status },
+        data: payload,
       }).unwrap();
     } catch (err) {
       console.error("Failed to update status:", err);
@@ -132,9 +110,6 @@ export default function LeadDetailDrawer({
   const whatsappUrl = `https://wa.me/${cleanPhone.startsWith("91") ? cleanPhone : "91" + cleanPhone}?text=${encodeURIComponent(
     `Hi ${lead?.name || "there"}, this is regarding your interest with Unisole.`
   )}`;
-
-  const qualityInfo = QUALITY_CONFIG[lead?.quality || "WARM"] || QUALITY_CONFIG.WARM;
-  const QualityIcon = qualityInfo.icon;
 
   const sla = lead ? getLeadSlaInfo(lead) : null;
   const nextCallDate = lead?.nextCallAt ? new Date(lead.nextCallAt) : null;
@@ -160,11 +135,11 @@ export default function LeadDetailDrawer({
             <div className="flex items-start gap-3.5">
               <div
                 className={`w-12 h-12 rounded-2xl flex items-center justify-center text-white font-extrabold text-lg shadow-md ${
-                  lead?.quality === "HOT"
+                  currentSimplifiedKey === "INTERESTED" || currentSimplifiedKey === "CONVERTED"
                     ? "bg-gradient-to-tr from-rose-500 to-amber-500"
-                    : lead?.quality === "WARM"
-                    ? "bg-gradient-to-tr from-amber-500 to-orange-500"
-                    : "bg-gradient-to-tr from-indigo-500 to-purple-600"
+                    : currentSimplifiedKey === "FOLLOW_UP"
+                    ? "bg-gradient-to-tr from-indigo-500 to-purple-600"
+                    : "bg-gradient-to-tr from-blue-500 to-indigo-600"
                 }`}
               >
                 {(lead?.name || "L").charAt(0).toUpperCase()}
@@ -174,21 +149,12 @@ export default function LeadDetailDrawer({
                   {lead?.name || "Lead Details"}
                 </h2>
                 <div className="flex items-center gap-2 mt-1 flex-wrap">
-                  {/* Quality Pill */}
+                  {/* Unified Status Pill */}
                   <span
-                    className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${qualityInfo.badgeClass}`}
+                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold border ${currentStatusCfg.badgeCls}`}
                   >
-                    <QualityIcon className="w-3 h-3" />
-                    <span>{qualityInfo.label}</span>
-                  </span>
-
-                  {/* Status Pill */}
-                  <span
-                    className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold border ${
-                      STATUS_COLORS[lead?.status || "NEW"] || STATUS_COLORS.NEW
-                    }`}
-                  >
-                    {lead?.status?.replace(/_/g, " ") || "NEW"}
+                    <span>{currentStatusCfg.emoji}</span>
+                    <span>{currentStatusCfg.label}</span>
                   </span>
 
                   {/* Stage & SLA Schedule Pill */}
@@ -309,17 +275,18 @@ export default function LeadDetailDrawer({
 
                   <div>
                     <label className="text-[10px] uppercase font-bold text-zinc-400 block mb-1">
-                      Lead Quality
+                      Lead Status
                     </label>
                     <select
-                      value={lead.quality || "WARM"}
-                      onChange={(e) => handleQualityChange(e.target.value)}
-                      className="w-full text-xs font-semibold px-2.5 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200"
+                      value={currentSimplifiedKey}
+                      onChange={(e) => handleUnifiedStatusChange(e.target.value)}
+                      className={`w-full text-xs font-bold px-2.5 py-1.5 rounded-lg border cursor-pointer ${currentStatusCfg.badgeCls}`}
                     >
-                      <option value="HOT">🔥 Hot Lead</option>
-                      <option value="WARM">☀️ Warm Lead</option>
-                      <option value="COLD">❄️ Cold Lead</option>
-                      <option value="POOR">⚠️ Poor / Unfit</option>
+                      {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
+                        <option key={opt.key} value={opt.key}>
+                          {opt.emoji} {opt.label}
+                        </option>
+                      ))}
                     </select>
                   </div>
                 </div>

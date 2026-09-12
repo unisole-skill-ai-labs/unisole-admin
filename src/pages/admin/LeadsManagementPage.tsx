@@ -50,26 +50,13 @@ import LeadFormModal from "../../components/leads/LeadFormModal";
 import LeadImportModal from "../../components/leads/LeadImportModal";
 import LeadAnalyticsDashboard from "../../components/leads/LeadAnalyticsDashboard";
 import LeadSlaBadge from "../../components/leads/LeadSlaBadge";
-
-const QUALITY_BADGES: Record<string, { label: string; icon: any; cls: string }> = {
-  HOT: { label: "HOT", icon: Flame, cls: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30" },
-  WARM: { label: "WARM", icon: Sun, cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30" },
-  COLD: { label: "COLD", icon: Snowflake, cls: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30" },
-  POOR: { label: "POOR", icon: AlertTriangle, cls: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/30" },
-};
-
-const STATUS_BADGES: Record<string, string> = {
-  NEW: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30",
-  ATTEMPTED: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/30",
-  CONTACTED: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30",
-  INTERESTED: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
-  FOLLOW_UP_SCHEDULED: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
-  DEMO_GIVEN: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30",
-  CONVERTED: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-black",
-  LOST: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30",
-  JUNK: "bg-zinc-500/10 text-zinc-500 border-zinc-500/30",
-  NOT_A_LEAD: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30 font-semibold",
-};
+import {
+  SIMPLIFIED_STATUS_MAP,
+  SIMPLIFIED_STATUS_OPTIONS,
+  getSimplifiedLeadStatus,
+  getSimplifiedStatusConfig,
+  getStatusUpdatePayload,
+} from "../../utils/leadStatus";
 
 export default function LeadsManagementPage() {
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
@@ -87,7 +74,6 @@ export default function LeadsManagementPage() {
   const [collegeId, setCollegeId] = useState("");
   const [branch, setBranch] = useState("");
   const [assignedToUserId, setAssignedToUserId] = useState("");
-  const [quality, setQuality] = useState("");
   const [status, setStatus] = useState("");
   const [nextCallDue, setNextCallDue] = useState<any>("");
 
@@ -108,8 +94,11 @@ export default function LeadsManagementPage() {
 
   // Computed status filter based on scopeFilter
   const effectiveStatus = useMemo(() => {
+    if (status && SIMPLIFIED_STATUS_MAP[status]) {
+      return SIMPLIFIED_STATUS_MAP[status].queryStatuses.join(",");
+    }
     if (status) return status;
-    if (scopeFilter === "NON_LEADS") return "NOT_A_LEAD";
+    if (scopeFilter === "NON_LEADS") return "NOT_A_LEAD,JUNK";
     return undefined;
   }, [status, scopeFilter]);
 
@@ -120,7 +109,6 @@ export default function LeadsManagementPage() {
     collegeId: collegeId || undefined,
     branch: branch || undefined,
     assignedToUserId: isAdmin ? (assignedToUserId || undefined) : currentUser?.id,
-    quality: quality || undefined,
     status: effectiveStatus,
     excludeNonLeads: scopeFilter === "ACTIVE" && !status ? true : undefined,
     nextCallDue: nextCallDue || undefined,
@@ -201,13 +189,15 @@ export default function LeadsManagementPage() {
     }
   };
 
-  const handleBulkStatusSubmit = async (newStatus: string) => {
-    if (selectedLeadIds.length === 0 || !newStatus) return;
+  const handleBulkStatusSubmit = async (statusKey: string) => {
+    if (selectedLeadIds.length === 0 || !statusKey) return;
     try {
+      const payload = getStatusUpdatePayload(statusKey);
       await bulkUpdateStatusMutation({
         baseUrl,
         leadIds: selectedLeadIds,
-        status: newStatus,
+        status: payload.status,
+        quality: payload.quality,
       }).unwrap();
       setSelectedLeadIds([]);
       setBulkStatus("");
@@ -229,24 +219,13 @@ export default function LeadsManagementPage() {
     }
   };
 
-  const handleInlineQuality = async (leadId: string, q: string) => {
+  const handleInlineStatus = async (leadId: string, statusKey: string) => {
     try {
+      const payload = getStatusUpdatePayload(statusKey);
       await updateLead({
         baseUrl,
         id: leadId,
-        data: { quality: q },
-      }).unwrap();
-    } catch (err) {
-      console.error("Failed to update quality:", err);
-    }
-  };
-
-  const handleInlineStatus = async (leadId: string, s: string) => {
-    try {
-      await updateLead({
-        baseUrl,
-        id: leadId,
-        data: { status: s },
+        data: payload,
       }).unwrap();
     } catch (err) {
       console.error("Failed to update status:", err);
@@ -265,7 +244,6 @@ export default function LeadsManagementPage() {
       "Branch",
       "Year",
       "Assigned To",
-      "Quality",
       "Status",
       "Call Count",
       "Last Call",
@@ -281,8 +259,7 @@ export default function LeadsManagementPage() {
       `"${l.branch || ""}"`,
       `"${l.yearOfStudy || ""}"`,
       `"${l.assignedToUser?.name || "Unassigned"}"`,
-      `"${l.quality || ""}"`,
-      `"${l.status || ""}"`,
+      `"${getSimplifiedStatusConfig(l.status, l.quality).label}"`,
       l.callCount || 0,
       `"${l.lastCallAt || ""}"`,
       `"${l.nextCallAt || ""}"`,
@@ -300,7 +277,7 @@ export default function LeadsManagementPage() {
   };
 
   const hasActiveFilters = Boolean(
-    search || collegeId || branch || assignedToUserId || quality || status || nextCallDue
+    search || collegeId || branch || assignedToUserId || status || nextCallDue
   );
 
   const clearFilters = () => {
@@ -308,7 +285,6 @@ export default function LeadsManagementPage() {
     setCollegeId("");
     setBranch("");
     setAssignedToUserId("");
-    setQuality("");
     setStatus("");
     setNextCallDue("");
   };
@@ -564,41 +540,21 @@ export default function LeadsManagementPage() {
               )}
             </div>
 
-            {/* Sub-Filters: Quality, Status, Next Call Due */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-              {/* Quality */}
-              <div>
-                <select
-                  value={quality}
-                  onChange={(e) => setQuality(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
-                >
-                  <option value="">All Qualities</option>
-                  <option value="HOT">🔥 Hot</option>
-                  <option value="WARM">☀️ Warm</option>
-                  <option value="COLD">❄️ Cold</option>
-                  <option value="POOR">⚠️ Poor</option>
-                  <option value="UNQUALIFIED">❌ Unqualified</option>
-                </select>
-              </div>
-
+            {/* Sub-Filters: Status & Next Call Due */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
               {/* Status Filter */}
               <div>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200 font-semibold"
                 >
                   <option value="">All Lead Statuses</option>
-                  <option value="NEW">New</option>
-                  <option value="CONTACTED">Contacted</option>
-                  <option value="INTERESTED">Interested</option>
-                  <option value="FOLLOW_UP_SCHEDULED">Follow-up Scheduled</option>
-                  <option value="DEMO_GIVEN">Demo Given</option>
-                  <option value="CONVERTED">🎉 Converted</option>
-                  <option value="LOST">Lost</option>
-                  <option value="JUNK">🗑️ Junk</option>
-                  <option value="NOT_A_LEAD">🚫 Not a Lead</option>
+                  {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.key} value={opt.key}>
+                      {opt.emoji} {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -660,22 +616,12 @@ export default function LeadsManagementPage() {
                   className="px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 text-xs text-zinc-800 dark:text-zinc-200 font-semibold"
                 >
                   <option value="">Change Status...</option>
-                  <option value="NEW">New</option>
-                  <option value="CONTACTED">Contacted</option>
-                  <option value="INTERESTED">Interested</option>
-                  <option value="CONVERTED">🎉 Converted</option>
-                  <option value="LOST">Lost</option>
-                  <option value="JUNK">🗑️ Junk</option>
-                  <option value="NOT_A_LEAD">🚫 Not a Lead</option>
+                  {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.key} value={opt.key}>
+                      {opt.emoji} {opt.label}
+                    </option>
+                  ))}
                 </select>
-
-                <button
-                  onClick={() => handleBulkStatusSubmit("NOT_A_LEAD")}
-                  className="px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-500/20 transition-colors flex items-center gap-1.5"
-                >
-                  <UserX className="w-3.5 h-3.5" />
-                  <span>Mark Selected Non-Leads</span>
-                </button>
 
                 <button
                   onClick={() => setSelectedLeadIds([])}
@@ -730,13 +676,12 @@ export default function LeadsManagementPage() {
                         />
                       </th>
                       <th className="p-3">Student Lead</th>
+                      <th className="p-3">Contact</th>
                       <th className="p-3">College & Branch</th>
-                      <th className="p-3">Quality Tier</th>
-                      <th className="p-3">Call Velocity</th>
-                      <th className="p-3 whitespace-nowrap">Stage & SLA Schedule</th>
+                      <th className="p-3 whitespace-nowrap">Follow-up & Calls</th>
                       <th className="p-3">Assigned Counselor</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-950/95 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[170px]">
+                      <th className="p-3 whitespace-nowrap min-w-[125px]">Status</th>
+                      <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-950/95 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[110px]">
                         Quick Actions
                       </th>
                     </tr>
@@ -745,8 +690,6 @@ export default function LeadsManagementPage() {
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
                     {leadsList.map((lead: any) => {
                       const isSelected = selectedLeadIds.includes(lead.id);
-                      const qualityCfg = QUALITY_BADGES[lead.quality] || QUALITY_BADGES.WARM;
-                      const QualityIcon = qualityCfg.icon;
 
                       const nextCallDate = lead.nextCallAt ? new Date(lead.nextCallAt) : null;
                       const isOverdue =
@@ -755,155 +698,117 @@ export default function LeadsManagementPage() {
                         lead.status !== "CONVERTED" &&
                         lead.status !== "LOST";
 
-                      const cleanPhone = lead.phone?.replace(/[^\d]/g, "") || "";
-                      const whatsappUrl = `https://wa.me/${cleanPhone.startsWith("91") ? cleanPhone : "91" + cleanPhone}?text=${encodeURIComponent(
-                        `Hi ${lead.name || "there"}, this is regarding your interest with Unisole.`
-                      )}`;
+                      const whatsappUrl = `https://wa.me/${lead.phone.replace(/[^0-9]/g, "")}`;
+                      const currentSimplifiedKey = getSimplifiedLeadStatus(lead.status, lead.quality);
+                      const currentStatusCfg = SIMPLIFIED_STATUS_MAP[currentSimplifiedKey] || SIMPLIFIED_STATUS_MAP.NEW;
 
                       return (
                         <tr
                           key={lead.id}
-                          className={`hover:bg-zinc-50/70 dark:hover:bg-zinc-950/70 transition-colors ${
+                          className={`hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors ${
                             isSelected ? "bg-indigo-50/40 dark:bg-indigo-950/20" : ""
                           }`}
                         >
-                          {/* Checkbox */}
+                          {/* Row Selection Checkbox */}
                           <td className="p-3">
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleToggleLead(lead.id)}
-                              className="rounded-sm border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                              className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                             />
                           </td>
 
-                          {/* Student Lead & Contact */}
+                          {/* Student Info */}
                           <td className="p-3">
-                            <div className="flex items-center gap-2.5">
-                              <button
-                                onClick={() => setDetailLeadId(lead.id)}
-                                className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 text-indigo-600 dark:text-indigo-400 font-extrabold flex items-center justify-center shrink-0 hover:scale-105 transition-transform"
-                              >
-                                {(lead.name || "L").charAt(0).toUpperCase()}
-                              </button>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white font-bold flex items-center justify-center text-xs shadow-2xs">
+                                {lead.name.charAt(0).toUpperCase()}
+                              </div>
                               <div>
-                                <button
-                                  onClick={() => setDetailLeadId(lead.id)}
-                                  className="font-bold text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 text-left block"
-                                >
-                                  {lead.name}
-                                </button>
-                                <div className="flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5">
-                                  <span className="font-mono text-zinc-600 dark:text-zinc-300">{lead.phone}</span>
-                                  {lead.email && <span className="truncate max-w-[120px]">• {lead.email}</span>}
+                                <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                                  <span>{lead.name}</span>
+                                  {lead.yearOfStudy && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                                      {lead.yearOfStudy}
+                                    </span>
+                                  )}
                                 </div>
+                                {lead.email && (
+                                  <div className="text-xs text-zinc-400 truncate max-w-[200px] mt-0.5">
+                                    {lead.email}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>
 
-                          {/* College & Branch */}
+                          {/* Contact */}
                           <td className="p-3">
-                            <span className="font-semibold text-zinc-800 dark:text-zinc-200 block truncate max-w-[160px]">
-                              {lead.collegeName || "Unassigned"}
-                            </span>
-                            <span className="text-[11px] text-zinc-400 block truncate max-w-[160px]">
-                              {lead.branch || "General"} {lead.yearOfStudy ? `(${lead.yearOfStudy})` : ""}
-                            </span>
-                          </td>
-
-                          {/* Lead Quality */}
-                          <td className="p-3">
-                            <select
-                              value={lead.quality || "WARM"}
-                              onChange={(e) => handleInlineQuality(lead.id, e.target.value)}
-                              className={`text-[11px] font-bold px-2 py-1 rounded-lg border cursor-pointer ${qualityCfg.cls}`}
-                            >
-                              <option value="HOT">🔥 Hot</option>
-                              <option value="WARM">☀️ Warm</option>
-                              <option value="COLD">❄️ Cold</option>
-                              <option value="POOR">⚠️ Poor</option>
-                            </select>
-                          </td>
-
-                          {/* Call Velocity */}
-                          <td className="p-3">
-                            <div>
-                              <span className="font-mono font-extrabold text-xs px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                                {lead.callCount || 0} calls
-                              </span>
-                              {lead.lastCallAt && (
-                                <span className="text-[10px] text-zinc-400 block mt-0.5 font-mono">
-                                  Last: {new Date(lead.lastCallAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
-                                </span>
-                              )}
+                            <div className="font-mono text-zinc-700 dark:text-zinc-300 font-medium">
+                              {lead.phone}
                             </div>
                           </td>
 
-                          {/* Stage & SLA Schedule */}
-                          <td className="p-3 whitespace-nowrap">
-                            <LeadSlaBadge lead={lead} showStage={true} />
+                          {/* College & Branch */}
+                          <td className="p-3 min-w-[220px]">
+                            <div className="font-semibold text-zinc-800 dark:text-zinc-200 leading-snug" title={lead.collegeName}>
+                              {lead.collegeName || "Unassigned"}
+                            </div>
+                            {lead.branch && (
+                              <div className="text-[11px] text-zinc-400 mt-0.5 leading-snug">{lead.branch}</div>
+                            )}
                           </td>
 
-                          {/* Assigned Rep / Staff */}
-                          <td className="p-3">
-                            {!isAdmin ? (
-                              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                                {lead.assignedToUser?.name || currentUser?.name || "Assigned to You"}
-                              </span>
-                            ) : (
+                          {/* Follow-up & Calls */}
+                          <td className="p-3 whitespace-nowrap">
+                            <LeadSlaBadge lead={lead} showStage={true} showVelocity={true} />
+                          </td>
+
+                          {/* Assigned Counselor */}
+                          <td className="p-3 whitespace-nowrap">
+                            {isAdmin ? (
                               <select
                                 value={lead.assignedToUserId || ""}
                                 onChange={(e) => handleInlineAssignee(lead.id, e.target.value)}
-                                className="text-xs font-semibold px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 max-w-[140px]"
+                                className="text-xs font-semibold px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200"
                               >
-                                <option value="">Unassigned</option>
-                                {meta.teamMembers.map((m: any) => (
+                                <option value="">⚠️ Unassigned</option>
+                                {meta?.teamMembers?.map((m: any) => (
                                   <option key={m.id} value={m.id}>
                                     {formatTeamMemberLabel(m)}
                                   </option>
                                 ))}
                               </select>
+                            ) : (
+                              <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                                {lead.assignedToName || "Unassigned"}
+                              </span>
                             )}
                           </td>
 
-                          {/* Status */}
-                          <td className="p-3">
+                          {/* Unified Status Dropdown */}
+                          <td className="p-3 pr-4 whitespace-nowrap min-w-[125px]">
                             <select
-                              value={lead.status || "NEW"}
+                              value={currentSimplifiedKey}
                               onChange={(e) => handleInlineStatus(lead.id, e.target.value)}
-                              className={`text-[11px] font-bold px-2 py-1 rounded-lg border cursor-pointer ${
-                                STATUS_BADGES[lead.status || "NEW"] || STATUS_BADGES.NEW
-                              }`}
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer max-w-[115px] ${currentStatusCfg.badgeCls}`}
                             >
-                              <option value="NEW">New</option>
-                              <option value="ATTEMPTED">Attempted</option>
-                              <option value="CONTACTED">Contacted</option>
-                              <option value="INTERESTED">Interested</option>
-                              <option value="FOLLOW_UP_SCHEDULED">Follow-up</option>
-                              <option value="DEMO_GIVEN">Demo Given</option>
-                              <option value="CONVERTED">🎉 Converted</option>
-                              <option value="LOST">Lost</option>
-                              <option value="JUNK">Junk</option>
-                              <option value="NOT_A_LEAD">🚫 Non-Lead</option>
+                              {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
+                                <option key={opt.key} value={opt.key} className="bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-normal">
+                                  {opt.emoji} {opt.label}
+                                </option>
+                              ))}
                             </select>
                           </td>
 
                           {/* Quick Actions (Sticky on right so always visible!) */}
                           <td
-                            className={`p-3 text-right sticky right-0 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800/80 shadow-2xs whitespace-nowrap min-w-[170px] ${
+                            className={`p-3 text-right sticky right-0 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800/80 shadow-2xs whitespace-nowrap min-w-[110px] ${
                               isSelected ? "bg-indigo-50/95 dark:bg-zinc-900" : "bg-white/95 dark:bg-zinc-900/95"
                             }`}
                           >
                             <div className="flex items-center justify-end gap-1.5">
-                              {/* Log Call Notes */}
-                              <button
-                                onClick={() => setSelectedLeadForCall(lead)}
-                                title="Log Call Note"
-                                className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
-                              >
-                                <FileText className="w-3.5 h-3.5" />
-                              </button>
-
                               {/* Call Directly */}
                               <a
                                 href={`tel:${lead.phone}`}
@@ -924,29 +829,10 @@ export default function LeadsManagementPage() {
                                 <MessageCircle className="w-3.5 h-3.5" />
                               </a>
 
-                              {/* Quick Mark / Unmark Non-Lead */}
-                              {lead.status === "NOT_A_LEAD" ? (
-                                <button
-                                  onClick={() => handleInlineStatus(lead.id, "NEW")}
-                                  title="Reactivate as Active Lead"
-                                  className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 transition-colors"
-                                >
-                                  <UserCheck className="w-3.5 h-3.5" />
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleInlineStatus(lead.id, "NOT_A_LEAD")}
-                                  title="Mark as Non-Lead"
-                                  className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors"
-                                >
-                                  <UserX className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-
-                              {/* View Profile & Full Drawer */}
+                              {/* View Profile & Call Notes (Merged Drawer) */}
                               <button
                                 onClick={() => setDetailLeadId(lead.id)}
-                                title="View profile & full timeline"
+                                title="View Profile & Call Notes"
                                 className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                               >
                                 <Eye className="w-3.5 h-3.5" />
