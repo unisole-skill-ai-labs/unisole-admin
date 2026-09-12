@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from "react";
 import { useSelector } from "react-redux";
+import { useLocation } from "react-router-dom";
 import { canExportLeads } from "../../utils/permissions";
 import {
   Users,
@@ -67,8 +68,11 @@ export default function LeadsManagementPage() {
   const isAdmin = currentUser?.role === "ADMIN" || isSuperAdmin;
   const isSales = currentUser?.role === "SALES" || (currentUser?.designation || "").toUpperCase().includes("SALES");
   const canExport = canExportLeads(currentUser);
+  const location = useLocation();
 
-  const [activeTab, setActiveTab] = useState<"directory" | "analytics">("directory");
+  const [activeTab, setActiveTab] = useState<"directory" | "analytics">(
+    location.pathname.includes("analytics") ? "analytics" : "directory"
+  );
   const [scopeFilter, setScopeFilter] = useState<"ACTIVE" | "NON_LEADS" | "ALL">("ACTIVE");
 
   // Filters State
