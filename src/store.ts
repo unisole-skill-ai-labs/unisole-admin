@@ -770,10 +770,10 @@ export const adminApi = createApi({
       invalidatesTags: ["Leads", "LeadAnalytics"],
     }),
     bulkUpdateLeadStatus: build.mutation({
-      query: ({ baseUrl, leadIds, status }) => ({
+      query: ({ baseUrl, leadIds, status, quality }) => ({
         url: `${baseUrl}/api/admin/leads/bulk-status`,
         method: "POST",
-        body: { leadIds, status },
+        body: { leadIds, status, quality },
       }),
       invalidatesTags: ["Leads", "LeadAnalytics"],
     }),

@@ -43,6 +43,12 @@ import LeadDetailDrawer from "./LeadDetailDrawer";
 import LeadFormModal from "./LeadFormModal";
 import LeadImportModal from "./LeadImportModal";
 import LeadSlaBadge from "./LeadSlaBadge";
+import {
+  SIMPLIFIED_STATUS_MAP,
+  SIMPLIFIED_STATUS_OPTIONS,
+  getSimplifiedLeadStatus,
+  getStatusUpdatePayload,
+} from "../../utils/leadStatus";
 
 interface CollegeLeadsSectionProps {
   collegeId: string;
@@ -51,52 +57,6 @@ interface CollegeLeadsSectionProps {
   branches?: Array<{ id: string; name: string; code?: string }>;
   onSelectBranch?: (branchName: string) => void;
 }
-
-const QUALITY_CONFIG: Record<string, { label: string; icon: any; color: string; bg: string }> = {
-  HOT: {
-    label: "Hot",
-    icon: Flame,
-    color: "text-rose-600 dark:text-rose-400",
-    bg: "bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-900/50",
-  },
-  WARM: {
-    label: "Warm",
-    icon: Sun,
-    color: "text-amber-600 dark:text-amber-400",
-    bg: "bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-900/50",
-  },
-  COLD: {
-    label: "Cold",
-    icon: Snowflake,
-    color: "text-sky-600 dark:text-sky-400",
-    bg: "bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-900/50",
-  },
-  POOR: {
-    label: "Poor",
-    icon: AlertCircle,
-    color: "text-zinc-500 dark:text-zinc-400",
-    bg: "bg-zinc-50 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800",
-  },
-  UNQUALIFIED: {
-    label: "Unqualified",
-    icon: AlertCircle,
-    color: "text-zinc-400 dark:text-zinc-500",
-    bg: "bg-zinc-100 dark:bg-zinc-900 border-zinc-200 dark:border-zinc-800",
-  },
-};
-
-const STATUS_BADGES: Record<string, string> = {
-  NEW: "bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-900/50",
-  ATTEMPTED: "bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-900/50",
-  CONTACTED: "bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900/50",
-  INTERESTED: "bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-900/50",
-  FOLLOW_UP_SCHEDULED: "bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-900/50",
-  DEMO_GIVEN: "bg-cyan-50 text-cyan-700 border-cyan-200 dark:bg-cyan-950/40 dark:text-cyan-300 dark:border-cyan-900/50",
-  CONVERTED: "bg-emerald-600 text-white border-emerald-600 shadow-xs",
-  LOST: "bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-900/50",
-  JUNK: "bg-zinc-100 text-zinc-600 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800",
-  NOT_A_LEAD: "bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-900 dark:text-zinc-400 dark:border-zinc-800 line-through",
-};
 
 export default function CollegeLeadsSection({
   collegeId,
@@ -114,7 +74,6 @@ export default function CollegeLeadsSection({
   const [search, setSearch] = useState("");
   const [activeBranchFilter, setActiveBranchFilter] = useState<string>(branch || "ALL");
   const [scope, setScope] = useState<"active" | "non_leads" | "all">("active");
-  const [qualityFilter, setQualityFilter] = useState<string>("ALL");
   const [statusFilter, setStatusFilter] = useState<string>("ALL");
   const [counselorFilter, setCounselorFilter] = useState<string>("ALL");
   const [callDueFilter, setCallDueFilter] = useState<string>("ALL");
@@ -135,18 +94,24 @@ export default function CollegeLeadsSection({
   const effectiveBranch = branch || (activeBranchFilter !== "ALL" ? activeBranchFilter : undefined);
 
   const queryParams = useMemo(() => {
+    const effectiveStatus =
+      statusFilter !== "ALL" && SIMPLIFIED_STATUS_MAP[statusFilter]
+        ? SIMPLIFIED_STATUS_MAP[statusFilter].queryStatuses.join(",")
+        : statusFilter !== "ALL"
+        ? statusFilter
+        : undefined;
+
     return {
       baseUrl,
       collegeId,
       branch: effectiveBranch,
       search: search.trim() || undefined,
-      quality: qualityFilter !== "ALL" ? qualityFilter : undefined,
-      status: statusFilter !== "ALL" ? statusFilter : undefined,
+      status: effectiveStatus,
       assignedToUserId: isAdmin ? (counselorFilter !== "ALL" ? counselorFilter : undefined) : currentUser?.id,
       nextCallDue: callDueFilter !== "ALL" ? (callDueFilter as any) : undefined,
       excludeNonLeads: scope === "active" ? true : undefined,
     };
-  }, [baseUrl, collegeId, effectiveBranch, search, qualityFilter, statusFilter, counselorFilter, callDueFilter, scope, isAdmin, currentUser?.id]);
+  }, [baseUrl, collegeId, effectiveBranch, search, statusFilter, counselorFilter, callDueFilter, scope, isAdmin, currentUser?.id]);
 
   const { data: leadsData, isLoading, isFetching, refetch } = useGetLeadsQuery(queryParams);
   const { data: metaData } = useGetLeadsMetaQuery({ baseUrl });
@@ -165,7 +130,6 @@ export default function CollegeLeadsSection({
       colleges: Array.isArray(d?.colleges) ? d.colleges : [],
       branches: Array.isArray(d?.branches) ? d.branches : [],
       teamMembers: Array.isArray(d?.teamMembers) ? d.teamMembers : [],
-      qualities: Array.isArray(d?.qualities) ? d.qualities : ["HOT", "WARM", "COLD", "POOR", "UNQUALIFIED"],
     };
   }, [metaData]);
 
@@ -181,7 +145,7 @@ export default function CollegeLeadsSection({
   // Scoped KPIs
   const kpis = useMemo(() => {
     const total = leads.length;
-    const hot = leads.filter((l: any) => l.quality === "HOT").length;
+    const hot = leads.filter((l: any) => getSimplifiedLeadStatus(l.status, l.quality) === "INTERESTED").length;
     const converted = leads.filter((l: any) => l.status === "CONVERTED").length;
     const now = new Date();
     const followupsDue = leads.filter((l: any) => {
@@ -195,12 +159,13 @@ export default function CollegeLeadsSection({
   }, [leads]);
 
   // Handlers
-  const handleInlineStatus = async (id: string, newStatus: string) => {
+  const handleInlineStatus = async (id: string, statusKey: string) => {
     try {
+      const payload = getStatusUpdatePayload(statusKey);
       await updateLead({
         baseUrl,
         id,
-        data: { status: newStatus },
+        data: payload,
       }).unwrap();
     } catch (err) {
       console.error("Failed to update status", err);
@@ -478,39 +443,19 @@ export default function CollegeLeadsSection({
             </div>
           )}
 
-          {/* Quality Filter */}
-          <div>
-            <select
-              value={qualityFilter}
-              onChange={(e) => setQualityFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100"
-            >
-              <option value="ALL">All Qualities</option>
-              <option value="HOT">🔥 Hot</option>
-              <option value="WARM">☀️ Warm</option>
-              <option value="COLD">❄️ Cold</option>
-              <option value="POOR">⚠️ Poor</option>
-              <option value="UNQUALIFIED">Unqualified</option>
-            </select>
-          </div>
-
           {/* Status Filter */}
           <div>
             <select
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value)}
-              className="w-full px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100"
+              className="w-full px-2.5 py-1.5 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100 font-semibold"
             >
               <option value="ALL">All Statuses</option>
-              <option value="NEW">New</option>
-              <option value="ATTEMPTED">Attempted</option>
-              <option value="CONTACTED">Contacted</option>
-              <option value="INTERESTED">Interested</option>
-              <option value="FOLLOW_UP_SCHEDULED">Follow-up Due</option>
-              <option value="DEMO_GIVEN">Demo Given</option>
-              <option value="CONVERTED">🎉 Converted</option>
-              <option value="LOST">Lost</option>
-              <option value="JUNK">Junk</option>
+              {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
+                <option key={opt.key} value={opt.key}>
+                  {opt.emoji} {opt.label}
+                </option>
+              ))}
             </select>
           </div>
 
@@ -611,7 +556,7 @@ export default function CollegeLeadsSection({
             </div>
             <h4 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">No leads found</h4>
             <p className="text-xs text-zinc-500 dark:text-zinc-400 max-w-sm mx-auto">
-              {search || qualityFilter !== "ALL" || statusFilter !== "ALL"
+              {search || statusFilter !== "ALL"
                 ? "Try adjusting your search criteria or active filters."
                 : `There are currently no registered leads for ${collegeName}${branch ? ` in ${branch}` : ""}.`}
             </p>
@@ -640,7 +585,6 @@ export default function CollegeLeadsSection({
                   <th className="p-3">Student / Lead</th>
                   <th className="p-3">Contact</th>
                   <th className="p-3">Branch</th>
-                  <th className="p-3">Quality</th>
                   <th className="p-3">Calls</th>
                   <th className="p-3 whitespace-nowrap">Stage & SLA Schedule</th>
                   <th className="p-3">Assigned Rep / Staff</th>
@@ -653,9 +597,9 @@ export default function CollegeLeadsSection({
               <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60 text-xs">
                 {leads.map((lead: any) => {
                   const isSelected = selectedLeadIds.includes(lead.id);
-                  const isNonLead = lead.status === "NOT_A_LEAD";
-                  const qConfig = QUALITY_CONFIG[lead.quality || "WARM"] || QUALITY_CONFIG.WARM;
-                  const QualityIcon = qConfig.icon;
+                  const currentSimplifiedKey = getSimplifiedLeadStatus(lead.status, lead.quality);
+                  const currentStatusCfg = SIMPLIFIED_STATUS_MAP[currentSimplifiedKey] || SIMPLIFIED_STATUS_MAP.NEW;
+                  const isNonLead = currentSimplifiedKey === "NOT_A_LEAD";
                   const nextCallDate = lead.nextCallAt ? new Date(lead.nextCallAt) : null;
                   const isOverdue = nextCallDate && nextCallDate < new Date() && lead.status !== "CONVERTED" && lead.status !== "LOST";
 
@@ -729,16 +673,6 @@ export default function CollegeLeadsSection({
                         </span>
                       </td>
 
-                      {/* Lead Quality */}
-                      <td className="p-3">
-                        <span
-                          className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[11px] font-bold border ${qConfig.bg} ${qConfig.color}`}
-                        >
-                          <QualityIcon className="w-3 h-3" />
-                          <span>{qConfig.label}</span>
-                        </span>
-                      </td>
-
                       {/* Call Count */}
                       <td className="p-3">
                         <button
@@ -781,22 +715,15 @@ export default function CollegeLeadsSection({
                       {/* Status */}
                       <td className="p-3">
                         <select
-                          value={lead.status || "NEW"}
+                          value={currentSimplifiedKey}
                           onChange={(e) => handleInlineStatus(lead.id, e.target.value)}
-                          className={`text-[11px] font-bold px-2 py-1 rounded-lg border cursor-pointer ${
-                            STATUS_BADGES[lead.status || "NEW"] || STATUS_BADGES.NEW
-                          }`}
+                          className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border cursor-pointer ${currentStatusCfg.badgeCls}`}
                         >
-                          <option value="NEW">New</option>
-                          <option value="ATTEMPTED">Attempted</option>
-                          <option value="CONTACTED">Contacted</option>
-                          <option value="INTERESTED">Interested</option>
-                          <option value="FOLLOW_UP_SCHEDULED">Follow-up</option>
-                          <option value="DEMO_GIVEN">Demo Given</option>
-                          <option value="CONVERTED">🎉 Converted</option>
-                          <option value="LOST">Lost</option>
-                          <option value="JUNK">Junk</option>
-                          <option value="NOT_A_LEAD">🚫 Not a Lead</option>
+                          {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
+                            <option key={opt.key} value={opt.key}>
+                              {opt.emoji} {opt.label}
+                            </option>
+                          ))}
                         </select>
                       </td>
 

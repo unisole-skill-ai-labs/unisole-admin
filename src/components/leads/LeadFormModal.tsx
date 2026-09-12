@@ -17,6 +17,12 @@ import {
 } from "lucide-react";
 import { useCreateLeadMutation, useUpdateLeadMutation } from "../../store";
 import { formatTeamMemberLabel } from "../../utils/permissions";
+import {
+  SIMPLIFIED_STATUS_MAP,
+  SIMPLIFIED_STATUS_OPTIONS,
+  getSimplifiedLeadStatus,
+  getStatusUpdatePayload,
+} from "../../utils/leadStatus";
 
 interface LeadFormModalProps {
   lead?: any;
@@ -52,6 +58,7 @@ export default function LeadFormModal({
 
   const isEdit = Boolean(lead?.id);
 
+  const initialKey = getSimplifiedLeadStatus(lead?.status, lead?.quality);
   const [name, setName] = useState(lead?.name || "");
   const [phone, setPhone] = useState(lead?.phone || "");
   const [email, setEmail] = useState(lead?.email || "");
@@ -63,8 +70,7 @@ export default function LeadFormModal({
   const [assignedToUserId, setAssignedToUserId] = useState(
     lead?.assignedToUserId || (!isAdmin ? currentUser?.id : "") || ""
   );
-  const [quality, setQuality] = useState(lead?.quality || "WARM");
-  const [status, setStatus] = useState(lead?.status || "NEW");
+  const [unifiedStatus, setUnifiedStatus] = useState(initialKey || "NEW");
   const [source, setSource] = useState(lead?.source || "COLLEGE_DRIVE");
   const [notes, setNotes] = useState(lead?.notes || "");
   const [errorMsg, setErrorMsg] = useState("");
@@ -93,6 +99,7 @@ export default function LeadFormModal({
     }
 
     const finalBranch = branch === "OTHER" ? customBranch.trim() : branch;
+    const statusPayload = getStatusUpdatePayload(unifiedStatus);
 
     const payload = {
       name: name.trim(),
@@ -103,8 +110,8 @@ export default function LeadFormModal({
       branch: finalBranch || undefined,
       yearOfStudy: yearOfStudy || undefined,
       assignedToUserId: isAdmin ? (assignedToUserId || undefined) : (currentUser?.id || undefined),
-      quality,
-      status,
+      quality: statusPayload.quality,
+      status: statusPayload.status,
       source,
       notes: notes.trim() || undefined,
     };
@@ -311,44 +318,22 @@ export default function LeadFormModal({
             </div>
           </div>
 
-          {/* Lead Quality & Status */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                Initial Lead Quality
-              </label>
-              <select
-                value={quality}
-                onChange={(e) => setQuality(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100"
-              >
-                <option value="HOT">🔥 Hot Lead (High Intent)</option>
-                <option value="WARM">☀️ Warm Lead (Interested)</option>
-                <option value="COLD">❄️ Cold Lead (Low Intent)</option>
-                <option value="POOR">⚠️ Poor / Bad Fit</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
-                Pipeline Status
-              </label>
-              <select
-                value={status}
-                onChange={(e) => setStatus(e.target.value)}
-                className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100"
-              >
-                <option value="NEW">New Lead</option>
-                <option value="ATTEMPTED">Call Attempted</option>
-                <option value="CONTACTED">Contacted</option>
-                <option value="INTERESTED">Interested</option>
-                <option value="FOLLOW_UP_SCHEDULED">Follow-up Scheduled</option>
-                <option value="DEMO_GIVEN">Demo / Counselling Given</option>
-                <option value="CONVERTED">Converted / Enrolled</option>
-                <option value="LOST">Lost</option>
-                <option value="JUNK">Junk / Invalid</option>
-              </select>
-            </div>
+          {/* Lead Status */}
+          <div>
+            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+              Lead Status
+            </label>
+            <select
+              value={unifiedStatus}
+              onChange={(e) => setUnifiedStatus(e.target.value)}
+              className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100 font-semibold"
+            >
+              {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
+                <option key={opt.key} value={opt.key}>
+                  {opt.emoji} {opt.label}
+                </option>
+              ))}
+            </select>
           </div>
 
           {/* Source & Notes */}

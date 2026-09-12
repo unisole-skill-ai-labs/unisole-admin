@@ -50,26 +50,13 @@ import LeadFormModal from "../../components/leads/LeadFormModal";
 import LeadImportModal from "../../components/leads/LeadImportModal";
 import LeadAnalyticsDashboard from "../../components/leads/LeadAnalyticsDashboard";
 import LeadSlaBadge from "../../components/leads/LeadSlaBadge";
-
-const QUALITY_BADGES: Record<string, { label: string; icon: any; cls: string }> = {
-  HOT: { label: "HOT", icon: Flame, cls: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30" },
-  WARM: { label: "WARM", icon: Sun, cls: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30" },
-  COLD: { label: "COLD", icon: Snowflake, cls: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30" },
-  POOR: { label: "POOR", icon: AlertTriangle, cls: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/30" },
-};
-
-const STATUS_BADGES: Record<string, string> = {
-  NEW: "bg-blue-500/10 text-blue-600 dark:text-blue-400 border-blue-500/30",
-  ATTEMPTED: "bg-zinc-500/10 text-zinc-600 dark:text-zinc-400 border-zinc-500/30",
-  CONTACTED: "bg-purple-500/10 text-purple-600 dark:text-purple-400 border-purple-500/30",
-  INTERESTED: "bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/30",
-  FOLLOW_UP_SCHEDULED: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
-  DEMO_GIVEN: "bg-teal-500/10 text-teal-600 dark:text-teal-400 border-teal-500/30",
-  CONVERTED: "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30 font-black",
-  LOST: "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30",
-  JUNK: "bg-zinc-500/10 text-zinc-500 border-zinc-500/30",
-  NOT_A_LEAD: "bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/30 font-semibold",
-};
+import {
+  SIMPLIFIED_STATUS_MAP,
+  SIMPLIFIED_STATUS_OPTIONS,
+  getSimplifiedLeadStatus,
+  getSimplifiedStatusConfig,
+  getStatusUpdatePayload,
+} from "../../utils/leadStatus";
 
 export default function LeadsManagementPage() {
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
@@ -87,7 +74,6 @@ export default function LeadsManagementPage() {
   const [collegeId, setCollegeId] = useState("");
   const [branch, setBranch] = useState("");
   const [assignedToUserId, setAssignedToUserId] = useState("");
-  const [quality, setQuality] = useState("");
   const [status, setStatus] = useState("");
   const [nextCallDue, setNextCallDue] = useState<any>("");
 
@@ -108,8 +94,11 @@ export default function LeadsManagementPage() {
 
   // Computed status filter based on scopeFilter
   const effectiveStatus = useMemo(() => {
+    if (status && SIMPLIFIED_STATUS_MAP[status]) {
+      return SIMPLIFIED_STATUS_MAP[status].queryStatuses.join(",");
+    }
     if (status) return status;
-    if (scopeFilter === "NON_LEADS") return "NOT_A_LEAD";
+    if (scopeFilter === "NON_LEADS") return "NOT_A_LEAD,JUNK";
     return undefined;
   }, [status, scopeFilter]);
 
@@ -120,7 +109,6 @@ export default function LeadsManagementPage() {
     collegeId: collegeId || undefined,
     branch: branch || undefined,
     assignedToUserId: isAdmin ? (assignedToUserId || undefined) : currentUser?.id,
-    quality: quality || undefined,
     status: effectiveStatus,
     excludeNonLeads: scopeFilter === "ACTIVE" && !status ? true : undefined,
     nextCallDue: nextCallDue || undefined,
@@ -201,13 +189,15 @@ export default function LeadsManagementPage() {
     }
   };
 
-  const handleBulkStatusSubmit = async (newStatus: string) => {
-    if (selectedLeadIds.length === 0 || !newStatus) return;
+  const handleBulkStatusSubmit = async (statusKey: string) => {
+    if (selectedLeadIds.length === 0 || !statusKey) return;
     try {
+      const payload = getStatusUpdatePayload(statusKey);
       await bulkUpdateStatusMutation({
         baseUrl,
         leadIds: selectedLeadIds,
-        status: newStatus,
+        status: payload.status,
+        quality: payload.quality,
       }).unwrap();
       setSelectedLeadIds([]);
       setBulkStatus("");
@@ -229,24 +219,13 @@ export default function LeadsManagementPage() {
     }
   };
 
-  const handleInlineQuality = async (leadId: string, q: string) => {
+  const handleInlineStatus = async (leadId: string, statusKey: string) => {
     try {
+      const payload = getStatusUpdatePayload(statusKey);
       await updateLead({
         baseUrl,
         id: leadId,
-        data: { quality: q },
-      }).unwrap();
-    } catch (err) {
-      console.error("Failed to update quality:", err);
-    }
-  };
-
-  const handleInlineStatus = async (leadId: string, s: string) => {
-    try {
-      await updateLead({
-        baseUrl,
-        id: leadId,
-        data: { status: s },
+        data: payload,
       }).unwrap();
     } catch (err) {
       console.error("Failed to update status:", err);
@@ -265,7 +244,6 @@ export default function LeadsManagementPage() {
       "Branch",
       "Year",
       "Assigned To",
-      "Quality",
       "Status",
       "Call Count",
       "Last Call",
@@ -281,8 +259,7 @@ export default function LeadsManagementPage() {
       `"${l.branch || ""}"`,
       `"${l.yearOfStudy || ""}"`,
       `"${l.assignedToUser?.name || "Unassigned"}"`,
-      `"${l.quality || ""}"`,
-      `"${l.status || ""}"`,
+      `"${getSimplifiedStatusConfig(l.status, l.quality).label}"`,
       l.callCount || 0,
       `"${l.lastCallAt || ""}"`,
       `"${l.nextCallAt || ""}"`,
@@ -300,7 +277,7 @@ export default function LeadsManagementPage() {
   };
 
   const hasActiveFilters = Boolean(
-    search || collegeId || branch || assignedToUserId || quality || status || nextCallDue
+    search || collegeId || branch || assignedToUserId || status || nextCallDue
   );
 
   const clearFilters = () => {
@@ -308,7 +285,6 @@ export default function LeadsManagementPage() {
     setCollegeId("");
     setBranch("");
     setAssignedToUserId("");
-    setQuality("");
     setStatus("");
     setNextCallDue("");
   };
@@ -564,41 +540,21 @@ export default function LeadsManagementPage() {
               )}
             </div>
 
-            {/* Sub-Filters: Quality, Status, Next Call Due */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1">
-              {/* Quality */}
-              <div>
-                <select
-                  value={quality}
-                  onChange={(e) => setQuality(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
-                >
-                  <option value="">All Qualities</option>
-                  <option value="HOT">🔥 Hot</option>
-                  <option value="WARM">☀️ Warm</option>
-                  <option value="COLD">❄️ Cold</option>
-                  <option value="POOR">⚠️ Poor</option>
-                  <option value="UNQUALIFIED">❌ Unqualified</option>
-                </select>
-              </div>
-
+            {/* Sub-Filters: Status & Next Call Due */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
               {/* Status Filter */}
               <div>
                 <select
                   value={status}
                   onChange={(e) => setStatus(e.target.value)}
-                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200"
+                  className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200 font-semibold"
                 >
                   <option value="">All Lead Statuses</option>
-                  <option value="NEW">New</option>
-                  <option value="CONTACTED">Contacted</option>
-                  <option value="INTERESTED">Interested</option>
-                  <option value="FOLLOW_UP_SCHEDULED">Follow-up Scheduled</option>
-                  <option value="DEMO_GIVEN">Demo Given</option>
-                  <option value="CONVERTED">🎉 Converted</option>
-                  <option value="LOST">Lost</option>
-                  <option value="JUNK">🗑️ Junk</option>
-                  <option value="NOT_A_LEAD">🚫 Not a Lead</option>
+                  {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.key} value={opt.key}>
+                      {opt.emoji} {opt.label}
+                    </option>
+                  ))}
                 </select>
               </div>
 
@@ -660,13 +616,11 @@ export default function LeadsManagementPage() {
                   className="px-3 py-1.5 rounded-xl border border-indigo-200 dark:border-indigo-800 bg-white dark:bg-zinc-900 text-xs text-zinc-800 dark:text-zinc-200 font-semibold"
                 >
                   <option value="">Change Status...</option>
-                  <option value="NEW">New</option>
-                  <option value="CONTACTED">Contacted</option>
-                  <option value="INTERESTED">Interested</option>
-                  <option value="CONVERTED">🎉 Converted</option>
-                  <option value="LOST">Lost</option>
-                  <option value="JUNK">🗑️ Junk</option>
-                  <option value="NOT_A_LEAD">🚫 Not a Lead</option>
+                  {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
+                    <option key={opt.key} value={opt.key}>
+                      {opt.emoji} {opt.label}
+                    </option>
+                  ))}
                 </select>
 
                 <button
@@ -731,7 +685,6 @@ export default function LeadsManagementPage() {
                       </th>
                       <th className="p-3">Student Lead</th>
                       <th className="p-3">College & Branch</th>
-                      <th className="p-3">Quality Tier</th>
                       <th className="p-3">Call Velocity</th>
                       <th className="p-3 whitespace-nowrap">Stage & SLA Schedule</th>
                       <th className="p-3">Assigned Counselor</th>
@@ -745,8 +698,6 @@ export default function LeadsManagementPage() {
                   <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/80">
                     {leadsList.map((lead: any) => {
                       const isSelected = selectedLeadIds.includes(lead.id);
-                      const qualityCfg = QUALITY_BADGES[lead.quality] || QUALITY_BADGES.WARM;
-                      const QualityIcon = qualityCfg.icon;
 
                       const nextCallDate = lead.nextCallAt ? new Date(lead.nextCallAt) : null;
                       const isOverdue =
@@ -759,6 +710,9 @@ export default function LeadsManagementPage() {
                       const whatsappUrl = `https://wa.me/${cleanPhone.startsWith("91") ? cleanPhone : "91" + cleanPhone}?text=${encodeURIComponent(
                         `Hi ${lead.name || "there"}, this is regarding your interest with Unisole.`
                       )}`;
+
+                      const currentSimplifiedKey = getSimplifiedLeadStatus(lead.status, lead.quality);
+                      const currentStatusCfg = SIMPLIFIED_STATUS_MAP[currentSimplifiedKey] || SIMPLIFIED_STATUS_MAP.NEW;
 
                       return (
                         <tr
@@ -811,20 +765,6 @@ export default function LeadsManagementPage() {
                             </span>
                           </td>
 
-                          {/* Lead Quality */}
-                          <td className="p-3">
-                            <select
-                              value={lead.quality || "WARM"}
-                              onChange={(e) => handleInlineQuality(lead.id, e.target.value)}
-                              className={`text-[11px] font-bold px-2 py-1 rounded-lg border cursor-pointer ${qualityCfg.cls}`}
-                            >
-                              <option value="HOT">🔥 Hot</option>
-                              <option value="WARM">☀️ Warm</option>
-                              <option value="COLD">❄️ Cold</option>
-                              <option value="POOR">⚠️ Poor</option>
-                            </select>
-                          </td>
-
                           {/* Call Velocity */}
                           <td className="p-3">
                             <div>
@@ -869,22 +809,15 @@ export default function LeadsManagementPage() {
                           {/* Status */}
                           <td className="p-3">
                             <select
-                              value={lead.status || "NEW"}
+                              value={currentSimplifiedKey}
                               onChange={(e) => handleInlineStatus(lead.id, e.target.value)}
-                              className={`text-[11px] font-bold px-2 py-1 rounded-lg border cursor-pointer ${
-                                STATUS_BADGES[lead.status || "NEW"] || STATUS_BADGES.NEW
-                              }`}
+                              className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border cursor-pointer ${currentStatusCfg.badgeCls}`}
                             >
-                              <option value="NEW">New</option>
-                              <option value="ATTEMPTED">Attempted</option>
-                              <option value="CONTACTED">Contacted</option>
-                              <option value="INTERESTED">Interested</option>
-                              <option value="FOLLOW_UP_SCHEDULED">Follow-up</option>
-                              <option value="DEMO_GIVEN">Demo Given</option>
-                              <option value="CONVERTED">🎉 Converted</option>
-                              <option value="LOST">Lost</option>
-                              <option value="JUNK">Junk</option>
-                              <option value="NOT_A_LEAD">🚫 Non-Lead</option>
+                              {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
+                                <option key={opt.key} value={opt.key}>
+                                  {opt.emoji} {opt.label}
+                                </option>
+                              ))}
                             </select>
                           </td>
 

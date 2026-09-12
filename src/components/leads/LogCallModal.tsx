@@ -16,6 +16,13 @@ import {
 } from "lucide-react";
 import { useLogLeadCallMutation } from "../../store";
 
+import {
+  SIMPLIFIED_STATUS_MAP,
+  SIMPLIFIED_STATUS_OPTIONS,
+  getSimplifiedLeadStatus,
+  getStatusUpdatePayload,
+} from "../../utils/leadStatus";
+
 interface LogCallModalProps {
   lead: any;
   baseUrl: string;
@@ -24,30 +31,23 @@ interface LogCallModalProps {
 }
 
 const OUTCOMES = [
-  { id: "CONNECTED_INTERESTED", label: "Connected - Interested", icon: Flame, color: "text-amber-500 bg-amber-500/10 border-amber-500/30" },
-  { id: "CONNECTED_FOLLOW_UP", label: "Connected - Follow-up Needed", icon: PhoneForwarded, color: "text-blue-500 bg-blue-500/10 border-blue-500/30" },
-  { id: "CONNECTED_CONVERTED", label: "Converted / Enrolled 🎉", icon: CheckCircle2, color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/30" },
+  { id: "CONNECTED_INTERESTED", label: "Interested / Call Back", icon: CheckCircle2, color: "text-emerald-500 bg-emerald-500/10 border-emerald-500/30" },
+  { id: "CONNECTED_FOLLOW_UP", label: "Follow-up Scheduled", icon: Calendar, color: "text-indigo-500 bg-indigo-500/10 border-indigo-500/30" },
+  { id: "CONNECTED_CONVERTED", label: "Converted / Admission Done", icon: Sparkles, color: "text-emerald-600 bg-emerald-600/15 border-emerald-600/40" },
   { id: "CONNECTED_NOT_INTERESTED", label: "Not Interested", icon: X, color: "text-zinc-500 bg-zinc-500/10 border-zinc-500/30" },
   { id: "CALL_BACK_REQUESTED", label: "Call Back Requested", icon: Clock, color: "text-indigo-500 bg-indigo-500/10 border-indigo-500/30" },
   { id: "BUSY_NO_ANSWER", label: "No Answer / Busy", icon: PhoneCall, color: "text-orange-500 bg-orange-500/10 border-orange-500/30" },
   { id: "WRONG_NUMBER", label: "Wrong Number / Invalid", icon: AlertTriangle, color: "text-rose-500 bg-rose-500/10 border-rose-500/30" },
 ];
 
-const QUALITIES = [
-  { id: "HOT", label: "Hot Lead", icon: Flame, color: "bg-rose-500 text-white" },
-  { id: "WARM", label: "Warm Lead", icon: Sun, color: "bg-amber-500 text-white" },
-  { id: "COLD", label: "Cold Lead", icon: Snowflake, color: "bg-blue-500 text-white" },
-  { id: "POOR", label: "Poor / Unfit", icon: AlertTriangle, color: "bg-zinc-600 text-white" },
-];
-
 export default function LogCallModal({ lead, baseUrl, onClose, onSuccess }: LogCallModalProps) {
   const [logCall, { isLoading }] = useLogLeadCallMutation();
 
+  const initialStatusKey = getSimplifiedLeadStatus(lead?.status, lead?.quality);
   const [outcome, setOutcome] = useState("CONNECTED_INTERESTED");
   const [durationMinutes, setDurationMinutes] = useState(3);
   const [notes, setNotes] = useState("");
-  const [quality, setQuality] = useState(lead?.quality || "WARM");
-  const [status, setStatus] = useState(lead?.status || "CONTACTED");
+  const [unifiedStatus, setUnifiedStatus] = useState(initialStatusKey || "FOLLOW_UP");
   const [scheduledNextCall, setScheduledNextCall] = useState("");
   const [recordingUrl, setRecordingUrl] = useState("");
   const [errorMsg, setErrorMsg] = useState("");
@@ -72,14 +72,16 @@ export default function LogCallModal({ lead, baseUrl, onClose, onSuccess }: LogC
     }
 
     try {
-      let resolvedStatus = status;
+      let resolvedStatusKey = unifiedStatus;
       if (outcome === "CONNECTED_CONVERTED") {
-        resolvedStatus = "CONVERTED";
-      } else if (outcome === "CONNECTED_INTERESTED" && status === "NEW") {
-        resolvedStatus = "INTERESTED";
-      } else if (outcome === "CONNECTED_FOLLOW_UP" && scheduledNextCall) {
-        resolvedStatus = "FOLLOW_UP_SCHEDULED";
+        resolvedStatusKey = "CONVERTED";
+      } else if (outcome === "CONNECTED_NOT_INTERESTED") {
+        resolvedStatusKey = "LOST";
+      } else if (outcome === "WRONG_NUMBER") {
+        resolvedStatusKey = "NOT_A_LEAD";
       }
+
+      const payload = getStatusUpdatePayload(resolvedStatusKey);
 
       await logCall({
         baseUrl,
@@ -88,8 +90,8 @@ export default function LogCallModal({ lead, baseUrl, onClose, onSuccess }: LogC
           outcome,
           notes: notes.trim(),
           callDurationSeconds: durationMinutes * 60,
-          newQuality: quality,
-          newStatus: resolvedStatus,
+          newQuality: payload.quality,
+          newStatus: payload.status,
           scheduledNextCallAt: scheduledNextCall ? new Date(scheduledNextCall).toISOString() : undefined,
           recordingUrl: recordingUrl.trim() || undefined,
         },
@@ -164,8 +166,15 @@ export default function LogCallModal({ lead, baseUrl, onClose, onSuccess }: LogC
                     onClick={() => {
                       setOutcome(item.id);
                       if (item.id === "CONNECTED_CONVERTED") {
-                        setQuality("HOT");
-                        setStatus("CONVERTED");
+                        setUnifiedStatus("CONVERTED");
+                      } else if (item.id === "CONNECTED_INTERESTED") {
+                        setUnifiedStatus("INTERESTED");
+                      } else if (item.id === "CONNECTED_NOT_INTERESTED") {
+                        setUnifiedStatus("LOST");
+                      } else if (item.id === "WRONG_NUMBER") {
+                        setUnifiedStatus("NOT_A_LEAD");
+                      } else if (item.id === "CONNECTED_FOLLOW_UP" || item.id === "CALL_BACK_REQUESTED") {
+                        setUnifiedStatus("FOLLOW_UP");
                       }
                     }}
                     className={`flex items-center gap-2 p-2.5 rounded-xl text-xs font-semibold border transition-all text-left ${
@@ -198,7 +207,7 @@ export default function LogCallModal({ lead, baseUrl, onClose, onSuccess }: LogC
             />
           </div>
 
-          {/* 3. Duration & Quality */}
+          {/* 3. Duration & Status */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
             {/* Call Duration */}
             <div>
@@ -223,28 +232,27 @@ export default function LogCallModal({ lead, baseUrl, onClose, onSuccess }: LogC
               </div>
             </div>
 
-            {/* Lead Quality */}
+            {/* Lead Status */}
             <div>
               <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-                Lead Quality Score
+                Lead Status
               </label>
               <div className="flex items-center gap-1.5 flex-wrap">
-                {QUALITIES.map((q) => {
-                  const isSelected = quality === q.id;
-                  const Icon = q.icon;
+                {SIMPLIFIED_STATUS_OPTIONS.map((opt) => {
+                  const isSelected = unifiedStatus === opt.key;
                   return (
                     <button
-                      key={q.id}
+                      key={opt.key}
                       type="button"
-                      onClick={() => setQuality(q.id)}
-                      className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                      onClick={() => setUnifiedStatus(opt.key)}
+                      className={`flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-xs font-bold transition-all border ${
                         isSelected
-                          ? `${q.color} shadow-xs`
-                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                          ? `${opt.badgeCls} shadow-xs scale-105`
+                          : "bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border-transparent hover:bg-zinc-200 dark:hover:bg-zinc-700"
                       }`}
                     >
-                      <Icon className="w-3.5 h-3.5" />
-                      <span>{q.label}</span>
+                      <span>{opt.emoji}</span>
+                      <span>{opt.label}</span>
                     </button>
                   );
                 })}
