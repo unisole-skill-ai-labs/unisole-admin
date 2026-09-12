@@ -735,14 +735,11 @@ export default function LeadsManagementPage() {
                                     </span>
                                   )}
                                 </div>
-                                <div className="text-xs text-zinc-400 flex items-center gap-2 mt-0.5">
-                                  <span>{lead.email || "No email"}</span>
-                                  {lead.userId && (
-                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
-                                      Registered
-                                    </span>
-                                  )}
-                                </div>
+                                {lead.email && (
+                                  <div className="text-xs text-zinc-400 truncate max-w-[200px] mt-0.5">
+                                    {lead.email}
+                                  </div>
+                                )}
                               </div>
                             </div>
                           </td>

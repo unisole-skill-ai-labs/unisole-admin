@@ -641,11 +641,6 @@ export default function CollegeLeadsSection({
                             </div>
                             <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 mt-0.5">
                               <span className="capitalize">{lead.source?.toLowerCase().replace(/_/g, " ") || "Organic"}</span>
-                              {lead.userId && (
-                                <span className="text-[9px] px-1 rounded bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 font-bold">
-                                  Registered User
-                                </span>
-                              )}
                             </div>
                           </div>
                         </div>
