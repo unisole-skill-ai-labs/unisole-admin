@@ -624,14 +624,6 @@ export default function LeadsManagementPage() {
                 </select>
 
                 <button
-                  onClick={() => handleBulkStatusSubmit("NOT_A_LEAD")}
-                  className="px-3 py-1.5 rounded-xl bg-rose-500/10 border border-rose-500/30 text-rose-600 dark:text-rose-400 text-xs font-bold hover:bg-rose-500/20 transition-colors flex items-center gap-1.5"
-                >
-                  <UserX className="w-3.5 h-3.5" />
-                  <span>Mark Selected Non-Leads</span>
-                </button>
-
-                <button
                   onClick={() => setSelectedLeadIds([])}
                   className="px-3 py-1.5 text-xs font-semibold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200"
                 >
@@ -684,12 +676,13 @@ export default function LeadsManagementPage() {
                         />
                       </th>
                       <th className="p-3">Student Lead</th>
+                      <th className="p-3">Contact</th>
                       <th className="p-3">College & Branch</th>
                       <th className="p-3">Call Velocity</th>
                       <th className="p-3 whitespace-nowrap">Stage & SLA Schedule</th>
                       <th className="p-3">Assigned Counselor</th>
-                      <th className="p-3">Status</th>
-                      <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-950/95 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[170px]">
+                      <th className="p-3 whitespace-nowrap">Status</th>
+                      <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-950/95 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[110px]">
                         Quick Actions
                       </th>
                     </tr>
@@ -706,74 +699,87 @@ export default function LeadsManagementPage() {
                         lead.status !== "CONVERTED" &&
                         lead.status !== "LOST";
 
-                      const cleanPhone = lead.phone?.replace(/[^\d]/g, "") || "";
-                      const whatsappUrl = `https://wa.me/${cleanPhone.startsWith("91") ? cleanPhone : "91" + cleanPhone}?text=${encodeURIComponent(
-                        `Hi ${lead.name || "there"}, this is regarding your interest with Unisole.`
-                      )}`;
-
+                      const whatsappUrl = `https://wa.me/${lead.phone.replace(/[^0-9]/g, "")}`;
                       const currentSimplifiedKey = getSimplifiedLeadStatus(lead.status, lead.quality);
                       const currentStatusCfg = SIMPLIFIED_STATUS_MAP[currentSimplifiedKey] || SIMPLIFIED_STATUS_MAP.NEW;
 
                       return (
                         <tr
                           key={lead.id}
-                          className={`hover:bg-zinc-50/70 dark:hover:bg-zinc-950/70 transition-colors ${
+                          className={`hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors ${
                             isSelected ? "bg-indigo-50/40 dark:bg-indigo-950/20" : ""
                           }`}
                         >
-                          {/* Checkbox */}
+                          {/* Row Selection Checkbox */}
                           <td className="p-3">
                             <input
                               type="checkbox"
                               checked={isSelected}
                               onChange={() => handleToggleLead(lead.id)}
-                              className="rounded-sm border-zinc-300 text-indigo-600 focus:ring-indigo-500"
+                              className="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                             />
                           </td>
 
-                          {/* Student Lead & Contact */}
+                          {/* Student Info */}
                           <td className="p-3">
-                            <div className="flex items-center gap-2.5">
-                              <button
-                                onClick={() => setDetailLeadId(lead.id)}
-                                className="w-8 h-8 rounded-xl bg-gradient-to-tr from-indigo-500/20 to-purple-500/20 text-indigo-600 dark:text-indigo-400 font-extrabold flex items-center justify-center shrink-0 hover:scale-105 transition-transform"
-                              >
-                                {(lead.name || "L").charAt(0).toUpperCase()}
-                              </button>
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white font-bold flex items-center justify-center text-xs shadow-2xs">
+                                {lead.name.charAt(0).toUpperCase()}
+                              </div>
                               <div>
-                                <button
-                                  onClick={() => setDetailLeadId(lead.id)}
-                                  className="font-bold text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 text-left block"
-                                >
-                                  {lead.name}
-                                </button>
-                                <div className="flex items-center gap-2 text-[11px] text-zinc-400 mt-0.5">
-                                  <span className="font-mono text-zinc-600 dark:text-zinc-300">{lead.phone}</span>
-                                  {lead.email && <span className="truncate max-w-[120px]">• {lead.email}</span>}
+                                <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
+                                  <span>{lead.name}</span>
+                                  {lead.yearOfStudy && (
+                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                                      {lead.yearOfStudy}
+                                    </span>
+                                  )}
+                                </div>
+                                <div className="text-xs text-zinc-400 flex items-center gap-2 mt-0.5">
+                                  <span>{lead.email || "No email"}</span>
+                                  {lead.userId && (
+                                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-semibold">
+                                      Registered
+                                    </span>
+                                  )}
                                 </div>
                               </div>
                             </div>
                           </td>
 
-                          {/* College & Branch */}
+                          {/* Contact */}
                           <td className="p-3">
-                            <span className="font-semibold text-zinc-800 dark:text-zinc-200 block truncate max-w-[160px]">
-                              {lead.collegeName || "Unassigned"}
-                            </span>
-                            <span className="text-[11px] text-zinc-400 block truncate max-w-[160px]">
-                              {lead.branch || "General"} {lead.yearOfStudy ? `(${lead.yearOfStudy})` : ""}
-                            </span>
+                            <div className="font-mono text-zinc-700 dark:text-zinc-300 font-medium">
+                              {lead.phone}
+                            </div>
+                          </td>
+
+                          {/* College */}
+                          <td className="p-3 max-w-[200px]">
+                            <div className="text-zinc-800 dark:text-zinc-200 truncate" title={lead.collegeName}>
+                              {lead.collegeName}
+                            </div>
+                            <div className="text-[11px] text-zinc-400 truncate">{lead.branch}</div>
                           </td>
 
                           {/* Call Velocity */}
-                          <td className="p-3">
-                            <div>
-                              <span className="font-mono font-extrabold text-xs px-2 py-0.5 rounded-md bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300">
-                                {lead.callCount || 0} calls
+                          <td className="p-3 whitespace-nowrap">
+                            <div className="flex items-center gap-2">
+                              <span
+                                className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
+                                  lead.callCount > 0
+                                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
+                                    : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
+                                }`}
+                              >
+                                {lead.callCount} calls
                               </span>
                               {lead.lastCallAt && (
-                                <span className="text-[10px] text-zinc-400 block mt-0.5 font-mono">
-                                  Last: {new Date(lead.lastCallAt).toLocaleDateString("en-IN", { day: "numeric", month: "short" })}
+                                <span className="text-[11px] text-zinc-400">
+                                  {new Date(lead.lastCallAt).toLocaleDateString([], {
+                                    month: "short",
+                                    day: "numeric",
+                                  })}
                                 </span>
                               )}
                             </div>
@@ -784,37 +790,37 @@ export default function LeadsManagementPage() {
                             <LeadSlaBadge lead={lead} showStage={true} />
                           </td>
 
-                          {/* Assigned Rep / Staff */}
-                          <td className="p-3">
-                            {!isAdmin ? (
-                              <span className="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                                {lead.assignedToUser?.name || currentUser?.name || "Assigned to You"}
-                              </span>
-                            ) : (
+                          {/* Assigned Counselor */}
+                          <td className="p-3 whitespace-nowrap">
+                            {isAdmin ? (
                               <select
                                 value={lead.assignedToUserId || ""}
                                 onChange={(e) => handleInlineAssignee(lead.id, e.target.value)}
-                                className="text-xs font-semibold px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 max-w-[140px]"
+                                className="text-xs font-semibold px-2 py-1 rounded-lg border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200"
                               >
-                                <option value="">Unassigned</option>
-                                {meta.teamMembers.map((m: any) => (
+                                <option value="">⚠️ Unassigned</option>
+                                {meta?.teamMembers?.map((m: any) => (
                                   <option key={m.id} value={m.id}>
                                     {formatTeamMemberLabel(m)}
                                   </option>
                                 ))}
                               </select>
+                            ) : (
+                              <span className="text-xs font-medium text-zinc-700 dark:text-zinc-300">
+                                {lead.assignedToName || "Unassigned"}
+                              </span>
                             )}
                           </td>
 
-                          {/* Status */}
-                          <td className="p-3">
+                          {/* Unified Status Dropdown */}
+                          <td className="p-3 whitespace-nowrap">
                             <select
                               value={currentSimplifiedKey}
                               onChange={(e) => handleInlineStatus(lead.id, e.target.value)}
-                              className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border cursor-pointer ${currentStatusCfg.badgeCls}`}
+                              className={`text-xs font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${currentStatusCfg.badgeCls}`}
                             >
                               {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
-                                <option key={opt.key} value={opt.key}>
+                                <option key={opt.key} value={opt.key} className="bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-normal">
                                   {opt.emoji} {opt.label}
                                 </option>
                               ))}
@@ -823,20 +829,11 @@ export default function LeadsManagementPage() {
 
                           {/* Quick Actions (Sticky on right so always visible!) */}
                           <td
-                            className={`p-3 text-right sticky right-0 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800/80 shadow-2xs whitespace-nowrap min-w-[170px] ${
+                            className={`p-3 text-right sticky right-0 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800/80 shadow-2xs whitespace-nowrap min-w-[110px] ${
                               isSelected ? "bg-indigo-50/95 dark:bg-zinc-900" : "bg-white/95 dark:bg-zinc-900/95"
                             }`}
                           >
                             <div className="flex items-center justify-end gap-1.5">
-                              {/* Log Call Notes */}
-                              <button
-                                onClick={() => setSelectedLeadForCall(lead)}
-                                title="Log Call Note"
-                                className="p-1.5 rounded-lg bg-amber-500/10 text-amber-600 dark:text-amber-400 hover:bg-amber-500/20 transition-colors"
-                              >
-                                <FileText className="w-3.5 h-3.5" />
-                              </button>
-
                               {/* Call Directly */}
                               <a
                                 href={`tel:${lead.phone}`}
@@ -857,29 +854,10 @@ export default function LeadsManagementPage() {
                                 <MessageCircle className="w-3.5 h-3.5" />
                               </a>
 
-                              {/* Quick Mark / Unmark Non-Lead */}
-                              {lead.status === "NOT_A_LEAD" ? (
-                                <button
-                                  onClick={() => handleInlineStatus(lead.id, "NEW")}
-                                  title="Reactivate as Active Lead"
-                                  className="p-1.5 rounded-lg text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/60 transition-colors"
-                                >
-                                  <UserCheck className="w-3.5 h-3.5" />
-                                </button>
-                              ) : (
-                                <button
-                                  onClick={() => handleInlineStatus(lead.id, "NOT_A_LEAD")}
-                                  title="Mark as Non-Lead"
-                                  className="p-1.5 rounded-lg text-zinc-400 hover:text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/60 transition-colors"
-                                >
-                                  <UserX className="w-3.5 h-3.5" />
-                                </button>
-                              )}
-
-                              {/* View Profile & Full Drawer */}
+                              {/* View Profile & Call Notes (Merged Drawer) */}
                               <button
                                 onClick={() => setDetailLeadId(lead.id)}
-                                title="View profile & full timeline"
+                                title="View Profile & Call Notes"
                                 className="p-1.5 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
                               >
                                 <Eye className="w-3.5 h-3.5" />

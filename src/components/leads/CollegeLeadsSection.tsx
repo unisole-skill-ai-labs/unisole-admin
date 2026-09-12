@@ -589,7 +589,7 @@ export default function CollegeLeadsSection({
                   <th className="p-3 whitespace-nowrap">Stage & SLA Schedule</th>
                   <th className="p-3">Assigned Rep / Staff</th>
                   <th className="p-3">Status</th>
-                  <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-900 z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[150px]">
+                  <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-900 z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[80px]">
                     Actions
                   </th>
                 </tr>
@@ -729,34 +729,14 @@ export default function CollegeLeadsSection({
 
                       {/* Actions */}
                       <td
-                        className={`p-3 text-right sticky right-0 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[150px] ${
+                        className={`p-3 text-right sticky right-0 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[80px] ${
                           isSelected ? "bg-indigo-50/95 dark:bg-zinc-900" : "bg-white/95 dark:bg-zinc-900/95"
                         }`}
                       >
                         <div className="flex items-center justify-end gap-1">
                           <button
-                            onClick={() => setSelectedLeadForCall(lead)}
-                            className="p-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 text-indigo-600 dark:text-indigo-400 font-bold transition-all"
-                            title="Log Call"
-                          >
-                            <PhoneCall className="w-3.5 h-3.5" />
-                          </button>
-
-                          <button
-                            onClick={() => handleInlineStatus(lead.id, isNonLead ? "NEW" : "NOT_A_LEAD")}
-                            className={`p-1.5 rounded-lg border transition-all ${
-                              isNonLead
-                                ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-600 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-900/50"
-                                : "bg-zinc-50 hover:bg-zinc-100 text-zinc-500 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-400 dark:border-zinc-700"
-                            }`}
-                            title={isNonLead ? "Reactivate as Active Lead" : "Mark as Non-Lead"}
-                          >
-                            {isNonLead ? <UserCheck className="w-3.5 h-3.5" /> : <UserX className="w-3.5 h-3.5" />}
-                          </button>
-
-                          <button
                             onClick={() => setEditLeadData(lead)}
-                            className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
+                            className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
                             title="Edit Lead"
                           >
                             <Edit2 className="w-3.5 h-3.5" />
@@ -764,8 +744,8 @@ export default function CollegeLeadsSection({
 
                           <button
                             onClick={() => setDetailLeadId(lead.id)}
-                            className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200"
-                            title="View Full History Drawer"
+                            className="p-1.5 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-700 dark:text-zinc-400 dark:hover:text-zinc-200 transition-colors"
+                            title="View Profile & Call Notes"
                           >
                             <Eye className="w-3.5 h-3.5" />
                           </button>
