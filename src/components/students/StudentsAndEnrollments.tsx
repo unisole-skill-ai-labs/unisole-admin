@@ -368,7 +368,7 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
                 <th className="py-3 px-4 font-semibold">Learner Info</th>
                 <th className="py-3 px-4 font-semibold">Mobile Number</th>
                 <th className="py-3 px-4 font-semibold">Acquisition Source</th>
-                <th className="py-3 px-4 font-semibold">Campus & Branch</th>
+                <th className="py-3 px-4 font-semibold min-w-[240px]">Campus & Branch</th>
                 <th className="py-3 px-4 font-semibold">Role</th>
                 <th className="py-3 px-4 font-semibold">Status</th>
                 <th className="py-3 px-4 font-semibold text-right">Actions</th>
@@ -424,22 +424,22 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
                         </span>
                       )}
                     </td>
-                    <td className="py-3.5 px-4">
+                    <td className="py-3.5 px-4 min-w-[240px]">
                       {s.role !== "STUDENT" ? (
                         <div>
-                          <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">
+                          <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
                             {s.designation || "Core Team"}
                           </div>
-                          <div className="text-[11px] text-zinc-400 font-mono truncate max-w-[180px]">
+                          <div className="text-[11px] text-zinc-400 font-mono mt-0.5 leading-snug">
                             Internal Staff
                           </div>
                         </div>
                       ) : (
                         <div>
-                          <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 truncate max-w-[180px]">
+                          <div className="text-xs font-bold text-zinc-900 dark:text-zinc-100 leading-snug break-words" title={s.collegeName || s.signupCollegeName}>
                             {s.collegeName || s.signupCollegeName || "—"}
                           </div>
-                          <div className="text-[11px] text-zinc-400 font-mono truncate max-w-[180px]">
+                          <div className="text-[11px] text-zinc-400 font-mono mt-0.5 leading-snug break-words" title={s.branch}>
                             {s.branch || "General"}
                           </div>
                         </div>
