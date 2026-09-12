@@ -750,12 +750,14 @@ export default function LeadsManagementPage() {
                             </div>
                           </td>
 
-                          {/* College */}
-                          <td className="p-3 max-w-[200px]">
-                            <div className="text-zinc-800 dark:text-zinc-200 truncate" title={lead.collegeName}>
-                              {lead.collegeName}
+                          {/* College & Branch */}
+                          <td className="p-3 min-w-[220px]">
+                            <div className="font-semibold text-zinc-800 dark:text-zinc-200 leading-snug" title={lead.collegeName}>
+                              {lead.collegeName || "Unassigned"}
                             </div>
-                            <div className="text-[11px] text-zinc-400 truncate">{lead.branch}</div>
+                            {lead.branch && (
+                              <div className="text-[11px] text-zinc-400 mt-0.5 leading-snug">{lead.branch}</div>
+                            )}
                           </td>
 
                           {/* Follow-up & Calls */}
