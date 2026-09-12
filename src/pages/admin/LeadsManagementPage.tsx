@@ -676,12 +676,11 @@ export default function LeadsManagementPage() {
                         />
                       </th>
                       <th className="p-3">Student Lead</th>
-                      <th className="p-3">Contact</th>
                       <th className="p-3">College & Branch</th>
                       <th className="p-3 whitespace-nowrap">Follow-up & Calls</th>
                       <th className="p-3">Assigned Counselor</th>
-                      <th className="p-3 whitespace-nowrap min-w-[125px]">Status</th>
-                      <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-950/95 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[110px]">
+                      <th className="p-3 whitespace-nowrap">Status</th>
+                      <th className="p-3 text-right whitespace-nowrap">
                         Quick Actions
                       </th>
                     </tr>
@@ -721,37 +720,29 @@ export default function LeadsManagementPage() {
 
                           {/* Student Info */}
                           <td className="p-3">
-                            <div className="flex items-center gap-3">
-                              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white font-bold flex items-center justify-center text-xs shadow-2xs">
+                            <div className="flex items-center gap-2.5">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 text-white font-bold flex items-center justify-center text-xs shadow-2xs shrink-0">
                                 {lead.name.charAt(0).toUpperCase()}
                               </div>
-                              <div>
+                              <div className="min-w-0">
                                 <div className="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
                                   <span>{lead.name}</span>
                                   {lead.yearOfStudy && (
-                                    <span className="text-[10px] font-medium px-1.5 py-0.5 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
+                                    <span className="text-[10px] font-medium px-1.5 py-0.2 rounded bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400">
                                       {lead.yearOfStudy}
                                     </span>
                                   )}
                                 </div>
-                                {lead.email && (
-                                  <div className="text-xs text-zinc-400 truncate max-w-[200px] mt-0.5">
-                                    {lead.email}
-                                  </div>
-                                )}
+                                <div className="text-[11px] text-zinc-400 flex items-center gap-1.5 mt-0.5 font-mono">
+                                  <span className="text-zinc-600 dark:text-zinc-300 font-semibold">{lead.phone}</span>
+                                  {lead.email && <span className="truncate max-w-[140px] text-zinc-400 font-sans">• {lead.email}</span>}
+                                </div>
                               </div>
                             </div>
                           </td>
 
-                          {/* Contact */}
-                          <td className="p-3">
-                            <div className="font-mono text-zinc-700 dark:text-zinc-300 font-medium">
-                              {lead.phone}
-                            </div>
-                          </td>
-
                           {/* College & Branch */}
-                          <td className="p-3 min-w-[220px]">
+                          <td className="p-3">
                             <div className="font-semibold text-zinc-800 dark:text-zinc-200 leading-snug" title={lead.collegeName}>
                               {lead.collegeName || "Unassigned"}
                             </div>
@@ -788,11 +779,11 @@ export default function LeadsManagementPage() {
                           </td>
 
                           {/* Unified Status Dropdown */}
-                          <td className="p-3 pr-4 whitespace-nowrap min-w-[125px]">
+                          <td className="p-3 whitespace-nowrap">
                             <select
                               value={currentSimplifiedKey}
                               onChange={(e) => handleInlineStatus(lead.id, e.target.value)}
-                              className={`text-[11px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer max-w-[115px] ${currentStatusCfg.badgeCls}`}
+                              className={`text-[11px] font-bold px-2.5 py-1 rounded-lg border transition-all cursor-pointer ${currentStatusCfg.badgeCls}`}
                             >
                               {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
                                 <option key={opt.key} value={opt.key} className="bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-normal">
@@ -802,12 +793,8 @@ export default function LeadsManagementPage() {
                             </select>
                           </td>
 
-                          {/* Quick Actions (Sticky on right so always visible!) */}
-                          <td
-                            className={`p-3 text-right sticky right-0 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800/80 shadow-2xs whitespace-nowrap min-w-[110px] ${
-                              isSelected ? "bg-indigo-50/95 dark:bg-zinc-900" : "bg-white/95 dark:bg-zinc-900/95"
-                            }`}
-                          >
+                          {/* Quick Actions (Non-sticky: natural table layout, zero overlap) */}
+                          <td className="p-3 text-right whitespace-nowrap">
                             <div className="flex items-center justify-end gap-1.5">
                               {/* Call Directly */}
                               <a
