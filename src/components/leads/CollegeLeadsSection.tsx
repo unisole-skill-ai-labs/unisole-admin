@@ -585,8 +585,7 @@ export default function CollegeLeadsSection({
                   <th className="p-3">Student / Lead</th>
                   <th className="p-3">Contact</th>
                   <th className="p-3">Branch</th>
-                  <th className="p-3">Calls</th>
-                  <th className="p-3 whitespace-nowrap">Stage & SLA Schedule</th>
+                  <th className="p-3 whitespace-nowrap">Follow-up & Calls</th>
                   <th className="p-3">Assigned Rep / Staff</th>
                   <th className="p-3">Status</th>
                   <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-900 z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[80px]">
@@ -668,21 +667,9 @@ export default function CollegeLeadsSection({
                         </span>
                       </td>
 
-                      {/* Call Count */}
-                      <td className="p-3">
-                        <button
-                          onClick={() => setSelectedLeadForCall(lead)}
-                          className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-[11px] font-bold hover:bg-indigo-50 hover:text-indigo-600 dark:hover:bg-indigo-950/40 dark:hover:text-indigo-400 transition-colors"
-                          title="Click to log a call"
-                        >
-                          <PhoneCall className="w-3 h-3" />
-                          <span>{lead.callCount || 0} calls</span>
-                        </button>
-                      </td>
-
-                      {/* Stage & SLA Schedule */}
+                      {/* Follow-up & Calls */}
                       <td className="p-3 whitespace-nowrap">
-                        <LeadSlaBadge lead={lead} showStage={true} />
+                        <LeadSlaBadge lead={lead} showStage={true} showVelocity={true} />
                       </td>
 
                       {/* Assigned Rep / Staff */}

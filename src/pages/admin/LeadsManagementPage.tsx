@@ -678,8 +678,7 @@ export default function LeadsManagementPage() {
                       <th className="p-3">Student Lead</th>
                       <th className="p-3">Contact</th>
                       <th className="p-3">College & Branch</th>
-                      <th className="p-3">Call Velocity</th>
-                      <th className="p-3 whitespace-nowrap">Stage & SLA Schedule</th>
+                      <th className="p-3 whitespace-nowrap">Follow-up & Calls</th>
                       <th className="p-3">Assigned Counselor</th>
                       <th className="p-3 whitespace-nowrap">Status</th>
                       <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-950/95 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[110px]">
@@ -759,32 +758,9 @@ export default function LeadsManagementPage() {
                             <div className="text-[11px] text-zinc-400 truncate">{lead.branch}</div>
                           </td>
 
-                          {/* Call Velocity */}
+                          {/* Follow-up & Calls */}
                           <td className="p-3 whitespace-nowrap">
-                            <div className="flex items-center gap-2">
-                              <span
-                                className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                                  lead.callCount > 0
-                                    ? "bg-emerald-50 text-emerald-600 dark:bg-emerald-950/50 dark:text-emerald-400"
-                                    : "bg-zinc-100 text-zinc-500 dark:bg-zinc-800"
-                                }`}
-                              >
-                                {lead.callCount} calls
-                              </span>
-                              {lead.lastCallAt && (
-                                <span className="text-[11px] text-zinc-400">
-                                  {new Date(lead.lastCallAt).toLocaleDateString([], {
-                                    month: "short",
-                                    day: "numeric",
-                                  })}
-                                </span>
-                              )}
-                            </div>
-                          </td>
-
-                          {/* Stage & SLA Schedule */}
-                          <td className="p-3 whitespace-nowrap">
-                            <LeadSlaBadge lead={lead} showStage={true} />
+                            <LeadSlaBadge lead={lead} showStage={true} showVelocity={true} />
                           </td>
 
                           {/* Assigned Counselor */}
