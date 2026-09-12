@@ -73,7 +73,7 @@ export default function LeadsManagementPage() {
   const [search, setSearch] = useState("");
   const [collegeId, setCollegeId] = useState("");
   const [branch, setBranch] = useState("");
-  const [assignedToUserId, setAssignedToUserId] = useState("");
+  const [assignedToUserId, setAssignedToUserId] = useState<string>("MY_LEADS");
   const [status, setStatus] = useState("");
   const [nextCallDue, setNextCallDue] = useState<any>("");
 
@@ -102,13 +102,27 @@ export default function LeadsManagementPage() {
     return undefined;
   }, [status, scopeFilter]);
 
+  // Computed effective assignedToUserId filter (defaults to current user's leads for everyone)
+  const effectiveAssignedToUserId = useMemo(() => {
+    if (!isAdmin) {
+      return currentUser?.id;
+    }
+    if (assignedToUserId === "MY_LEADS") {
+      return currentUser?.id || undefined;
+    }
+    if (assignedToUserId === "ALL" || !assignedToUserId) {
+      return undefined;
+    }
+    return assignedToUserId;
+  }, [isAdmin, assignedToUserId, currentUser?.id]);
+
   // Queries & Mutations
   const { data: leadsRes, isLoading, refetch } = useGetLeadsQuery({
     baseUrl,
     search: search.trim() || undefined,
     collegeId: collegeId || undefined,
     branch: branch || undefined,
-    assignedToUserId: isAdmin ? (assignedToUserId || undefined) : currentUser?.id,
+    assignedToUserId: effectiveAssignedToUserId,
     status: effectiveStatus,
     excludeNonLeads: scopeFilter === "ACTIVE" && !status ? true : undefined,
     nextCallDue: nextCallDue || undefined,
@@ -277,14 +291,14 @@ export default function LeadsManagementPage() {
   };
 
   const hasActiveFilters = Boolean(
-    search || collegeId || branch || assignedToUserId || status || nextCallDue
+    search || collegeId || branch || (isAdmin ? assignedToUserId !== "MY_LEADS" : false) || status || nextCallDue
   );
 
   const clearFilters = () => {
     setSearch("");
     setCollegeId("");
     setBranch("");
-    setAssignedToUserId("");
+    setAssignedToUserId(isAdmin ? "MY_LEADS" : "");
     setStatus("");
     setNextCallDue("");
   };
@@ -299,14 +313,27 @@ export default function LeadsManagementPage() {
               <PhoneCall className="w-5 h-5" />
             </div>
             <div>
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <h1 className="text-xl font-extrabold text-zinc-900 dark:text-zinc-100 tracking-tight">
                   {!isAdmin ? "My Assigned Leads" : "Lead Management CRM"}
                 </h1>
-                {!isAdmin && (
+                {!isAdmin ? (
                   <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
                     <UserCheck className="w-3.5 h-3.5" />
                     <span>Assigned to: {currentUser?.name || currentUser?.phone || "Me"}</span>
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[11px] font-bold bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20 font-mono">
+                    <UserCheck className="w-3.5 h-3.5" />
+                    <span>
+                      {assignedToUserId === "MY_LEADS" || assignedToUserId === currentUser?.id
+                        ? "Showing: My Assigned Leads"
+                        : assignedToUserId === "ALL"
+                        ? "Showing: All Team Leads"
+                        : assignedToUserId === "unassigned"
+                        ? "Showing: Unassigned Leads"
+                        : "Showing: Filtered Staff Leads"}
+                    </span>
                   </span>
                 )}
               </div>
@@ -417,14 +444,14 @@ export default function LeadsManagementPage() {
           baseUrl={baseUrl}
           collegeId={collegeId || undefined}
           branch={branch || undefined}
-          assignedToUserId={isAdmin ? (assignedToUserId || undefined) : currentUser?.id}
+          assignedToUserId={effectiveAssignedToUserId}
         />
       ) : (
         <div className="space-y-4">
           {/* Advanced Multi-Filter Bar & Scope Switcher */}
           <div className="p-4 rounded-2xl bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 shadow-xs space-y-3">
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
                 <div className="flex items-center gap-2 text-xs font-bold text-zinc-700 dark:text-zinc-300 mr-2">
                   <Filter className="w-4 h-4 text-indigo-500" />
                   <span>Pipeline Scope:</span>
@@ -462,6 +489,34 @@ export default function LeadsManagementPage() {
                     All Records
                   </button>
                 </div>
+
+                {/* Admin Quick Switcher: My Leads vs All Leads */}
+                {isAdmin && (
+                  <div className="flex items-center gap-1 p-1 rounded-xl bg-zinc-100 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 ml-1">
+                    <button
+                      type="button"
+                      onClick={() => setAssignedToUserId("MY_LEADS")}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        assignedToUserId === "MY_LEADS" || assignedToUserId === currentUser?.id
+                          ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
+                          : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                      }`}
+                    >
+                      👤 My Leads
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setAssignedToUserId("ALL")}
+                      className={`px-3 py-1 rounded-lg text-xs font-bold transition-all cursor-pointer ${
+                        assignedToUserId === "ALL"
+                          ? "bg-white dark:bg-zinc-900 text-indigo-600 dark:text-indigo-400 shadow-xs"
+                          : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900"
+                      }`}
+                    >
+                      🌐 All Leads
+                    </button>
+                  </div>
+                )}
               </div>
 
               {hasActiveFilters && (
@@ -528,13 +583,16 @@ export default function LeadsManagementPage() {
                     onChange={(e) => setAssignedToUserId(e.target.value)}
                     className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-zinc-50 dark:bg-zinc-950 text-xs text-zinc-800 dark:text-zinc-200 font-medium"
                   >
-                    <option value="">All Assigned Reps / Staff</option>
+                    <option value="MY_LEADS">👤 My Assigned Leads (Default)</option>
+                    <option value="ALL">🌐 All Assigned Reps / Staff</option>
                     <option value="unassigned">⚠️ Unassigned Leads</option>
-                    {meta.teamMembers.map((m: any) => (
-                      <option key={m.id} value={m.id}>
-                        {formatTeamMemberLabel(m)}
-                      </option>
-                    ))}
+                    <optgroup label="Filter by Team Member">
+                      {meta.teamMembers.map((m: any) => (
+                        <option key={m.id} value={m.id}>
+                          {m.id === currentUser?.id ? `👤 ${formatTeamMemberLabel(m)} (You)` : formatTeamMemberLabel(m)}
+                        </option>
+                      ))}
+                    </optgroup>
                   </select>
                 </div>
               )}
