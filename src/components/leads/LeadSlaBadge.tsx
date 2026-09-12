@@ -34,25 +34,13 @@ export default function LeadSlaBadge({ lead, showStage = true, showVelocity = fa
       ? new Date(lead.lastCallAt).toLocaleDateString([], { month: "short", day: "numeric" })
       : null;
 
-    if (!hasCalls) {
-      return (
-        <div className="text-[11px] text-zinc-500 font-medium">
-          Never called
-        </div>
-      );
-    }
-
     return (
       <div className="flex items-center gap-1.5 text-[11px] text-zinc-400 font-medium">
-        <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+        <span className={hasCalls ? "text-emerald-600 dark:text-emerald-400 font-bold" : "text-zinc-500"}>
           {callCount} {callCount === 1 ? "call" : "calls"}
         </span>
-        {lastDate && (
-          <>
-            <span>•</span>
-            <span>{lastDate}</span>
-          </>
-        )}
+        <span>•</span>
+        <span>{lastDate ? `Last: ${lastDate}` : "Never called"}</span>
       </div>
     );
   };
@@ -63,7 +51,7 @@ export default function LeadSlaBadge({ lead, showStage = true, showVelocity = fa
     }
     return (
       <div className="flex flex-col items-start gap-0.5 whitespace-nowrap">
-        <span className="text-xs font-semibold text-zinc-400 select-none">— Closed</span>
+        <span className="text-xs font-semibold text-zinc-400 select-none">— Converted / Closed</span>
         {renderVelocity()}
       </div>
     );
@@ -75,9 +63,9 @@ export default function LeadSlaBadge({ lead, showStage = true, showVelocity = fa
       <div className="flex flex-col items-start gap-0.5 whitespace-nowrap">
         <div className="flex items-center gap-1.5 text-xs font-bold text-rose-600 dark:text-rose-400">
           <AlertTriangle className="w-3.5 h-3.5 shrink-0" />
-          <span>{showVelocity ? "Overdue" : "1st Contact Breached"}</span>
+          <span>1st Contact Breached</span>
           {showVelocity && (
-            <span className="text-[11px] font-mono font-semibold text-rose-500/90 dark:text-rose-400/80">
+            <span className="text-[11px] font-mono font-normal text-rose-500/90 dark:text-rose-400/80">
               ({sla.countdownText})
             </span>
           )}
@@ -98,7 +86,7 @@ export default function LeadSlaBadge({ lead, showStage = true, showVelocity = fa
       <div className="flex flex-col items-start gap-0.5 whitespace-nowrap">
         <div className="flex items-center gap-1.5 text-xs font-bold text-purple-600 dark:text-purple-400">
           <Clock className="w-3.5 h-3.5 shrink-0" />
-          <span>{showVelocity ? "1st Call Due" : "1st Contact Due"}</span>
+          <span>1st Contact Due</span>
           {showVelocity && (
             <span className="text-[11px] font-mono font-semibold text-purple-600/90 dark:text-purple-300">
               ({sla.countdownText})
@@ -165,6 +153,7 @@ export default function LeadSlaBadge({ lead, showStage = true, showVelocity = fa
     <div className="flex flex-col items-start gap-0.5 whitespace-nowrap">
       <div className="flex items-center gap-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300">
         <span>{showStage && lead.callCount ? sla.stageLabel : "Unscheduled"}</span>
+        {showVelocity && <span className="text-[11px] font-mono text-zinc-400 dark:text-zinc-500">• No time set</span>}
       </div>
       {!showVelocity && (
         <span className="text-[11px] font-mono text-zinc-400 dark:text-zinc-500">No time set</span>
