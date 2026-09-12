@@ -20,7 +20,7 @@ export const SIMPLIFIED_STATUS_MAP: Record<string, SimplifiedStatusConfig> = {
   },
   FOLLOW_UP: {
     key: "FOLLOW_UP",
-    label: "In Follow-up",
+    label: "Follow-up",
     emoji: "📞",
     badgeCls: "bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border-indigo-500/30",
     queryStatuses: ["FOLLOW_UP_SCHEDULED", "CONTACTED", "ATTEMPTED"],

@@ -587,7 +587,7 @@ export default function CollegeLeadsSection({
                   <th className="p-3">Branch</th>
                   <th className="p-3 whitespace-nowrap">Follow-up & Calls</th>
                   <th className="p-3">Assigned Rep / Staff</th>
-                  <th className="p-3">Status</th>
+                  <th className="p-3 whitespace-nowrap min-w-[125px]">Status</th>
                   <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-900 z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[80px]">
                     Actions
                   </th>
@@ -695,11 +695,11 @@ export default function CollegeLeadsSection({
                       </td>
 
                       {/* Status */}
-                      <td className="p-3">
+                      <td className="p-3 pr-4 whitespace-nowrap min-w-[125px]">
                         <select
                           value={currentSimplifiedKey}
                           onChange={(e) => handleInlineStatus(lead.id, e.target.value)}
-                          className={`text-[11px] font-bold px-2.5 py-1.5 rounded-lg border cursor-pointer ${currentStatusCfg.badgeCls}`}
+                          className={`text-[11px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer max-w-[115px] ${currentStatusCfg.badgeCls}`}
                         >
                           {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
                             <option key={opt.key} value={opt.key}>

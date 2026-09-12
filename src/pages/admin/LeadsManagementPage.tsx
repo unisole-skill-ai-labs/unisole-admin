@@ -680,7 +680,7 @@ export default function LeadsManagementPage() {
                       <th className="p-3">College & Branch</th>
                       <th className="p-3 whitespace-nowrap">Follow-up & Calls</th>
                       <th className="p-3">Assigned Counselor</th>
-                      <th className="p-3 whitespace-nowrap">Status</th>
+                      <th className="p-3 whitespace-nowrap min-w-[125px]">Status</th>
                       <th className="p-3 text-right sticky right-0 bg-zinc-50 dark:bg-zinc-950/95 backdrop-blur-xs z-10 border-l border-zinc-200 dark:border-zinc-800 shadow-2xs whitespace-nowrap min-w-[110px]">
                         Quick Actions
                       </th>
@@ -788,11 +788,11 @@ export default function LeadsManagementPage() {
                           </td>
 
                           {/* Unified Status Dropdown */}
-                          <td className="p-3 whitespace-nowrap">
+                          <td className="p-3 pr-4 whitespace-nowrap min-w-[125px]">
                             <select
                               value={currentSimplifiedKey}
                               onChange={(e) => handleInlineStatus(lead.id, e.target.value)}
-                              className={`text-xs font-bold px-2 py-1 rounded-lg border transition-all cursor-pointer ${currentStatusCfg.badgeCls}`}
+                              className={`text-[11px] font-bold px-2 py-0.5 rounded-md border transition-all cursor-pointer max-w-[115px] ${currentStatusCfg.badgeCls}`}
                             >
                               {SIMPLIFIED_STATUS_OPTIONS.map((opt) => (
                                 <option key={opt.key} value={opt.key} className="bg-white dark:bg-zinc-900 text-zinc-800 dark:text-zinc-200 font-normal">
