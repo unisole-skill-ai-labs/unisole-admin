@@ -88,6 +88,7 @@ export const adminApi = createApi({
     "LeaderRadar",
     "Projects",
     "SubProjects",
+    "Surveys",
     "LeadAnalytics",
     "LeadMeta",
     "MyWork",
@@ -1225,10 +1226,50 @@ export const adminApi = createApi({
         body,
       }),
     }),
+    // Surveys & Question Editor
+    getSurveys: build.query({
+      query: (baseUrl) => `${baseUrl}/api/admin/surveys`,
+      providesTags: ["Surveys"],
+    }),
+    getSurveyDetail: build.query({
+      query: ({ baseUrl, slug }) => `${baseUrl}/api/admin/surveys/${slug}`,
+      providesTags: (_res, _err, { slug }) => [{ type: "Surveys" as const, id: slug }],
+    }),
+    getSurveyResponses: build.query({
+      query: ({ baseUrl, slug, params }) => {
+        const q = new URLSearchParams();
+        if (params?.collegeName) q.set("collegeName", params.collegeName);
+        if (params?.stream) q.set("stream", params.stream);
+        if (params?.yearOfStudy) q.set("yearOfStudy", params.yearOfStudy);
+        if (params?.search) q.set("search", params.search);
+        if (params?.limit) q.set("limit", String(params.limit));
+        if (params?.offset) q.set("offset", String(params.offset));
+        return `${baseUrl}/api/admin/surveys/${slug}/responses?${q.toString()}`;
+      },
+      providesTags: (_res, _err, { slug }) => [{ type: "Surveys" as const, id: `${slug}-responses` }],
+    }),
+    getSurveyStats: build.query({
+      query: ({ baseUrl, slug }) => `${baseUrl}/api/admin/surveys/${slug}/stats`,
+      providesTags: (_res, _err, { slug }) => [{ type: "Surveys" as const, id: `${slug}-stats` }],
+    }),
+    updateSurvey: build.mutation({
+      query: ({ baseUrl, slug, body }) => ({
+        url: `${baseUrl}/api/admin/surveys/${slug}`,
+        method: "PUT",
+        body,
+      }),
+      invalidatesTags: ["Surveys"],
+    }),
   }),
 });
 
 export const {
+  // Surveys Management
+  useGetSurveysQuery,
+  useGetSurveyDetailQuery,
+  useGetSurveyResponsesQuery,
+  useGetSurveyStatsQuery,
+  useUpdateSurveyMutation,
   // Students
   useGetStudentsQuery,
   useCreateStudentMutation,

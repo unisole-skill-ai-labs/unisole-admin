@@ -31,6 +31,7 @@ import {
   PhoneCall,
   Briefcase,
   ListTodo,
+  ClipboardList,
 } from "lucide-react";
 import { formatPhone } from "../../utils/formatters";
 
@@ -66,6 +67,7 @@ export default function AdminShell() {
   const canViewColleges = !isSales && (hasPermission(user, "colleges:view") || hasPermission(user, "colleges:manage") || isSuperAdmin);
   const canViewPresentations = !isSales && (hasPermission(user, "presentations:manage") || isSuperAdmin);
   const canViewStudents = !isSales && (hasPermission(user, "students:manage") || isSuperAdmin);
+  const canViewSurveys = !isSales && (hasPermission(user, "surveys:view") || isSuperAdmin || isAdmin);
   const canViewPayments = !isSales && hasPermission(user, "payments:view");
 
   // Close mobile sidebar on route change
@@ -450,6 +452,34 @@ export default function AdminShell() {
                   <span>Learners & Enrollments</span>
                 </NavLink>
               )}
+            </div>
+          )}
+
+          {/* 5. Surveys & Feedback Intake */}
+          {canViewSurveys && (
+            <div className="space-y-1">
+              <div className="px-3 text-[10px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500 font-mono mb-2">
+                Surveys & Intake
+              </div>
+
+              <NavLink
+                to="/surveys"
+                className={({ isActive }) =>
+                  `flex items-center justify-between px-3.5 py-2.5 rounded-xl text-xs font-bold transition-all ${
+                    isActive || location.pathname.startsWith("/surveys")
+                      ? "bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400 shadow-xs font-black"
+                      : "text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-900"
+                  }`
+                }
+              >
+                <div className="flex items-center gap-3">
+                  <ClipboardList className="w-4 h-4 text-violet-500" />
+                  <span>Student Surveys</span>
+                </div>
+                <span className="text-[9px] font-bold px-1.5 py-0.5 rounded-md bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20">
+                  NEW
+                </span>
+              </NavLink>
             </div>
           )}
 
