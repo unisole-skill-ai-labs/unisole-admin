@@ -347,6 +347,7 @@ export default function LeadFormModal({
               className="w-full px-3 py-2 rounded-xl border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-950 text-xs text-zinc-900 dark:text-zinc-100"
             >
               <option value="COLLEGE_DRIVE">College Seminar / Drive</option>
+              <option value="SURVEY">Student Survey</option>
               <option value="PRESENTATION_SESSION">Presentation Session QR</option>
               <option value="PAMPHLET_SCAN">Pamphlet QR Scan</option>
               <option value="WEBSITE_INQUIRY">Website Form / Inquiry</option>

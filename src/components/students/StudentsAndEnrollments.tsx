@@ -66,6 +66,8 @@ const exportLearnersCsv = (data: any[], filterLabel: string) => {
     const sourceLabel =
       s.role !== "STUDENT"
         ? "Staff / Admin"
+        : s.signupSource === "SURVEY" || s.signupSource === "STUDENT_SURVEY"
+        ? "Student Survey"
         : s.signupSource === "IAPT"
         ? "IAPT Portal"
         : s.signupSource === "PAMPHLET_QR" || s.signupSource === "PAMPHLET"
@@ -249,6 +251,7 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
 
     const matchesSource =
       sourceFilter === "ALL" ||
+      (sourceFilter === "SURVEY" && (s.signupSource === "SURVEY" || s.signupSource === "STUDENT_SURVEY")) ||
       (sourceFilter === "PAMPHLET_QR" && (s.signupSource === "PAMPHLET_QR" || s.signupSource === "PAMPHLET")) ||
       (sourceFilter === "SESSION_QR" && (s.signupSource === "SESSION_QR" || !!s.signupSessionCode)) ||
       (sourceFilter === "IAPT" && s.signupSource === "IAPT") ||
@@ -319,6 +322,7 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
           <div className="flex items-center gap-1 p-1 bg-zinc-100 dark:bg-zinc-800/80 rounded-xl border border-zinc-200/60 dark:border-zinc-700/60 text-xs w-full sm:w-auto overflow-x-auto">
             {[
               { id: "ALL", label: "All Sources" },
+              { id: "SURVEY", label: "📝 Survey" },
               { id: "PAMPHLET_QR", label: "📰 Pamphlet QR" },
               { id: "SESSION_QR", label: "🏛️ Session QR" },
               { id: "IAPT", label: "🎓 IAPT Portal" },
@@ -398,6 +402,10 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
                       {s.role !== "STUDENT" ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-violet-500/10 text-violet-600 dark:text-violet-400 border border-violet-500/20 font-mono">
                           🛡️ Staff / Admin
+                        </span>
+                      ) : s.signupSource === "SURVEY" || s.signupSource === "STUDENT_SURVEY" ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 font-mono">
+                          📝 Survey
                         </span>
                       ) : s.signupSource === "IAPT" ? (
                         <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 font-mono">
