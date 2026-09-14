@@ -13,9 +13,12 @@ import {
   Sparkles,
   RefreshCw,
   Clock,
+  Copy,
+  Check,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
+import { getSurveyPublicUrl } from "../../utils/surveyUrl";
 
 export default function SurveysPage() {
   const baseUrl = useSelector((s: any) => s.settings.baseUrl);
@@ -59,7 +62,7 @@ export default function SurveysPage() {
             <span>Refresh</span>
           </Button>
           <a
-            href="http://localhost:5180/survey"
+            href={getSurveyPublicUrl()}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 hover:bg-violet-100 transition-colors"
@@ -229,7 +232,7 @@ export default function SurveysPage() {
                         Edit Questions
                       </Button>
                       <a
-                        href={`http://localhost:5180/survey/${survey.slug}`}
+                        href={getSurveyPublicUrl(survey.slug)}
                         target="_blank"
                         rel="noreferrer"
                         className="p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"

@@ -31,10 +31,13 @@ import {
   BarChart3,
   ListOrdered,
   HelpCircle,
+  Copy,
+  Check,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import Input from "../../components/ui/Input";
+import { getSurveyPublicUrl } from "../../utils/surveyUrl";
 
 export default function SurveyDetailPage() {
   const { slug = "student-skills-survey" } = useParams<{ slug: string }>();
@@ -59,6 +62,16 @@ export default function SurveyDetailPage() {
   const [yearFilter, setYearFilter] = useState("");
   const [selectedResponse, setSelectedResponse] = useState<any>(null);
   const [isExporting, setIsExporting] = useState(false);
+  const [hasCopied, setHasCopied] = useState(false);
+
+  const handleCopyLink = () => {
+    const url = getSurveyPublicUrl(survey?.slug);
+    if (navigator?.clipboard) {
+      navigator.clipboard.writeText(url);
+    }
+    setHasCopied(true);
+    setTimeout(() => setHasCopied(false), 3000);
+  };
 
   const {
     data: responsesRes,
@@ -268,6 +281,16 @@ export default function SurveyDetailPage() {
           <Button
             variant="outline"
             size="sm"
+            onClick={handleCopyLink}
+            className="flex items-center gap-1.5 text-zinc-700 dark:text-zinc-300"
+          >
+            {hasCopied ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5" />}
+            <span>{hasCopied ? "Link Copied!" : "Copy Link"}</span>
+          </Button>
+
+          <Button
+            variant="outline"
+            size="sm"
             onClick={handleExportCsv}
             disabled={isExporting}
             className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 border-emerald-300 dark:border-emerald-800 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
@@ -277,7 +300,7 @@ export default function SurveyDetailPage() {
           </Button>
 
           <a
-            href={`http://localhost:5180/survey/${survey.slug}`}
+            href={getSurveyPublicUrl(survey.slug)}
             target="_blank"
             rel="noreferrer"
             className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800 hover:bg-violet-100 transition-colors"
