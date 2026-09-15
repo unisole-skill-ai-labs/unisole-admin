@@ -33,11 +33,152 @@ import {
   HelpCircle,
   Copy,
   Check,
+  Phone,
+  Mail,
+  Calendar,
+  MessageSquare,
 } from "lucide-react";
 import Button from "../../components/ui/Button";
 import Badge from "../../components/ui/Badge";
 import Input from "../../components/ui/Input";
 import { getSurveyPublicUrl } from "../../utils/surveyUrl";
+
+interface QuestionMeta {
+  num?: number;
+  section?: string;
+  title: string;
+  subtitle?: string;
+  followUpKey?: string;
+  followUpLabel?: string;
+}
+
+const ELABORATED_QUESTIONS: Record<string, QuestionMeta> = {
+  // Section 1: College Realities & Career Perspective
+  current_focus: {
+    num: 1,
+    section: "College Realities & Career Perspective",
+    title: "What are you mainly focusing on alongside your college studies?",
+    subtitle: "Job preparation, competitive exams, external course, projects, or college syllabus",
+    followUpKey: "current_focus_reason",
+    followUpLabel: "Personal Choice / Reason",
+  },
+  career_ambition: {
+    num: 2,
+    section: "College Realities & Career Perspective",
+    title: "What is your primary career ambition right now?",
+    subtitle: "Target career path (Private sector, Govt job, Higher studies, Startup, etc.)",
+    followUpKey: "ambition_preparation",
+    followUpLabel: "Current Preparation Steps",
+  },
+  college_problem: {
+    num: 3,
+    section: "College Realities & Career Perspective",
+    title: "What feels like the biggest problem or bottleneck at the college level?",
+    subtitle: "Outdated syllabus, lack of labs/coding, few placements, or theory overload",
+  },
+  system_problem: {
+    num: 4,
+    section: "College Realities & Career Perspective",
+    title: "In your honest opinion, what is the biggest problem in the overall education system?",
+    subtitle: "Degree vs employment gap, rote learning, or lack of modern technology exposure",
+  },
+  past_course_exp: {
+    num: 5,
+    section: "College Realities & Career Perspective",
+    title: "Have you previously taken any offline or online courses outside college?",
+    subtitle: "Offline coaching institute, online platforms, or no external training",
+    followUpKey: "past_course_feedback",
+    followUpLabel: "Feedback / What was missing",
+  },
+  course_motivation: {
+    num: 6,
+    section: "College Realities & Career Perspective",
+    title: "What is your main reason for enrolling in an external skill course?",
+    subtitle: "Job-ready skills, certificate, personal interest, or portfolio projects",
+  },
+  seniors_guidance: {
+    num: 7,
+    section: "College Realities & Career Perspective",
+    title: "Do you get useful career guidance from college seniors, or do they seem just as confused?",
+    subtitle: "Quality and clarity of guidance received from senior students",
+  },
+  professors_direction: {
+    num: 8,
+    section: "College Realities & Career Perspective",
+    title: "Which career direction do college professors usually encourage or push students towards?",
+    subtitle: "Government jobs, higher studies, private/IT corporate careers, or syllabus-only",
+  },
+  parents_expectation: {
+    num: 9,
+    section: "College Realities & Career Perspective",
+    title: "What career path do your parents want for you, and does it match your own choice?",
+    subtitle: "Alignment between parental expectations and student's personal choice",
+  },
+  sector_preference: {
+    num: 10,
+    section: "College Realities & Career Perspective",
+    title: "What is your honest opinion when comparing the Private Sector vs Government Sector?",
+    subtitle: "Career growth & salary upside vs job security & work-life balance",
+  },
+
+  // Section 2: Designing Ideal Skill Program (NEP)
+  interested_skills: {
+    num: 11,
+    section: "Designing Ideal Skill Program (NEP)",
+    title: "Which skill programs would you be most interested in taking?",
+    subtitle: "Curriculum tracks student wants to learn (Data Science, AI, ML, Cyber Security, etc.)",
+  },
+  learning_mode: {
+    num: 12,
+    section: "Designing Ideal Skill Program (NEP)",
+    title: "Which learning format do you prefer?",
+    subtitle: "Offline in-person labs, Online live sessions, or Hybrid model",
+  },
+  degree_skill_weightage: {
+    num: 13,
+    section: "Designing Ideal Skill Program (NEP)",
+    title: "How should a student's time and effort ideally be divided between degree and skill training?",
+    subtitle: "Ideal distribution: 50/50 balance, 70% skills focus, or 70% degree focus",
+  },
+  credit_value: {
+    num: 14,
+    section: "Designing Ideal Skill Program (NEP)",
+    title: "If this skill training is officially counted towards your degree as Academic Credits (NEP), would that make it more valuable?",
+    subtitle: "Value perception of official university academic credits vs separate certificate",
+  },
+  budget_preference: {
+    num: 15,
+    section: "Designing Ideal Skill Program (NEP)",
+    title: "For a genuinely high-quality 3-month skill program, what could you realistically afford to pay?",
+    subtitle: "Realistic budget or only if free/government-subsidized",
+  },
+  weekly_hours: {
+    num: 16,
+    section: "Designing Ideal Skill Program (NEP)",
+    title: "Alongside your regular college studies, how many hours per week can you dedicate to skill training?",
+    subtitle: "Weekly realistic time availability for practical assignments",
+  },
+
+  // Fallback / Older Survey Schemas
+  aiming_for: {
+    title: "What career field are you currently aiming for?",
+  },
+  why_learn: {
+    title: "Why do you want to learn new skills?",
+  },
+  challenges: {
+    title: "What challenges are you facing when trying to learn new skills?",
+  },
+  course_factors: {
+    title: "What factors make a skill course truly valuable?",
+  },
+  laptop_access: {
+    title: "Do you currently have access to a laptop or computer for learning?",
+  },
+  missed_skills: {
+    title: "Is there any course or skill we missed that you would like to learn?",
+  },
+};
 
 export default function SurveyDetailPage() {
   const { slug = "student-skills-survey" } = useParams<{ slug: string }>();
@@ -812,81 +953,305 @@ export default function SurveyDetailPage() {
       )}
 
       {/* Response Details Drawer / Modal */}
-      {selectedResponse && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fade-in">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl max-w-2xl w-full max-h-[85vh] flex flex-col shadow-2xl overflow-hidden">
-            {/* Header */}
-            <div className="p-5 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
-              <div>
-                <h3 className="text-base font-bold text-zinc-900 dark:text-zinc-100">
-                  {selectedResponse.user?.name || selectedResponse.answers?.student_name || "Student Submission"}
-                </h3>
-                <p className="text-xs text-zinc-400 font-mono mt-0.5">
-                  Phone: {selectedResponse.user?.phone || selectedResponse.answers?.student_phone || "-"}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedResponse(null)}
-                className="p-1.5 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800"
-              >
-                <X className="w-5 h-5" />
-              </button>
-            </div>
+      {selectedResponse && (() => {
+        const studentName =
+          selectedResponse.name ||
+          selectedResponse.user?.name ||
+          selectedResponse.answers?.student_name ||
+          "Student Submission";
 
-            {/* Content Q&A list */}
-            <div className="p-6 overflow-y-auto space-y-4">
-              <div className="bg-zinc-50 dark:bg-zinc-800/50 rounded-xl p-4 border border-zinc-200/60 dark:border-zinc-700/60 grid grid-cols-2 gap-3 text-xs">
-                <div>
-                  <span className="text-zinc-400 font-bold uppercase text-[10px] block">Stream</span>
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                    {selectedResponse.answers?.student_stream || selectedResponse.answers?.stream || "-"}
-                  </span>
-                </div>
-                <div>
-                  <span className="text-zinc-400 font-bold uppercase text-[10px] block">Year</span>
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                    {selectedResponse.answers?.student_year || selectedResponse.answers?.year || "-"}
-                  </span>
-                </div>
-                <div className="col-span-2">
-                  <span className="text-zinc-400 font-bold uppercase text-[10px] block">College</span>
-                  <span className="font-bold text-zinc-800 dark:text-zinc-200">
-                    {selectedResponse.college?.name || selectedResponse.answers?.student_college || "-"}
-                  </span>
-                </div>
-              </div>
+        const rawPhone =
+          selectedResponse.phone ||
+          selectedResponse.user?.phone ||
+          selectedResponse.answers?.student_phone ||
+          "";
+        const cleanPhone = rawPhone.replace(/\D/g, "");
 
-              <div className="space-y-3 pt-2">
-                <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-400">
-                  Survey Question Responses
-                </h4>
-                {Object.entries(selectedResponse.answers || {})
-                  .filter(([key]) => !key.startsWith("student_"))
-                  .map(([qKey, aVal]: [string, any]) => (
-                    <div
-                      key={qKey}
-                      className="p-3 rounded-xl bg-zinc-50/70 dark:bg-zinc-800/40 border border-zinc-100 dark:border-zinc-800"
-                    >
-                      <p className="text-xs font-semibold text-zinc-600 dark:text-zinc-400">
-                        {qKey.replace(/_/g, " ")}
-                      </p>
-                      <p className="text-xs font-bold text-zinc-900 dark:text-zinc-100 mt-1">
-                        {Array.isArray(aVal) ? aVal.join(", ") : String(aVal)}
-                      </p>
+        const email =
+          selectedResponse.email ||
+          selectedResponse.user?.email ||
+          selectedResponse.answers?.student_email ||
+          "";
+
+        const stream =
+          selectedResponse.stream ||
+          selectedResponse.answers?.student_stream ||
+          selectedResponse.answers?.stream ||
+          "-";
+
+        const year =
+          selectedResponse.yearOfStudy ||
+          selectedResponse.answers?.student_year ||
+          selectedResponse.answers?.year ||
+          "-";
+
+        const college =
+          selectedResponse.collegeName ||
+          selectedResponse.college?.name ||
+          selectedResponse.answers?.student_college ||
+          selectedResponse.answers?.college ||
+          "-";
+
+        const submittedDate = selectedResponse.createdAt
+          ? new Date(selectedResponse.createdAt).toLocaleString("en-IN", {
+              day: "numeric",
+              month: "short",
+              year: "numeric",
+              hour: "2-digit",
+              minute: "2-digit",
+            })
+          : "-";
+
+        // Filter and organize answers
+        const answersObj = selectedResponse.answers || {};
+        const ignoredKeys = [
+          "student_name",
+          "student_phone",
+          "student_email",
+          "student_college",
+          "student_stream",
+          "student_year",
+          "current_focus_reason",
+          "ambition_preparation",
+          "past_course_feedback",
+        ];
+
+        const questionEntries = Object.entries(answersObj)
+          .filter(([k]) => !ignoredKeys.includes(k) && !k.endsWith("_other"))
+          .sort(([aKey], [bKey]) => {
+            const aNum = ELABORATED_QUESTIONS[aKey]?.num ?? 99;
+            const bNum = ELABORATED_QUESTIONS[bKey]?.num ?? 99;
+            return aNum - bNum;
+          });
+
+        return (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-xs animate-fade-in">
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl overflow-hidden animate-scale-in">
+              {/* Modal Header */}
+              <div className="p-5 sm:p-6 border-b border-zinc-100 dark:border-zinc-800 flex items-start justify-between gap-4 bg-zinc-50/50 dark:bg-zinc-800/30">
+                <div className="flex items-center gap-3.5">
+                  <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-violet-600 to-indigo-500 text-white flex items-center justify-center font-bold text-lg shadow-sm shrink-0">
+                    {studentName.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-bold text-zinc-900 dark:text-zinc-100 leading-snug">
+                      {studentName}
+                    </h3>
+                    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                      {rawPhone && (
+                        <span className="flex items-center gap-1 font-mono">
+                          <Phone className="w-3 h-3 text-emerald-500" />
+                          <span>{rawPhone}</span>
+                        </span>
+                      )}
+                      {email && (
+                        <span className="flex items-center gap-1">
+                          <Mail className="w-3 h-3 text-blue-500" />
+                          <span>{email}</span>
+                        </span>
+                      )}
                     </div>
-                  ))}
-              </div>
-            </div>
+                  </div>
+                </div>
 
-            {/* Footer */}
-            <div className="p-4 border-t border-zinc-100 dark:border-zinc-800 flex justify-end">
-              <Button size="sm" onClick={() => setSelectedResponse(null)}>
-                Close
-              </Button>
+                <div className="flex items-center gap-2 shrink-0">
+                  {cleanPhone && (
+                    <a
+                      href={`https://wa.me/91${cleanPhone.slice(-10)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold border border-emerald-200 dark:border-emerald-800 transition"
+                    >
+                      <MessageSquare className="w-3.5 h-3.5" />
+                      <span>WhatsApp</span>
+                    </a>
+                  )}
+                  <button
+                    onClick={() => setSelectedResponse(null)}
+                    className="p-2 rounded-xl text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition"
+                  >
+                    <X className="w-5 h-5" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Scrollable Content */}
+              <div className="p-5 sm:p-6 overflow-y-auto space-y-5">
+                {/* Basic Student & College Details Card */}
+                <div className="bg-zinc-50 dark:bg-zinc-800/60 rounded-2xl p-4 sm:p-5 border border-zinc-200/80 dark:border-zinc-700/80 space-y-3 shadow-xs">
+                  <div className="flex items-center justify-between pb-2 border-b border-zinc-200/60 dark:border-zinc-700/60 text-[11px] font-mono font-bold uppercase tracking-wider text-zinc-400">
+                    <span>Student Profile &amp; Institution</span>
+                    {selectedResponse.id && (
+                      <span className="text-zinc-400 font-normal">ID: {selectedResponse.id}</span>
+                    )}
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+                    <div>
+                      <span className="text-zinc-400 font-bold uppercase text-[10px] block flex items-center gap-1">
+                        <GraduationCap className="w-3.5 h-3.5 text-violet-500" />
+                        Degree / Stream
+                      </span>
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5 block">
+                        {stream}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-zinc-400 font-bold uppercase text-[10px] block flex items-center gap-1">
+                        <Clock className="w-3.5 h-3.5 text-violet-500" />
+                        Year of Study
+                      </span>
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5 block">
+                        {year}
+                      </span>
+                    </div>
+
+                    <div className="sm:col-span-2">
+                      <span className="text-zinc-400 font-bold uppercase text-[10px] block flex items-center gap-1">
+                        <Building2 className="w-3.5 h-3.5 text-violet-500" />
+                        College / Institution
+                      </span>
+                      <span className="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5 block">
+                        {college}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-zinc-400 font-bold uppercase text-[10px] block flex items-center gap-1">
+                        <Phone className="w-3.5 h-3.5 text-emerald-500" />
+                        Contact Phone
+                      </span>
+                      <span className="font-mono font-bold text-zinc-900 dark:text-zinc-100 mt-0.5 block">
+                        {rawPhone || "-"}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-zinc-400 font-bold uppercase text-[10px] block flex items-center gap-1">
+                        <Calendar className="w-3.5 h-3.5 text-amber-500" />
+                        Submitted Date
+                      </span>
+                      <span className="font-medium text-zinc-800 dark:text-zinc-200 mt-0.5 block">
+                        {submittedDate}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Elaborated Question Responses */}
+                <div className="space-y-3 pt-1">
+                  <div className="flex items-center justify-between">
+                    <h4 className="text-xs font-mono font-bold uppercase tracking-wider text-zinc-400">
+                      Survey Question Responses ({questionEntries.length})
+                    </h4>
+                    <span className="text-[11px] text-zinc-400 font-medium">NEP Survey Feedback</span>
+                  </div>
+
+                  <div className="space-y-3">
+                    {questionEntries.map(([qKey, aVal]: [string, any]) => {
+                      const meta = ELABORATED_QUESTIONS[qKey];
+                      const questionNum = meta?.num;
+                      const questionTitle = meta?.title || qKey.replace(/_/g, " ");
+                      const questionSubtitle = meta?.subtitle;
+
+                      // Resolve value: If "__OTHER__", fetch the other text input
+                      const otherValue = answersObj[`${qKey}_other`];
+                      const displayVal =
+                        aVal === "__OTHER__"
+                          ? otherValue
+                            ? `Other: ${otherValue}`
+                            : "Other (Custom input)"
+                          : aVal;
+
+                      // Check if there is an associated follow-up key
+                      const followUpKey = meta?.followUpKey;
+                      const followUpVal = followUpKey ? answersObj[followUpKey] : null;
+
+                      return (
+                        <div
+                          key={qKey}
+                          className="p-4 rounded-2xl bg-zinc-50/80 dark:bg-zinc-800/40 border border-zinc-200/70 dark:border-zinc-800 space-y-2.5 hover:border-violet-200 dark:hover:border-violet-900/40 transition"
+                        >
+                          {/* Question Header */}
+                          <div className="flex items-start gap-2.5">
+                            {questionNum ? (
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-violet-100 dark:bg-violet-950/60 text-violet-700 dark:text-violet-300 font-bold text-xs shrink-0 mt-0.5">
+                                Q{questionNum}
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center justify-center w-6 h-6 rounded-lg bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300 font-bold text-xs shrink-0 mt-0.5">
+                                •
+                              </span>
+                            )}
+                            <div className="flex-1 min-w-0">
+                              <h5 className="text-xs sm:text-sm font-semibold text-zinc-900 dark:text-zinc-100 leading-snug">
+                                {questionTitle}
+                              </h5>
+                              {questionSubtitle && (
+                                <p className="text-[11px] text-zinc-400 mt-0.5">
+                                  {questionSubtitle}
+                                </p>
+                              )}
+                            </div>
+                          </div>
+
+                          {/* Student Answer */}
+                          <div className="pl-8.5">
+                            {Array.isArray(displayVal) ? (
+                              <div className="flex flex-wrap gap-1.5 pt-0.5">
+                                {displayVal.map((item: string, i: number) => (
+                                  <span
+                                    key={i}
+                                    className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-violet-50 dark:bg-violet-950/50 text-violet-700 dark:text-violet-300 border border-violet-200/70 dark:border-violet-800/60"
+                                  >
+                                    {item}
+                                  </span>
+                                ))}
+                                {otherValue && !displayVal.includes(otherValue) && (
+                                  <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-semibold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200/70 dark:border-amber-800/60">
+                                    Other: {otherValue}
+                                  </span>
+                                )}
+                              </div>
+                            ) : (
+                              <div className="text-xs sm:text-sm font-bold text-zinc-800 dark:text-zinc-200 bg-white dark:bg-zinc-800/80 p-2.5 rounded-xl border border-zinc-200/60 dark:border-zinc-700/60">
+                                {String(displayVal)}
+                              </div>
+                            )}
+
+                            {/* Attached Follow-up Note / Reasoning */}
+                            {followUpVal && (
+                              <div className="mt-2 p-2.5 rounded-xl bg-violet-50/70 dark:bg-violet-950/30 border border-violet-100 dark:border-violet-900/50 text-xs">
+                                <span className="font-semibold text-violet-700 dark:text-violet-300 block mb-0.5">
+                                  💬 {meta?.followUpLabel || "Student's Reason / Preparation Note"}:
+                                </span>
+                                <span className="text-zinc-800 dark:text-zinc-200 italic font-medium">
+                                  "{followUpVal}"
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer */}
+              <div className="p-4 sm:p-5 border-t border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/30 dark:bg-zinc-800/20">
+                <span className="text-xs text-zinc-400 font-medium">
+                  {questionEntries.length} questions answered
+                </span>
+                <Button size="sm" onClick={() => setSelectedResponse(null)}>
+                  Close
+                </Button>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
     </div>
   );
 }
