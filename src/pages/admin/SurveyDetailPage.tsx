@@ -161,7 +161,7 @@ const ELABORATED_QUESTIONS: Record<string, QuestionMeta> = {
   has_laptop: {
     num: 17,
     section: "Designing Ideal Skill Program (NEP)",
-    title: "Do you have a personal laptop or computer for hands-on practice? (laptop hai ??)",
+    title: "Do you have a personal laptop or computer for hands-on practice?",
     subtitle: "Personal laptop, lab/shared laptop, or smartphone only",
   },
   join_ai_network: {
