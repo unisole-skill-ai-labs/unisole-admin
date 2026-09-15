@@ -25,6 +25,8 @@ import { AdminOpsPage } from "./pages/worksole/AdminOpsPage";
 import LeadsManagementPage from "./pages/admin/LeadsManagementPage";
 import LiveAudiencePage from "./pages/live/LiveAudiencePage";
 import JoinSessionPage from "./pages/live/JoinSessionPage";
+import SurveysPage from "./pages/admin/SurveysPage";
+import SurveyDetailPage from "./pages/admin/SurveyDetailPage";
 
 import PermissionGuard from "./components/auth/PermissionGuard";
 
@@ -205,6 +207,22 @@ export default function App() {
             element={
               <PermissionGuard permission="students:manage">
                 <StudentsPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="surveys"
+            element={
+              <PermissionGuard permission="surveys:view">
+                <SurveysPage />
+              </PermissionGuard>
+            }
+          />
+          <Route
+            path="surveys/:slug"
+            element={
+              <PermissionGuard permission="surveys:view">
+                <SurveyDetailPage />
               </PermissionGuard>
             }
           />

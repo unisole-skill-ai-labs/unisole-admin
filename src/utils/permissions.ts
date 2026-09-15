@@ -94,6 +94,22 @@ export const ALL_PERMISSIONS: PermissionDefinition[] = [
     description: "View registered students and manage course enrollments",
     color: "#2563eb",
   },
+  {
+    key: "surveys:view",
+    label: "View Student Surveys",
+    shortLabel: "Surveys View",
+    category: "Campus & Ops",
+    description: "View survey submissions, filter analytics, and export student responses",
+    color: "#8b5cf6",
+  },
+  {
+    key: "surveys:manage",
+    label: "Manage Surveys & Questions",
+    shortLabel: "Surveys Manage",
+    category: "Campus & Ops",
+    description: "Edit questions, update survey schema, and configure survey forms",
+    color: "#7c3aed",
+  },
 
   // Curriculum & Academic
   {
@@ -215,6 +231,8 @@ export const DESIGNATION_PRESETS: Record<
       "curriculum:manage",
       "presentations:manage",
       "students:manage",
+      "surveys:view",
+      "surveys:manage",
       "team:view",
       "analytics:view",
     ],

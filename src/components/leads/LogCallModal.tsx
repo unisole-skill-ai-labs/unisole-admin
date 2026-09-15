@@ -10,7 +10,7 @@ import {
   Link2,
 } from "lucide-react";
 import { useLogLeadCallMutation } from "../../store";
-import { getStatusUpdatePayload } from "../../utils/leadStatus";
+import { getStatusUpdatePayload, OBJECTION_REASON_OPTIONS } from "../../utils/leadStatus";
 
 interface LogCallModalProps {
   lead: any;
@@ -90,6 +90,7 @@ export default function LogCallModal({ lead, baseUrl, onClose, onSuccess }: LogC
   const [logCall, { isLoading }] = useLogLeadCallMutation();
 
   const [selectedResultId, setSelectedResultId] = useState("FOLLOW_UP");
+  const [selectedObjection, setSelectedObjection] = useState(lead?.subStatus || "");
   const [durationMinutes, setDurationMinutes] = useState(2);
   const [notes, setNotes] = useState("");
   const [scheduledNextCall, setScheduledNextCall] = useState("");
@@ -126,6 +127,7 @@ export default function LogCallModal({ lead, baseUrl, onClose, onSuccess }: LogC
         body: {
           outcome: currentResult.outcome,
           notes: notes.trim(),
+          subStatus: selectedObjection || undefined,
           callDurationSeconds: durationMinutes * 60,
           newQuality: payload.quality,
           newStatus: payload.status,
@@ -204,6 +206,44 @@ export default function LogCallModal({ lead, baseUrl, onClose, onSuccess }: LogC
                   >
                     <span>{res.emoji}</span>
                     <span className="truncate">{res.label}</span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 2. Objection / Drop-off Reason Selector (Optional) */}
+          <div>
+            <div className="flex items-center justify-between mb-1.5">
+              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300">
+                Student Reason / Objection <span className="text-[10px] font-normal text-zinc-400">(Optional)</span>
+              </label>
+              {selectedObjection && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedObjection("")}
+                  className="text-[10px] text-rose-500 hover:underline font-medium cursor-pointer"
+                >
+                  Clear reason
+                </button>
+              )}
+            </div>
+            <div className="flex flex-wrap gap-1.5">
+              {OBJECTION_REASON_OPTIONS.map((opt) => {
+                const isSelected = selectedObjection === opt.key;
+                return (
+                  <button
+                    key={opt.key}
+                    type="button"
+                    onClick={() => setSelectedObjection(isSelected ? "" : opt.key)}
+                    className={`px-2 py-1 rounded-lg text-[11px] font-medium border transition-all cursor-pointer flex items-center gap-1 ${
+                      isSelected
+                        ? `${opt.badgeCls} ring-2 ring-indigo-500/30 scale-[1.02] font-semibold`
+                        : "border-zinc-200 dark:border-zinc-800 text-zinc-600 dark:text-zinc-400 hover:border-zinc-300 dark:hover:border-zinc-700 bg-zinc-50/60 dark:bg-zinc-900/60"
+                    }`}
+                  >
+                    <span>{opt.emoji}</span>
+                    <span>{opt.label}</span>
                   </button>
                 );
               })}
