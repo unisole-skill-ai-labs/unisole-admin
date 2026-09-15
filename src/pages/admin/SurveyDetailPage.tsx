@@ -158,6 +158,18 @@ const ELABORATED_QUESTIONS: Record<string, QuestionMeta> = {
     title: "Alongside your regular college studies, how many hours per week can you dedicate to skill training?",
     subtitle: "Weekly realistic time availability for practical assignments",
   },
+  has_laptop: {
+    num: 17,
+    section: "Designing Ideal Skill Program (NEP)",
+    title: "Do you have a personal laptop or computer for hands-on practice? (laptop hai ??)",
+    subtitle: "Personal laptop, lab/shared laptop, or smartphone only",
+  },
+  join_ai_network: {
+    num: 18,
+    section: "Designing Ideal Skill Program (NEP)",
+    title: "Would you like to join the National AI Network of Unisole?",
+    subtitle: "Interest in joining Unisole National AI community, workshops & events",
+  },
 
   // Fallback / Older Survey Schemas
   aiming_for: {
