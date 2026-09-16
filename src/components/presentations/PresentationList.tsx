@@ -15,6 +15,7 @@ import {
   Plus,
   Play,
   Edit,
+  Copy,
   Trash2,
   BarChart3,
   CheckCircle2,
@@ -53,6 +54,10 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
   const [deleteSession, { isLoading: isDeletingSession }] = useDeleteSessionMutation();
 
   const [createModalOpen, setCreateModalOpen] = useState(false);
+  const [duplicateModalOpen, setDuplicateModalOpen] = useState(false);
+  const [duplicateTargetDeck, setDuplicateTargetDeck] = useState<any>(null);
+  const [duplicateTitleInput, setDuplicateTitleInput] = useState("");
+  const [duplicateCollegeId, setDuplicateCollegeId] = useState("");
   const [launchModalOpen, setLaunchModalOpen] = useState(false);
   const [deletingDeck, setDeletingDeck] = useState<any>(null);
   const [activeDeck, setActiveDeck] = useState<any>(null);
@@ -111,6 +116,37 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
       }
     } catch (err: any) {
       alert("Failed to create pitch deck: " + (err?.data?.message || err.message));
+    }
+  };
+
+  const handleOpenDuplicateModal = (deck: any) => {
+    setDuplicateTargetDeck(deck);
+    setDuplicateTitleInput(`${deck.title} (Copy)`);
+    setDuplicateCollegeId(deck.collegeId || (colleges[0]?.id ?? ""));
+    setDuplicateModalOpen(true);
+  };
+
+  const handleDuplicateDeck = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!duplicateTargetDeck || !duplicateTitleInput.trim()) return;
+    try {
+      const res: any = await createPresentation({
+        baseUrl,
+        body: {
+          title: duplicateTitleInput.trim(),
+          description: duplicateTargetDeck.description || "",
+          collegeId: duplicateCollegeId || duplicateTargetDeck.collegeId,
+          theme: duplicateTargetDeck.theme || "dark",
+          slides: duplicateTargetDeck.slides || [],
+        },
+      }).unwrap();
+      setDuplicateModalOpen(false);
+      setDuplicateTargetDeck(null);
+      if (res?.data?.id) {
+        navigate(`/presentations/builder/${res.data.id}`);
+      }
+    } catch (err: any) {
+      alert("Failed to duplicate pitch deck: " + (err?.data?.message || err.message));
     }
   };
 
@@ -416,20 +452,33 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
                     Launch Stage
                   </Button>
 
-                  <Link to={`/presentations/builder/${deck.id}`}>
-                    <Button variant="secondary" size="sm" icon={Edit} className="text-xs font-bold">
-                      Edit Slides
+                  <div className="flex items-center gap-1.5">
+                    <Button
+                      variant="secondary"
+                      size="sm"
+                      onClick={() => handleOpenDuplicateModal(deck)}
+                      icon={Copy}
+                      className="text-xs font-bold"
+                      title="Duplicate / Clone this pitch deck"
+                    >
+                      Duplicate
                     </Button>
-                  </Link>
 
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setDeletingDeck(deck)}
-                    icon={Trash2}
-                    className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
-                    title="Delete Deck"
-                  />
+                    <Link to={`/presentations/builder/${deck.id}`}>
+                      <Button variant="secondary" size="sm" icon={Edit} className="text-xs font-bold">
+                        Edit Slides
+                      </Button>
+                    </Link>
+
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setDeletingDeck(deck)}
+                      icon={Trash2}
+                      className="p-2 text-rose-500 hover:bg-rose-50 dark:hover:bg-rose-950/30"
+                      title="Delete Deck"
+                    />
+                  </div>
                 </div>
               </div>
             );
@@ -737,6 +786,61 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
               </Button>
               <Button type="submit" variant="primary" size="sm" loading={isLaunching} icon={Play} className="font-bold">
                 Start Live Auditorium Stage
+              </Button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {/* Duplicate / Clone Deck Modal */}
+      {duplicateModalOpen && duplicateTargetDeck && (
+        <Modal
+          isOpen={true}
+          onClose={() => setDuplicateModalOpen(false)}
+          title={`Duplicate Pitch Deck: ${duplicateTargetDeck.title}`}
+          maxWidth="max-w-lg"
+        >
+          <form onSubmit={handleDuplicateDeck} className="space-y-4">
+            <div className="p-3.5 rounded-2xl bg-indigo-50/50 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-800/60 flex items-center gap-3">
+              <Copy className="w-5 h-5 text-indigo-600 dark:text-indigo-400 shrink-0" />
+              <div className="text-xs text-indigo-800 dark:text-indigo-300 leading-relaxed">
+                <p className="font-bold mb-0.5">Cloning Complete Deck ({Array.isArray(duplicateTargetDeck.slides) ? duplicateTargetDeck.slides.length : 0} Slides)</p>
+                All slide layouts, questions, notes, and configurations will be copied into your new pitch deck.
+              </div>
+            </div>
+
+            <div>
+              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+                Target University / College <span className="text-rose-500">*</span>
+              </label>
+              <select
+                value={duplicateCollegeId}
+                onChange={(e) => setDuplicateCollegeId(e.target.value)}
+                required
+                className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs font-bold text-zinc-900 dark:text-zinc-100 focus:outline-hidden focus:border-indigo-500"
+              >
+                {colleges.map((c: any) => (
+                  <option key={c.id} value={c.id}>
+                    {c.name} ({c.shortName || "CAMPUS"})
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <Input
+              label="New Presentation Deck Title"
+              value={duplicateTitleInput}
+              onChange={(e) => setDuplicateTitleInput(e.target.value)}
+              placeholder="e.g. Sanjauli College PPT (BCA)"
+              required
+            />
+
+            <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
+              <Button type="button" variant="ghost" size="sm" onClick={() => setDuplicateModalOpen(false)}>
+                Cancel
+              </Button>
+              <Button type="submit" variant="primary" size="sm" loading={isCreating} icon={Copy}>
+                Duplicate & Open Builder
               </Button>
             </div>
           </form>
