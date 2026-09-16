@@ -67,6 +67,28 @@ function renderSlideContent({
 
   const currentStep = buildStep ?? 0;
 
+  const renderAudienceQuestionBanner = () => {
+    if (!slide.questionPrompt) return null;
+    return (
+      <div className="w-full p-3.5 sm:p-4 rounded-2xl sm:rounded-3xl bg-gradient-to-r from-amber-500/20 via-orange-500/15 to-indigo-500/20 border-2 border-amber-500/50 shadow-xl shadow-amber-500/10 space-y-1.5 animate-scale-in my-2 text-left">
+        <div className="flex items-center gap-2">
+          <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+          <span className="px-2.5 py-0.5 rounded-full bg-amber-500/30 text-amber-200 text-[10px] sm:text-xs font-black font-mono uppercase tracking-wider">
+            Audience Question · Live Discussion
+          </span>
+        </div>
+        <p className="text-sm sm:text-base font-extrabold text-white leading-snug">
+          “{slide.questionPrompt}”
+        </p>
+        {slide.speakerHook && (
+          <div className="pt-1 text-[11px] sm:text-xs text-amber-300/90 font-medium italic border-t border-amber-500/20">
+            💡 <strong>Key Takeaway:</strong> {slide.speakerHook}
+          </div>
+        )}
+      </div>
+    );
+  };
+
   switch (slide.type) {
     // ==========================================
     // 1. COVER SLIDE
@@ -490,17 +512,13 @@ function renderSlideContent({
         { year: "2020s", label: "DIGITAL ECONOMY" },
         { year: "2025+", label: "AI ECONOMY" },
       ];
-      const stats = slide.stats || [
-        { value: "$315 bn", label: "Tech revenue, FY2026", sub: "124x since 1995-96" },
-        { value: "~60 lakh", label: "Working in tech today", sub: "+2.36 mn in 2,117 GCCs" },
-        { value: "2.35 lakh", label: "Recognised startups", sub: "23.36 lakh jobs created" },
-      ];
+      const stats = slide.stats;
 
       return (
-        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-4 sm:space-y-5 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
-              {slide.badge || "PILLAR 02"}
+              {slide.badge || "THE 2021–2026 CYCLE"}
             </span>
             <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
               {slide.title || "THE RISE OF THE PRIVATE SECTOR"}
@@ -510,50 +528,61 @@ function renderSlideContent({
             </p>
           </div>
 
-          {/* Timeline Step Bar */}
+          {renderAudienceQuestionBanner()}
+
+          {/* Timeline Step Cards */}
           <div
-            className={`grid grid-cols-2 sm:grid-cols-6 gap-2 pt-1 transition-all duration-300 ease-out ${
+            className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-1 transition-all duration-300 ease-out ${
               currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
             }`}
           >
             {timeline.map((t: any, idx: number) => (
               <div
                 key={idx}
-                className="p-2.5 rounded-2xl bg-white/5 border border-white/10 text-center space-y-0.5"
+                className="p-3.5 sm:p-4 rounded-2xl bg-white/5 border border-white/10 text-left space-y-1.5 shadow-sm"
               >
-                <div className="text-xs font-mono font-bold text-indigo-400">{t.year}</div>
-                <div className="text-[10px] font-bold text-zinc-200 leading-tight">{t.label}</div>
+                <span className="px-2 py-0.5 rounded-md bg-indigo-500/20 text-xs font-mono font-bold text-indigo-400 inline-block">
+                  {t.year}
+                </span>
+                <p className="text-xs sm:text-sm font-medium text-zinc-200 leading-relaxed">
+                  {t.label}
+                </p>
               </div>
             ))}
           </div>
 
-          {/* 3 Impact Numbers */}
-          <div
-            className={`grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 transition-all duration-300 ease-out ${
-              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
-            }`}
-          >
-            {stats.map((s: any, idx: number) => (
-              <div
-                key={idx}
-                className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-indigo-950/60 to-zinc-900 border border-indigo-500/30 text-center space-y-1 shadow-lg"
-              >
-                <div className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-violet-300">
-                  {s.value}
+          {/* Optional Stats */}
+          {stats && stats.length > 0 && (
+            <div
+              className={`grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1 transition-all duration-300 ease-out ${
+                currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
+              }`}
+            >
+              {stats.map((s: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="p-4 sm:p-5 rounded-3xl bg-gradient-to-b from-indigo-950/60 to-zinc-900 border border-indigo-500/30 text-center space-y-1 shadow-lg"
+                >
+                  <div className="text-2xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-white to-violet-300">
+                    {s.value}
+                  </div>
+                  <div className="text-xs font-bold text-zinc-200">{s.label}</div>
+                  <div className="text-[10px] text-zinc-400 font-mono">{s.sub}</div>
                 </div>
-                <div className="text-xs font-bold text-zinc-200">{s.label}</div>
-                <div className="text-[10px] text-zinc-400 font-mono">{s.sub}</div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
 
-          <p
-            className={`text-xs text-zinc-400 text-center pt-1 transition-all duration-300 ease-out ${
-              currentStep >= 2 ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            Source: NASSCOM Strategic Review 2026 · DPIIT / Startup India
-          </p>
+          {/* Optional Quote */}
+          {slide.quote && (
+            <div
+              className={`p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-indigo-950/70 to-purple-950/70 border border-indigo-500/40 text-xs sm:text-sm font-medium text-indigo-200 shadow-xl transition-all duration-300 ${
+                currentStep >= 2 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              <p className="italic">{slide.quote}</p>
+            </div>
+          )}
         </div>
       );
     }
@@ -674,77 +703,95 @@ function renderSlideContent({
       };
 
       return (
-        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-4 sm:space-y-5 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
-              {slide.badge || "PILLAR 04"}
+              {slide.badge || "ARCHITECTURAL OWNERSHIP"}
             </span>
             <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
-              {slide.title || "TIME & OPPORTUNITY COST"}
+              {slide.title || "Technical Debt: The Mortgage vs. Credit Card Trap"}
             </h2>
             <p className="text-xs sm:text-sm text-zinc-400">
-              {slide.subtitle || "WHAT CAN TWO YEARS CHANGE?"}
+              {slide.subtitle || "How you leverage AI determines your career trajectory."}
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+          {renderAudienceQuestionBanner()}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 sm:gap-4 pt-1">
             {/* Scenario A */}
             <div
-              className={`p-4 sm:p-5 rounded-3xl bg-white/5 border border-white/10 space-y-3 transition-all duration-300 ease-out shadow-lg ${
+              className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-white/5 border border-white/10 space-y-3 transition-all duration-300 ease-out shadow-lg ${
                 currentStep >= 0 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
               <div>
-                <span className="text-xs font-mono font-bold text-zinc-400">{scA.title}</span>
+                <span className="text-xs font-mono font-bold text-rose-400">{scA.title}</span>
                 <h4 className="text-sm sm:text-base font-bold text-white mt-0.5">{scA.subtitle}</h4>
               </div>
               <div className="space-y-1.5">
-                {scA.steps.map((st: string, idx: number) => (
-                  <div key={idx} className="p-2 rounded-xl bg-black/30 text-xs text-zinc-300">
-                    {st}
+                {(scA.steps || []).map((st: any, idx: number) => (
+                  <div key={idx} className="p-2 sm:p-2.5 rounded-xl bg-black/30 text-xs text-zinc-300 leading-relaxed">
+                    {typeof st === "string" ? st : st.label || JSON.stringify(st)}
                   </div>
                 ))}
               </div>
-              <div className="text-xs font-mono text-zinc-400 pt-1 border-t border-white/10">
-                {scA.footer}
-              </div>
+              {scA.footer && (
+                <div className="text-xs font-mono text-zinc-400 pt-1 border-t border-white/10">
+                  {scA.footer}
+                </div>
+              )}
             </div>
 
             {/* Scenario B */}
             <div
-              className={`p-4 sm:p-5 rounded-3xl bg-gradient-to-br from-indigo-950/70 to-zinc-900 border border-indigo-500/40 space-y-3 transition-all duration-300 ease-out shadow-xl ${
+              className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br from-indigo-950/70 to-zinc-900 border border-indigo-500/40 space-y-3 transition-all duration-300 ease-out shadow-xl ${
                 currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-2"
               }`}
             >
               <div>
-                <span className="text-xs font-mono font-bold text-indigo-400">{scB.title}</span>
+                <span className="text-xs font-mono font-bold text-emerald-400">{scB.title}</span>
                 <h4 className="text-sm sm:text-base font-bold text-white mt-0.5">{scB.subtitle}</h4>
               </div>
               <div className="space-y-1.5">
-                {scB.steps.map((st: any, idx: number) => (
-                  <div
-                    key={idx}
-                    className="p-2 rounded-xl bg-indigo-900/30 border border-indigo-500/20 flex items-center justify-between text-xs"
-                  >
-                    <span className="font-mono text-indigo-300 font-bold">{st.time}</span>
-                    <span className="text-zinc-200 font-medium">{st.label}</span>
-                  </div>
-                ))}
+                {(scB.steps || []).map((st: any, idx: number) => {
+                  const isObj = typeof st === "object" && st !== null && st.time;
+                  return (
+                    <div
+                      key={idx}
+                      className="p-2 sm:p-2.5 rounded-xl bg-indigo-900/30 border border-indigo-500/20 flex items-center justify-between text-xs"
+                    >
+                      {isObj ? (
+                        <>
+                          <span className="font-mono text-indigo-300 font-bold">{st.time}</span>
+                          <span className="text-zinc-200 font-medium">{st.label}</span>
+                        </>
+                      ) : (
+                        <span className="text-zinc-200 font-medium leading-relaxed">
+                          {typeof st === "string" ? st : st.label}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
-              <div className="text-xs font-mono text-emerald-400 font-bold pt-1 border-t border-indigo-500/20">
-                {scB.footer}
-              </div>
+              {scB.footer && (
+                <div className="text-xs font-mono text-emerald-400 font-bold pt-1 border-t border-indigo-500/20">
+                  {scB.footer}
+                </div>
+              )}
             </div>
           </div>
 
-          <p
-            className={`text-xs text-zinc-400 text-center italic transition-all duration-300 ease-out ${
-              currentStep >= 2 ? "opacity-100" : "opacity-0"
-            }`}
-          >
-            {slide.caveat ||
-              "Illustrative — not a guaranteed outcome. Many students do both. Choose deliberately, not by default."}
-          </p>
+          {slide.caveat && (
+            <p
+              className={`text-xs text-zinc-400 text-center italic transition-all duration-300 ease-out ${
+                currentStep >= 2 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {slide.caveat}
+            </p>
+          )}
         </div>
       );
     }
@@ -2130,7 +2177,7 @@ function renderSlideContent({
     case "THREE_CARDS": {
       const cards = slide.cards || [];
       return (
-        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-4 sm:space-y-6 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "INFORMATION GAP"}
@@ -2143,13 +2190,15 @@ function renderSlideContent({
             </p>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 pt-1">
+          {renderAudienceQuestionBanner()}
+
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-3 sm:gap-4 pt-1">
             {cards.map((c: any, idx: number) => {
               const isRevealed = currentStep >= idx;
               return (
                 <div
                   key={idx}
-                  className={`p-5 rounded-3xl border transition-all duration-300 ease-out shadow-xl flex flex-col justify-between space-y-3 ${
+                  className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border transition-all duration-300 ease-out shadow-xl flex flex-col justify-between space-y-2.5 sm:space-y-3 ${
                     isRevealed
                       ? "bg-gradient-to-b from-indigo-950/60 to-zinc-900 border-indigo-500/40 opacity-100 translate-y-0"
                       : "bg-white/2 border-white/5 opacity-25 translate-y-3"
@@ -2162,15 +2211,15 @@ function renderSlideContent({
                       </span>
                       <span className="w-2 h-2 rounded-full bg-indigo-400" />
                     </div>
-                    <h3 className="font-extrabold text-base text-white">{c.title}</h3>
+                    <h3 className="font-extrabold text-sm sm:text-base text-white">{c.title}</h3>
                     <div className="space-y-1.5 pt-2 border-t border-white/10">
                       {(c.items || []).map((it: string, iIdx: number) => (
                         <div
                           key={iIdx}
-                          className="p-2 rounded-xl bg-black/30 border border-white/5 text-xs text-zinc-200 font-medium flex items-center gap-2"
+                          className="p-1.5 sm:p-2 rounded-xl bg-black/30 border border-white/5 text-[11px] sm:text-xs text-zinc-200 font-medium flex items-start sm:items-center gap-2"
                         >
-                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0" />
-                          <span>{it}</span>
+                          <span className="w-1.5 h-1.5 rounded-full bg-indigo-400 shrink-0 mt-1 sm:mt-0" />
+                          <span className="leading-snug">{it}</span>
                         </div>
                       ))}
                     </div>
@@ -2182,7 +2231,7 @@ function renderSlideContent({
 
           {slide.punchline && (
             <div
-              className={`p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center font-bold text-xs sm:text-sm text-amber-300 transition-all duration-300 ${
+              className={`p-3 sm:p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center font-bold text-xs sm:text-sm text-amber-300 transition-all duration-300 ${
                 currentStep >= 2 ? "opacity-100" : "opacity-0"
               }`}
             >
@@ -2350,7 +2399,7 @@ function renderSlideContent({
     case "MYTH_REALITY_PAIRS": {
       const pairs = slide.pairs || [];
       return (
-        <div className="w-full max-w-5xl mx-auto space-y-5 animate-fade-in">
+        <div className="w-full max-w-5xl mx-auto space-y-4 sm:space-y-5 animate-fade-in">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "MYTH VS REALITY"}
@@ -2363,24 +2412,26 @@ function renderSlideContent({
             </p>
           </div>
 
-          <div className="space-y-3 pt-1">
+          {renderAudienceQuestionBanner()}
+
+          <div className="space-y-2.5 sm:space-y-3 pt-1">
             {pairs.map((pr: any, idx: number) => {
               const isRevealed = currentStep >= idx;
               return (
                 <div
                   key={idx}
-                  className={`p-4 sm:p-5 rounded-3xl border grid grid-cols-1 md:grid-cols-12 gap-3 items-center transition-all duration-300 ease-out shadow-lg ${
+                  className={`p-3.5 sm:p-5 rounded-2xl sm:rounded-3xl border grid grid-cols-1 md:grid-cols-12 gap-2.5 sm:gap-3 items-center transition-all duration-300 ease-out shadow-lg ${
                     isRevealed
                       ? "bg-zinc-900/90 border-white/10 opacity-100 translate-x-0"
                       : "bg-white/2 border-white/5 opacity-25 -translate-x-3"
                   }`}
                 >
                   {/* Myth */}
-                  <div className="md:col-span-5 p-3 rounded-2xl bg-rose-950/30 border border-rose-500/30 space-y-1">
+                  <div className="md:col-span-5 p-2.5 sm:p-3 rounded-2xl bg-rose-950/30 border border-rose-500/30 space-y-1">
                     <span className="text-[10px] font-mono font-bold text-rose-400 uppercase tracking-wider block">
                       MYTH 0{idx + 1}
                     </span>
-                    <p className="text-xs sm:text-sm font-bold text-rose-200">{pr.myth}</p>
+                    <p className="text-xs sm:text-sm font-bold text-rose-200 leading-snug">{pr.myth}</p>
                   </div>
 
                   <div className="hidden md:flex md:col-span-1 items-center justify-center text-zinc-400">
@@ -2388,7 +2439,7 @@ function renderSlideContent({
                   </div>
 
                   {/* Reality */}
-                  <div className="md:col-span-6 p-3 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 space-y-1">
+                  <div className="md:col-span-6 p-2.5 sm:p-3 rounded-2xl bg-emerald-950/30 border border-emerald-500/30 space-y-1">
                     <span className="text-[10px] font-mono font-bold text-emerald-400 uppercase tracking-wider block">
                       INDUSTRY REALITY
                     </span>
