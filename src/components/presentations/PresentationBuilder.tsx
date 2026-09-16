@@ -783,14 +783,14 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
     if (
       slides.length > 0 &&
       !window.confirm(
-        "Are you sure you want to load the 27-slide Sanjauli College PPT (BCA Focused)? This will replace current slides."
+        "Are you sure you want to load the 35-slide Sanjauli College PPT (BCA Focused)? This will replace current slides."
       )
     ) {
       return;
     }
     setTitle("Sanjauli College PPT");
     setDescription(
-      "27-slide high-energy BCA-oriented career awareness & industrial training presentation for Centre of Excellence Govt. College Sanjauli featuring the Post-Bubble Macro AI Landscape, 100-Candidate Drop-off Funnel, and 7-Step Strategic Action Playbook."
+      "35-slide high-energy BCA-oriented career awareness & industrial training presentation for Centre of Excellence Govt. College Sanjauli featuring the Post-Bubble Macro AI Landscape, 100-Candidate Drop-off Funnel, Flagship Capstone Blueprints, and 7-Step Strategic Action Playbook."
     );
     setSlides(SANJAULI_COLLEGE_PPT_SLIDES);
     setActiveSlideIndex(0);
@@ -972,10 +972,10 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
             size="sm"
             onClick={handleLoadSanjauliTemplate}
             className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 flex items-center gap-1.5 font-bold"
-            title="Load the 27-slide Sanjauli College PPT presentation (BCA Oriented)"
+            title="Load the 35-slide Sanjauli College PPT presentation (BCA Oriented)"
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">Load Sanjauli College PPT (27 Slides)</span>
+            <span className="hidden sm:inline">Load Sanjauli College PPT (35 Slides)</span>
           </Button>
 
           <Button
