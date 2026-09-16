@@ -1113,6 +1113,103 @@ function renderSlideContent({
     }
 
     // ==========================================
+    // 14B. DROPOUT FUNNEL (100-CANDIDATE FUNNEL)
+    // ==========================================
+    case "DROPOUT_FUNNEL": {
+      const stages = slide.stages || [
+        { stage: "Learning Basic Syntax", remaining: "100", drop: "Baseline", cause: "Finish basic tutorials, YouTube courses, and syntax drills." },
+        { stage: "Production-Grade Projects", remaining: "25", drop: "75 Drop Out", cause: "75% build clone tutorials (Netflix/Todo/Chatbot wrappers) with zero real users, tests, or backend depth." },
+        { stage: "Resume / ATS Screening", remaining: "5", drop: "20 Drop Out", cause: "Poor resumes with no metrics, generic buzzword bullet points, or missing GitHub proofs fail automated screens." },
+        { stage: "Technical & System Loops", remaining: "2", drop: "3 Drop Out", cause: "Candidates crumble under edge cases, cannot explain architectural trade-offs, or display defensive attitudes." },
+        { stage: "Final Offer", remaining: "1–2", drop: "Top Hires", cause: "Hired candidates who demonstrate production mindset, business value, and strong culture add." },
+      ];
+
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-4 sm:space-y-5 animate-fade-in">
+          <div>
+            <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              {slide.badge || "THE STRATEGIC FUNNEL"}
+            </span>
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title || "The 100-Candidate Drop-off Funnel"}
+            </h2>
+            <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+              {slide.subtitle || "Visualizing why high-effort students fail to land offers due to strategic leaks."}
+            </p>
+          </div>
+
+          <div className="space-y-2 pt-1">
+            {stages.map((st: any, idx: number) => {
+              const isRevealed = currentStep >= idx;
+              const stageColors = [
+                "border-indigo-500/40 bg-indigo-950/40 text-indigo-300",
+                "border-amber-500/40 bg-amber-950/40 text-amber-300",
+                "border-rose-500/40 bg-rose-950/40 text-rose-300",
+                "border-purple-500/40 bg-purple-950/40 text-purple-300",
+                "border-emerald-500/40 bg-emerald-950/40 text-emerald-300",
+              ];
+              const badgeColors = [
+                "bg-indigo-500/20 text-indigo-300 border-indigo-500/30",
+                "bg-amber-500/20 text-amber-300 border-amber-500/30",
+                "bg-rose-500/20 text-rose-300 border-rose-500/30",
+                "bg-purple-500/20 text-purple-300 border-purple-500/30",
+                "bg-emerald-500/20 text-emerald-300 border-emerald-500/30",
+              ];
+
+              return (
+                <div
+                  key={idx}
+                  className={`p-3 sm:p-3.5 rounded-2xl border transition-all duration-300 ease-out shadow-md ${
+                    isRevealed
+                      ? "bg-zinc-900/90 border-white/10 opacity-100 translate-x-0"
+                      : "bg-white/2 border-white/5 opacity-25 -translate-x-2"
+                  }`}
+                >
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                    <div className="flex items-center gap-3">
+                      <span className={`px-2.5 py-1 rounded-xl text-[11px] font-mono font-bold border ${badgeColors[idx % badgeColors.length]}`}>
+                        0{idx + 1}
+                      </span>
+                      <div>
+                        <h4 className="text-xs sm:text-sm font-bold text-white flex items-center gap-2">
+                          <span>{st.stage}</span>
+                          <span className={`text-[10px] font-mono px-2 py-0.5 rounded-full border ${stageColors[idx % stageColors.length]}`}>
+                            {st.remaining} Remaining
+                          </span>
+                        </h4>
+                        <p className="text-[11px] sm:text-xs text-zinc-300 font-medium mt-0.5">
+                          {st.cause}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="shrink-0 flex sm:flex-col items-end justify-between sm:justify-center">
+                      <span className="text-[10px] font-mono uppercase tracking-wider text-zinc-400">
+                        {st.drop}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {slide.takeaway && (
+            <div
+              className={`p-3.5 rounded-2xl bg-gradient-to-r from-indigo-950/60 via-purple-950/40 to-zinc-900 border border-indigo-500/40 shadow-lg text-center transition-all duration-300 ${
+                currentStep >= stages.length ? "opacity-100 scale-100" : "opacity-0 scale-98"
+              }`}
+            >
+              <p className="text-xs sm:text-sm font-bold text-indigo-200">
+                💡 {slide.takeaway}
+              </p>
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
     // 15. FUNNEL WAYS
     // ==========================================
     case "FUNNEL_WAYS": {
