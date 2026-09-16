@@ -46,6 +46,7 @@ import Button from "../ui/Button";
 import SlideRenderer from "./SlideRenderer";
 import { UNISOLE_AI_CAMPUS_DECK_SLIDES } from "../../data/aiCampusDeck";
 import { THEOG_COLLEGE_PPT_SLIDES } from "../../data/theogDeck";
+import { SANJAULI_COLLEGE_PPT_SLIDES } from "../../data/sanjauliDeck";
 
 interface PresentationBuilderProps {
   baseUrl: string;
@@ -778,6 +779,24 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
     setStepTestIndex(999);
   };
 
+  const handleLoadSanjauliTemplate = () => {
+    if (
+      slides.length > 0 &&
+      !window.confirm(
+        "Are you sure you want to load the 35-slide Sanjauli College PPT (BCA Focused)? This will replace current slides."
+      )
+    ) {
+      return;
+    }
+    setTitle("Sanjauli College PPT");
+    setDescription(
+      "35-slide high-energy BCA-oriented career awareness & industrial training presentation for Centre of Excellence Govt. College Sanjauli featuring the Post-Bubble Macro AI Landscape, 100-Candidate Drop-off Funnel, Flagship Capstone Blueprints, and 7-Step Strategic Action Playbook."
+    );
+    setSlides(SANJAULI_COLLEGE_PPT_SLIDES);
+    setActiveSlideIndex(0);
+    setStepTestIndex(999);
+  };
+
   const handleInsertTemplate = (template: any) => {
     const newSlide = {
       id: `slide_${Date.now()}`,
@@ -947,6 +966,17 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
               <span>Mobile Phone (9:16)</span>
             </button>
           </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleLoadSanjauliTemplate}
+            className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 flex items-center gap-1.5 font-bold"
+            title="Load the 35-slide Sanjauli College PPT presentation (BCA Oriented)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+            <span className="hidden sm:inline">Load Sanjauli College PPT (35 Slides)</span>
+          </Button>
 
           <Button
             variant="secondary"

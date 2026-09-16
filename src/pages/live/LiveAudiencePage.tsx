@@ -155,6 +155,14 @@ export default function LiveAudiencePage() {
   const [doubtSentSuccess, setDoubtSentSuccess] = useState(false);
   const [peerQrModalOpen, setPeerQrModalOpen] = useState(false);
   const [peerCopied, setPeerCopied] = useState(false);
+  const mainScrollRef = useRef<HTMLDivElement>(null);
+
+  // Auto-scroll to top when presenter changes slide
+  useEffect(() => {
+    if (mainScrollRef.current) {
+      mainScrollRef.current.scrollTop = 0;
+    }
+  }, [currentSlideIndex]);
 
   const handlePeerCopy = useCallback((e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
@@ -2179,9 +2187,12 @@ export default function LiveAudiencePage() {
         </div>
       </header>
 
-      {/* Portrait Main Stage */}
-      <main className="flex-1 min-h-0 relative flex flex-col items-center justify-center p-2 sm:p-4 z-20 overflow-hidden w-full">
-        <div className="w-full h-full flex flex-col justify-center max-w-lg mx-auto">
+      {/* Portrait Main Stage (Mobile-First Scrollable) */}
+      <main
+        ref={mainScrollRef}
+        className="flex-1 min-h-0 relative flex flex-col items-center p-2.5 sm:p-4 z-20 overflow-y-auto overscroll-contain w-full scroll-smooth"
+      >
+        <div className="w-full min-h-full flex flex-col justify-start sm:justify-center max-w-lg mx-auto py-2 pb-20 sm:pb-6">
           {quizState.isLeaderboardActive ? (
             <div className="w-full max-w-sm mx-auto space-y-3 text-center py-2">
               <div className="flex items-center justify-center gap-2">
