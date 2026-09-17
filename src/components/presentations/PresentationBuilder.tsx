@@ -972,10 +972,10 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
             size="sm"
             onClick={handleLoadSanjauliTemplate}
             className="border-emerald-500/30 text-emerald-600 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/50 flex items-center gap-1.5 font-bold"
-            title="Load the 35-slide Sanjauli College PPT presentation (BCA Oriented)"
+            title="Load the complete Sanjauli College PPT presentation (BCA Master Deck)"
           >
             <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-            <span className="hidden sm:inline">Load Sanjauli College PPT (35 Slides)</span>
+            <span className="hidden sm:inline">Load Sanjauli College PPT (Master Deck)</span>
           </Button>
 
           <Button
