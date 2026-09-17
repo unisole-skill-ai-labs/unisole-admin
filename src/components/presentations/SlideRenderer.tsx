@@ -163,13 +163,23 @@ function renderSlideContent({
                   currentStep >= 0 ? "scale-100 opacity-100" : "scale-95 opacity-0"
                 }`}
               >
-                <div className="w-full h-full rounded-[22px] bg-zinc-950 flex flex-col items-center justify-center border border-white/10">
-                  <span className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-violet-200">
-                    {slide.initials || "AM"}
-                  </span>
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-zinc-400 mt-1">
-                    Founder
-                  </span>
+                <div className="w-full h-full rounded-[22px] bg-zinc-950 flex flex-col items-center justify-center border border-white/10 overflow-hidden">
+                  {slide.image ? (
+                    <img
+                      src={slide.image}
+                      alt={slide.title || "Founder"}
+                      className="w-full h-full object-cover object-top"
+                    />
+                  ) : (
+                    <>
+                      <span className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-violet-200">
+                        {slide.initials || "AM"}
+                      </span>
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-zinc-400 mt-1">
+                        Founder
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
