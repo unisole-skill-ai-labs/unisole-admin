@@ -46,6 +46,8 @@ import Modal from "../ui/Modal";
 import { formatPhone } from "../../utils/formatters";
 
 const COURSES_CATALOG = [
+  { id: "cs-genai", title: "Generative AI & LLM Systems", group: "Group 01 • CS & IT" },
+  { id: "cs-agentic", title: "Agentic AI & Autonomous Systems", group: "Group 01 • CS & IT" },
   { id: "cs-p1", title: "ML Engineering in Production", group: "Group 01 • CS & IT" },
   { id: "cs-p2", title: "Full Stack Web Development (AI)", group: "Group 01 • CS & IT" },
   { id: "cs-p3", title: "Complete ML + Full Stack (Dual Track)", group: "Group 01 • CS & IT" },
