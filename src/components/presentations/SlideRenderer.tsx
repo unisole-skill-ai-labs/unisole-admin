@@ -163,13 +163,23 @@ function renderSlideContent({
                   currentStep >= 0 ? "scale-100 opacity-100" : "scale-95 opacity-0"
                 }`}
               >
-                <div className="w-full h-full rounded-[22px] bg-zinc-950 flex flex-col items-center justify-center border border-white/10">
-                  <span className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-violet-200">
-                    {slide.initials || "AM"}
-                  </span>
-                  <span className="text-[10px] uppercase font-mono tracking-widest text-zinc-400 mt-1">
-                    Founder
-                  </span>
+                <div className="w-full h-full rounded-[22px] bg-zinc-950 flex flex-col items-center justify-center border border-white/10 overflow-hidden">
+                  {slide.image ? (
+                    <img
+                      src={slide.image}
+                      alt={slide.title || "Founder"}
+                      className="w-full h-full object-cover object-top"
+                    />
+                  ) : (
+                    <>
+                      <span className="text-3xl sm:text-5xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 to-violet-200">
+                        {slide.initials || "AM"}
+                      </span>
+                      <span className="text-[10px] uppercase font-mono tracking-widest text-zinc-400 mt-1">
+                        Founder
+                      </span>
+                    </>
+                  )}
                 </div>
               </div>
 
@@ -3315,13 +3325,20 @@ function renderSlideContent({
     // ==========================================
     case "FINAL_MESSAGE": {
       return (
-        <div className="w-full max-w-4xl mx-auto space-y-6 sm:space-y-8 animate-fade-in text-center py-8">
+        <div className="w-full max-w-4xl mx-auto space-y-5 sm:space-y-6 animate-fade-in text-center py-6 sm:py-8">
+          {slide.badge && (
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+              <Sparkles className="w-3.5 h-3.5 text-indigo-400 shrink-0" />
+              <span>{slide.badge}</span>
+            </div>
+          )}
+
           <div
             className={`transition-all duration-500 ease-out ${
               currentStep >= 0 ? "opacity-100 scale-100" : "opacity-0 scale-95"
             }`}
           >
-            <h1 className="text-3xl sm:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-indigo-300 tracking-tight leading-tight">
+            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-black text-transparent bg-clip-text bg-gradient-to-r from-white via-indigo-100 to-indigo-300 tracking-tight leading-tight px-2">
               {slide.title || "Your degree is not your destination."}
             </h1>
           </div>
@@ -3331,27 +3348,43 @@ function renderSlideContent({
               currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
             }`}
           >
-            <p className="text-base sm:text-2xl text-amber-300 font-bold max-w-2xl mx-auto leading-relaxed">
+            <p className="text-sm sm:text-xl text-amber-300 font-bold max-w-2xl mx-auto leading-relaxed px-2">
               {slide.subtitle || "Your skills + projects + proof + decisions build your career."}
             </p>
           </div>
 
+          {slide.quote && (
+            <div
+              className={`p-4 sm:p-5 rounded-3xl bg-indigo-950/40 border border-indigo-500/30 max-w-2xl mx-auto transition-all duration-300 shadow-xl ${
+                currentStep >= 2 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
+              }`}
+            >
+              <p className="text-sm sm:text-lg font-bold text-white italic">
+                {slide.quote}
+              </p>
+            </div>
+          )}
+
+          {slide.punchline && (
+            <p
+              className={`text-xs sm:text-sm text-zinc-300 font-medium max-w-xl mx-auto pt-1 transition-all duration-300 ${
+                currentStep >= 2 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {slide.punchline}
+            </p>
+          )}
+
           <div
-            className={`pt-4 transition-all duration-300 ${
+            className={`pt-2 transition-all duration-300 ${
               currentStep >= 1 ? "opacity-100" : "opacity-0"
             }`}
           >
-            <div className="inline-flex items-center gap-2 px-5 py-2 rounded-2xl bg-white/5 border border-white/10 text-xs font-mono text-zinc-300">
+            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-2xl bg-white/5 border border-white/10 text-xs font-mono text-zinc-400">
               <span className="w-2 h-2 rounded-full bg-indigo-400" />
-              <span>{slide.org || "UNISOLE Skill AI Labs"}</span>
+              <span>{slide.org || "UNISOLE SKILL AI LABS"}</span>
             </div>
           </div>
-
-          {slide.closingQuote && (
-            <p className="text-xs sm:text-sm text-zinc-400 italic max-w-xl mx-auto pt-2">
-              {slide.closingQuote}
-            </p>
-          )}
         </div>
       );
     }
