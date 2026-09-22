@@ -514,7 +514,22 @@ export const adminApi = createApi({
         method: "POST",
         body: { notes },
       }),
-      invalidatesTags: ["Orders", "Payments", "Enrollments"],
+      invalidatesTags: ["Orders", "Payments", "Enrollments", "Students"],
+    }),
+    updateOrderStatus: build.mutation({
+      query: ({ baseUrl, id, status, notes }) => ({
+        url: `${baseUrl}/api/admin/orders/${id}/status`,
+        method: "POST",
+        body: { status, notes },
+      }),
+      invalidatesTags: ["Orders", "Payments", "Enrollments", "Students"],
+    }),
+    deleteOrder: build.mutation({
+      query: ({ baseUrl, id }) => ({
+        url: `${baseUrl}/api/admin/orders/${id}`,
+        method: "DELETE",
+      }),
+      invalidatesTags: ["Orders", "Payments", "Enrollments", "Students"],
     }),
 
     // Dynamic Offerings & Product Pricing Catalog
@@ -1333,6 +1348,8 @@ export const {
   useGetOrdersQuery,
   useGetOrderByIdQuery,
   useConfirmManualOrderMutation,
+  useUpdateOrderStatusMutation,
+  useDeleteOrderMutation,
   // Dynamic Catalog Pricing
   useGetOfferingsPricingQuery,
   useCreateOfferingPricingMutation,

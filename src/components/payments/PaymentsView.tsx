@@ -11,6 +11,8 @@ import {
   useUpdateCouponMutation,
   useDeleteCouponMutation,
   useConfirmManualOrderMutation,
+  useUpdateOrderStatusMutation,
+  useDeleteOrderMutation,
   useManualGrantEnrollmentMutation,
   useGetStudentsQuery,
   useGetPathwaysQuery,
@@ -94,6 +96,8 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
   const [deleteCoupon] = useDeleteCouponMutation();
 
   const [confirmManualOrder, { isLoading: isConfirmingManual }] = useConfirmManualOrderMutation();
+  const [updateOrderStatus, { isLoading: isUpdatingOrderStatus }] = useUpdateOrderStatusMutation();
+  const [deleteOrder, { isLoading: isDeletingOrder }] = useDeleteOrderMutation();
   const [manualGrantEnrollment, { isLoading: isGrantingEnrollment }] = useManualGrantEnrollmentMutation();
 
   // Modals state
@@ -280,18 +284,74 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
     }
   };
 
-  const handleManualConfirmOrder = async (orderId: string) => {
-    const reason = prompt("Enter confirmation note / offline payment reference (e.g. Received via Cash / Direct UPI):");
-    if (reason === null) return;
+  const handleToggleOrderStatus = async (order: any, targetStatus: "PAID" | "PENDING") => {
+    if (targetStatus === "PAID") {
+      const reason = prompt(
+        `Enter confirmation note for marking order ${order.orderNumber || order.id} as PAID (e.g. Received via Cash / Direct UPI):`,
+        "Offline payment confirmed by Admin"
+      );
+      if (reason === null) return;
+
+      try {
+        await updateOrderStatus({ baseUrl, id: order.id, status: "PAID", notes: reason }).unwrap();
+        alert("Order marked as PAID and student access granted successfully!");
+        if (selectedOrder && selectedOrder.id === order.id) {
+          setSelectedOrder((prev: any) => (prev ? { ...prev, status: "PAID" } : null));
+        }
+        refetchOrders();
+      } catch (err: any) {
+        alert(err?.data?.message || err?.message || "Failed to mark order as PAID");
+      }
+    } else {
+      const confirmRevoke = window.confirm(
+        `Are you sure you want to revert order ${order.orderNumber || order.id} to PENDING?\n\n` +
+        `⚠️ WARNING: This will immediately REVOKE student access and remove the confirmed payment mark from their profile.`
+      );
+      if (!confirmRevoke) return;
+
+      const reason = prompt(
+        "Enter reason for reverting to PENDING (optional):",
+        "Admin manual status revert"
+      );
+      if (reason === null) return;
+
+      try {
+        await updateOrderStatus({ baseUrl, id: order.id, status: "PENDING", notes: reason }).unwrap();
+        alert("Order reverted to PENDING and student access revoked successfully!");
+        if (selectedOrder && selectedOrder.id === order.id) {
+          setSelectedOrder((prev: any) => (prev ? { ...prev, status: "PENDING" } : null));
+        }
+        refetchOrders();
+      } catch (err: any) {
+        alert(err?.data?.message || err?.message || "Failed to revert order to PENDING");
+      }
+    }
+  };
+
+  const handleDeleteOrder = async (order: any) => {
+    const amountRupees = ((Number(order.totalPaise) || 0) / 100).toLocaleString("en-IN");
+    const confirmDelete = window.confirm(
+      `Are you sure you want to permanently DELETE order ${order.orderNumber || order.id}?\n\n` +
+      `⚠️ This will permanently remove the order, revoke related enrollments, and subtract ₹${amountRupees} from total revenue.\n\n` +
+      `This action CANNOT be undone.`
+    );
+    if (!confirmDelete) return;
 
     try {
-      await confirmManualOrder({ baseUrl, id: orderId, notes: reason }).unwrap();
-      alert("Order marked as PAID and student enrollments granted successfully!");
-      if (selectedOrder) setSelectedOrder(null);
+      await deleteOrder({ baseUrl, id: order.id }).unwrap();
+      alert(`Order ${order.orderNumber || order.id} has been permanently deleted.`);
+      if (selectedOrder && selectedOrder.id === order.id) {
+        setSelectedOrder(null);
+      }
       refetchOrders();
     } catch (err: any) {
-      alert(err?.data?.message || err?.message || "Failed to confirm manual order");
+      alert(err?.data?.message || err?.message || "Failed to delete order");
     }
+  };
+
+  const handleManualConfirmOrder = async (orderId: string) => {
+    const targetOrder = orders.find((o: any) => o.id === orderId) || { id: orderId };
+    await handleToggleOrderStatus(targetOrder, "PAID");
   };
 
   const handleManualGrantEnrollment = async (e: React.FormEvent) => {
@@ -604,15 +664,35 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
-                              {o.status !== "PAID" && (
+                              {o.status === "PAID" ? (
                                 <button
-                                  onClick={() => handleManualConfirmOrder(o.id)}
-                                  className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 rounded-lg text-xs font-bold hover:bg-emerald-100 transition-colors"
-                                  title="Approve / Mark Paid (Offline Cash/UPI)"
+                                  onClick={() => handleToggleOrderStatus(o, "PENDING")}
+                                  disabled={isUpdatingOrderStatus}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 rounded-lg text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
+                                  title="Revoke access & mark as PENDING"
                                 >
+                                  <RotateCcw className="w-3 h-3" />
+                                  Mark Pending
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleToggleOrderStatus(o, "PAID")}
+                                  disabled={isUpdatingOrderStatus}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60 rounded-lg text-xs font-bold hover:bg-emerald-100 dark:hover:bg-emerald-900/40 transition-colors"
+                                  title="Approve / Mark Paid (Grant Student Access)"
+                                >
+                                  <CheckCircle className="w-3 h-3" />
                                   Mark Paid
                                 </button>
                               )}
+                              <button
+                                onClick={() => handleDeleteOrder(o)}
+                                disabled={isDeletingOrder}
+                                className="p-1.5 text-zinc-400 hover:text-red-600 dark:hover:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/50 rounded-lg transition-colors"
+                                title="Delete order permanently (recalculates revenue)"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
                             </div>
                           </td>
                         </tr>
@@ -1007,20 +1087,43 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
               </div>
             )}
 
-            <div className="flex justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
-              <Button variant="secondary" onClick={() => setSelectedOrder(null)}>
-                Close
+            <div className="flex items-center justify-between pt-3 border-t border-zinc-100 dark:border-zinc-800">
+              <Button
+                variant="danger"
+                size="sm"
+                onClick={() => handleDeleteOrder(selectedOrder)}
+                disabled={isDeletingOrder}
+                icon={Trash2}
+              >
+                Delete Order
               </Button>
-              {selectedOrder.status !== "PAID" && (
-                <Button
-                  variant="primary"
-                  onClick={() => handleManualConfirmOrder(selectedOrder.id)}
-                  disabled={isConfirmingManual}
-                  icon={CheckCircle}
-                >
-                  Confirm Manual Payment & Grant Access
+              <div className="flex items-center gap-2">
+                <Button variant="secondary" size="sm" onClick={() => setSelectedOrder(null)}>
+                  Close
                 </Button>
-              )}
+                {selectedOrder.status !== "PAID" ? (
+                  <Button
+                    variant="primary"
+                    size="sm"
+                    onClick={() => handleToggleOrderStatus(selectedOrder, "PAID")}
+                    disabled={isUpdatingOrderStatus}
+                    icon={CheckCircle}
+                  >
+                    Confirm Manual Payment & Grant Access
+                  </Button>
+                ) : (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-amber-400 text-amber-600 hover:bg-amber-50 dark:border-amber-700 dark:text-amber-400 dark:hover:bg-amber-950/50"
+                    onClick={() => handleToggleOrderStatus(selectedOrder, "PENDING")}
+                    disabled={isUpdatingOrderStatus}
+                    icon={RotateCcw}
+                  >
+                    Revert to PENDING & Revoke Access
+                  </Button>
+                )}
+              </div>
             </div>
           </div>
         </Modal>
