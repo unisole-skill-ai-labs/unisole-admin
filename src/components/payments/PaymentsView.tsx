@@ -664,17 +664,7 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
                               >
                                 <Eye className="w-4 h-4" />
                               </button>
-                              {o.status === "PAID" ? (
-                                <button
-                                  onClick={() => handleToggleOrderStatus(o, "PENDING")}
-                                  disabled={isUpdatingOrderStatus}
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60 rounded-lg text-xs font-semibold hover:bg-amber-100 dark:hover:bg-amber-900/40 transition-colors"
-                                  title="Revoke access & mark as PENDING"
-                                >
-                                  <RotateCcw className="w-3 h-3" />
-                                  Mark Pending
-                                </button>
-                              ) : (
+                              {o.status !== "PAID" && (
                                 <button
                                   onClick={() => handleToggleOrderStatus(o, "PAID")}
                                   disabled={isUpdatingOrderStatus}
