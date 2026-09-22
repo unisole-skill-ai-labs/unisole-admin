@@ -71,12 +71,11 @@ interface PaymentsViewProps {
 export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
   const [activeTab, setActiveTab] = useState<"orders" | "pricing" | "coupons" | "gateway">("orders");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("PAID");
 
   // Queries
   const { data: ordersData, isLoading: isOrdersLoading, refetch: refetchOrders } = useGetOrdersQuery({
     baseUrl,
-    status: statusFilter === "ALL" ? undefined : statusFilter,
     search: search || undefined,
   });
   const { data: pricingData, isLoading: isPricingLoading, refetch: refetchPricing } = useGetOfferingsPricingQuery(baseUrl);
@@ -144,17 +143,21 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
     reason: "",
   });
 
-  const orders = ordersData?.items || [];
+  const allOrders = ordersData?.items || [];
+  const orders =
+    statusFilter === "ALL"
+      ? allOrders
+      : allOrders.filter((o: any) => o.status === statusFilter);
   const pricingItems = pricingData?.items || [];
   const coupons = couponsData?.items || [];
 
   // Metrics calculation
-  const totalRevenuePaise = orders
+  const totalRevenuePaise = allOrders
     .filter((o: any) => o.status === "PAID")
     .reduce((sum: number, o: any) => sum + (Number(o.totalPaise) || 0), 0);
 
-  const paidOrdersCount = orders.filter((o: any) => o.status === "PAID").length;
-  const pendingOrdersCount = orders.filter((o: any) => o.status === "PENDING").length;
+  const paidOrdersCount = allOrders.filter((o: any) => o.status === "PAID").length;
+  const pendingOrdersCount = allOrders.filter((o: any) => o.status === "PENDING").length;
 
   const handleSavePricing = async (e: React.FormEvent) => {
     e.preventDefault();
