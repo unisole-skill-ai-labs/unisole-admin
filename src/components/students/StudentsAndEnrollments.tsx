@@ -11,7 +11,15 @@ import {
   useManualGrantEnrollmentMutation,
   useGetPathwaysQuery,
 } from "../../store";
-import { CANONICAL_CATALOG, resolveOfferingTitle } from "../../constants/offerings";
+
+// Helper to resolve pathway title directly from DB query results
+const resolvePathwayTitle = (idOrSlug: string, pathwayList: any[] = []): string => {
+  if (!idOrSlug) return "Unknown Pathway";
+  const found = pathwayList.find(
+    (p: any) => p.id === idOrSlug || p.slug === idOrSlug
+  );
+  return found?.title || idOrSlug;
+};
 import {
   Users,
   GraduationCap,
@@ -140,7 +148,7 @@ const exportEnrollmentsCsv = (data: any[], allStudents: any[], allPathways: any[
   const rows = data.map((e: any) => {
     const student = allStudents.find((s: any) => s.id === e.userId) || e.user;
     const offeringId = e.pathwayId || e.itemId || "";
-    const offeringTitle = resolveOfferingTitle(offeringId, allPathways);
+    const offeringTitle = resolvePathwayTitle(offeringId, allPathways);
     const formattedPhone = student?.phone ? formatPhone(student.phone) : "";
     const enrolledDate = e.enrolledAt
       ? new Date(e.enrolledAt).toISOString().replace("T", " ").substring(0, 19)
@@ -529,7 +537,7 @@ function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
     const term = search.toLowerCase();
     const student = students.find((s: any) => s.id === e.userId) || e.user;
     const offeringId = e.pathwayId || e.itemId || "";
-    const offeringTitle = resolveOfferingTitle(offeringId, pathways);
+    const offeringTitle = resolvePathwayTitle(offeringId, pathways);
     return (
       e.id?.toLowerCase().includes(term) ||
       e.userId?.toLowerCase().includes(term) ||
@@ -627,7 +635,7 @@ function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
                 filtered.map((e: any) => {
                   const student = students.find((s: any) => s.id === e.userId) || e.user;
                   const offeringId = e.pathwayId || e.itemId || "";
-                  const offeringTitle = resolveOfferingTitle(offeringId, pathways);
+                  const offeringTitle = resolvePathwayTitle(offeringId, pathways);
                   return (
                     <tr key={e.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
                       <td className="py-3.5 px-4">
@@ -728,7 +736,7 @@ function CreateEnrollmentModal({
   onSave: (data: { userId: string; itemId: string; itemType: string }) => void;
 }) {
   const [userId, setUserId] = useState("");
-  const [selectedOfferingId, setSelectedOfferingId] = useState("");
+  const [selectedPathwayId, setSelectedPathwayId] = useState("");
   const [learnerFilter, setLearnerFilter] = useState("");
 
   const filteredStudents = students.filter((s: any) => {
@@ -741,33 +749,17 @@ function CreateEnrollmentModal({
     );
   });
 
-  const canonicalIds = new Set(CANONICAL_CATALOG.map((c) => c.id.toLowerCase()));
-  const canonicalSlugs = new Set(CANONICAL_CATALOG.map((c) => c.slug.toLowerCase()));
-  const extraPathways = pathways.filter(
-    (p: any) => !canonicalIds.has(p.id?.toLowerCase()) && !canonicalSlugs.has(p.slug?.toLowerCase())
+  const selectedPathway = pathways.find(
+    (p: any) => p.id === selectedPathwayId || p.slug === selectedPathwayId
   );
-
-  const groups = [
-    "Group 01 • Computer Science & IT",
-    "Incubator Track • CS & Commerce",
-    "Group 02 • Science & Mathematics",
-    "Group 03 • Commerce & Management",
-    "Group 04 • BA & Humanities",
-    "Workshops & Masterclasses",
-  ];
-
-  const selectedOffering =
-    CANONICAL_CATALOG.find((c) => c.id === selectedOfferingId) ||
-    extraPathways.find((p: any) => p.id === selectedOfferingId);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!userId || !selectedOfferingId) return;
-    const itemType = (selectedOffering as any)?.itemType || "PATHWAY";
+    if (!userId || !selectedPathwayId) return;
     onSave({
       userId,
-      itemId: selectedOfferingId,
-      itemType,
+      itemId: selectedPathwayId,
+      itemType: "PATHWAY",
     });
   };
 
@@ -804,51 +796,34 @@ function CreateEnrollmentModal({
 
         <div>
           <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
-            Select Pathway
+            Select Pathway (From Database Table: {pathways.length} active)
           </label>
           <select
-            value={selectedOfferingId}
-            onChange={(e) => setSelectedOfferingId(e.target.value)}
+            value={selectedPathwayId}
+            onChange={(e) => setSelectedPathwayId(e.target.value)}
             className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-semibold"
             required
           >
             <option value="">Choose pathway curriculum...</option>
-            {groups.map((groupName) => {
-              const items = CANONICAL_CATALOG.filter((c) => c.group === groupName);
-              if (items.length === 0) return null;
-              return (
-                <optgroup key={groupName} label={groupName}>
-                  {items.map((item) => (
-                    <option key={item.id} value={item.id}>
-                      {item.title} ({item.id})
-                    </option>
-                  ))}
-                </optgroup>
-              );
-            })}
-            {extraPathways.length > 0 && (
-              <optgroup label="Additional / Database Pathways">
-                {extraPathways.map((p: any) => (
-                  <option key={p.id} value={p.id}>
-                    {p.title} (/{p.slug})
-                  </option>
-                ))}
-              </optgroup>
-            )}
+            {pathways.map((p: any) => (
+              <option key={p.id} value={p.id}>
+                {p.title} ({p.id || p.slug})
+              </option>
+            ))}
           </select>
         </div>
 
-        {selectedOffering && (
+        {selectedPathway && (
           <div className="p-3 bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 rounded-xl text-xs space-y-1">
             <div className="font-bold text-indigo-900 dark:text-indigo-200">
-              {selectedOffering.title}
+              {selectedPathway.title}
             </div>
             <div className="text-[11px] text-indigo-700 dark:text-indigo-300 font-mono">
-              ID: {selectedOffering.id} • Track: {(selectedOffering as any).group || "Pathway"}
+              ID: {selectedPathway.id} • Slug: /{selectedPathway.slug} • Status: {selectedPathway.status || "ACTIVE"}
             </div>
-            {(selectedOffering as any).description && (
+            {(selectedPathway.shortDescription || selectedPathway.description) && (
               <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
-                {(selectedOffering as any).description}
+                {selectedPathway.shortDescription || selectedPathway.description}
               </div>
             )}
           </div>
