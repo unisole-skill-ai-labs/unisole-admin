@@ -131,14 +131,28 @@ export default function LiveProjectorPage() {
     setTimeout(() => setCopied(false), 2500);
   }, [session]);
 
-  const handleExitShow = useCallback(() => {
+  const handleExitShow = useCallback(async () => {
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
     if (socketRef.current && session?.sessionCode) {
       socketRef.current.emit("admin:end_session", {
         sessionCode: session.sessionCode,
       });
     }
-    navigate(`/presentations/sessions/${sessionId}/analytics`);
-  }, [navigate, session?.sessionCode, sessionId]);
+    if (sessionId) {
+      try {
+        await fetch(`${baseUrl}/api/admin/presentations/sessions/${sessionId}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify({ status: "ENDED" }),
+        });
+      } catch (e) {
+        console.error("Failed to update session status on exit:", e);
+      }
+    }
+    setTimeout(() => {
+      navigate(`/presentations/sessions/${sessionId}/analytics`);
+    }, 150);
+  }, [baseUrl, navigate, session?.sessionCode, sessionId, token]);
 
   // Fetch initial session & presentation data
   useEffect(() => {
