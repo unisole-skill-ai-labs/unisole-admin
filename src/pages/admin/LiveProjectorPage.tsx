@@ -1357,57 +1357,128 @@ export default function LiveProjectorPage() {
                 {instantPollState.question}
               </div>
 
-              {/* Real-time YES vs NO Live Vote Bars */}
+              {/* Real-time Live Vote Bars (Supports 4 options or binary YES/NO) */}
               {(() => {
-                const yes = instantPollState.counts[0] || 0;
-                const no = instantPollState.counts[1] || 0;
-                const total = yes + no;
-                const yesPct = total > 0 ? Math.round((yes / total) * 100) : 50;
-                const noPct = total > 0 ? Math.round((no / total) * 100) : 50;
+                const options =
+                  instantPollState.options && instantPollState.options.length >= 2
+                    ? instantPollState.options
+                    : ["YES", "NO"];
+                const isBinaryYesNo =
+                  options.length === 2 &&
+                  options[0].toUpperCase() === "YES" &&
+                  options[1].toUpperCase() === "NO";
+
+                const total = instantPollState.totalVotes || 0;
+
+                if (isBinaryYesNo) {
+                  const yes = instantPollState.counts[0] || 0;
+                  const no = instantPollState.counts[1] || 0;
+                  const yesPct = total > 0 ? Math.round((yes / total) * 100) : 50;
+                  const noPct = total > 0 ? Math.round((no / total) * 100) : 50;
+
+                  return (
+                    <div className="space-y-2 pt-1">
+                      <div className="grid grid-cols-2 gap-3">
+                        {/* YES Count Box */}
+                        <div className="p-2.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-center">
+                          <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
+                            YES 👍
+                          </div>
+                          <div className="text-2xl font-black text-white">
+                            {yes}{" "}
+                            <span className="text-xs text-emerald-300 font-normal">
+                              ({total > 0 ? yesPct : 0}%)
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* NO Count Box */}
+                        <div className="p-2.5 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-center">
+                          <div className="text-xs font-bold text-rose-400 uppercase tracking-wider">
+                            NO 👎
+                          </div>
+                          <div className="text-2xl font-black text-white">
+                            {no}{" "}
+                            <span className="text-xs text-rose-300 font-normal">
+                              ({total > 0 ? noPct : 0}%)
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Split Progress Bar */}
+                      <div className="h-3 rounded-full bg-zinc-800 overflow-hidden flex shadow-inner">
+                        <div
+                          className="bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
+                          style={{ width: `${total > 0 ? yesPct : 0}%` }}
+                        />
+                        <div
+                          className="bg-gradient-to-r from-rose-500 to-pink-500 transition-all duration-300"
+                          style={{ width: `${total > 0 ? noPct : 0}%` }}
+                        />
+                      </div>
+
+                      <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 px-1">
+                        <span>{instantPollState.totalVotes} responses recorded</span>
+                        <span>Audience: {attendees.length} active</span>
+                      </div>
+                    </div>
+                  );
+                }
+
+                // 4 Options Grid on Projector
+                const barGradients = [
+                  "from-indigo-500 to-blue-400",
+                  "from-amber-500 to-orange-400",
+                  "from-emerald-500 to-teal-400",
+                  "from-cyan-500 to-sky-400",
+                ];
+                const badgeBgs = [
+                  "bg-indigo-500/30 text-indigo-300 border-indigo-500/40",
+                  "bg-amber-500/30 text-amber-300 border-amber-500/40",
+                  "bg-emerald-500/30 text-emerald-300 border-emerald-500/40",
+                  "bg-cyan-500/30 text-cyan-300 border-cyan-500/40",
+                ];
+                const letters = ["A", "B", "C", "D"];
 
                 return (
-                  <div className="space-y-2 pt-1">
-                    <div className="grid grid-cols-2 gap-3">
-                      {/* YES Count Box */}
-                      <div className="p-2.5 rounded-2xl bg-emerald-950/60 border border-emerald-500/40 text-center">
-                        <div className="text-xs font-bold text-emerald-400 uppercase tracking-wider">
-                          YES 👍
-                        </div>
-                        <div className="text-2xl font-black text-white">
-                          {yes}{" "}
-                          <span className="text-xs text-emerald-300 font-normal">
-                            ({total > 0 ? yesPct : 0}%)
-                          </span>
-                        </div>
-                      </div>
-
-                      {/* NO Count Box */}
-                      <div className="p-2.5 rounded-2xl bg-rose-950/60 border border-rose-500/40 text-center">
-                        <div className="text-xs font-bold text-rose-400 uppercase tracking-wider">
-                          NO 👎
-                        </div>
-                        <div className="text-2xl font-black text-white">
-                          {no}{" "}
-                          <span className="text-xs text-rose-300 font-normal">
-                            ({total > 0 ? noPct : 0}%)
-                          </span>
-                        </div>
-                      </div>
+                  <div className="space-y-3 pt-1">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                      {options.map((opt: string, idx: number) => {
+                        const count = instantPollState.counts[idx] || 0;
+                        const pct = total > 0 ? Math.round((count / total) * 100) : 0;
+                        return (
+                          <div
+                            key={idx}
+                            className="p-3 rounded-2xl bg-zinc-900/80 border border-white/10 space-y-2"
+                          >
+                            <div className="flex items-center justify-between gap-2">
+                              <div className="flex items-center gap-2 truncate">
+                                <span
+                                  className={`w-6 h-6 rounded-lg border flex items-center justify-center font-mono font-black text-xs shrink-0 ${badgeBgs[idx % 4]}`}
+                                >
+                                  {letters[idx] || String.fromCharCode(65 + idx)}
+                                </span>
+                                <span className="text-xs sm:text-sm font-bold text-zinc-200 truncate">
+                                  {opt}
+                                </span>
+                              </div>
+                              <span className="font-mono font-bold text-xs sm:text-sm text-white shrink-0">
+                                {count} ({pct}%)
+                              </span>
+                            </div>
+                            <div className="h-2 rounded-full bg-zinc-800 overflow-hidden shadow-inner">
+                              <div
+                                className={`h-full bg-gradient-to-r ${barGradients[idx % 4]} transition-all duration-300`}
+                                style={{ width: `${pct}%` }}
+                              />
+                            </div>
+                          </div>
+                        );
+                      })}
                     </div>
 
-                    {/* Split Progress Bar */}
-                    <div className="h-3 rounded-full bg-zinc-800 overflow-hidden flex shadow-inner">
-                      <div
-                        className="bg-gradient-to-r from-emerald-500 to-teal-400 transition-all duration-300"
-                        style={{ width: `${total > 0 ? yesPct : 0}%` }}
-                      />
-                      <div
-                        className="bg-gradient-to-r from-rose-500 to-pink-500 transition-all duration-300"
-                        style={{ width: `${total > 0 ? noPct : 0}%` }}
-                      />
-                    </div>
-
-                    <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 px-1">
+                    <div className="flex items-center justify-between text-[11px] font-mono text-zinc-400 px-1 pt-1 border-t border-white/10">
                       <span>{instantPollState.totalVotes} responses recorded</span>
                       <span>Audience: {attendees.length} active</span>
                     </div>
