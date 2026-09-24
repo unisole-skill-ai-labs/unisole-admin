@@ -510,12 +510,33 @@ function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingEnrollment, setEditingEnrollment] = useState<any>(null);
 
-  const filtered = enrollments.filter(
-    (e: any) =>
-      e.userId?.toLowerCase().includes(search.toLowerCase()) ||
-      e.pathwayId?.toLowerCase().includes(search.toLowerCase()) ||
-      e.id?.toLowerCase().includes(search.toLowerCase())
-  );
+  const rawList = Array.isArray(enrollments) ? enrollments : [];
+  const normalizedEnrollments = rawList.map((item: any) => {
+    if (item?.enrollment) {
+      return {
+        ...item.enrollment,
+        user: item.user,
+      };
+    }
+    return item;
+  });
+
+  const filtered = normalizedEnrollments.filter((e: any) => {
+    if (!search.trim()) return true;
+    const term = search.toLowerCase();
+    const student = students.find((s: any) => s.id === e.userId) || e.user;
+    const pathway = pathways.find((p: any) => p.id === e.pathwayId || p.id === e.itemId);
+    return (
+      e.id?.toLowerCase().includes(term) ||
+      e.userId?.toLowerCase().includes(term) ||
+      e.pathwayId?.toLowerCase().includes(term) ||
+      e.itemId?.toLowerCase().includes(term) ||
+      student?.name?.toLowerCase().includes(term) ||
+      student?.phone?.includes(term) ||
+      student?.email?.toLowerCase().includes(term) ||
+      pathway?.title?.toLowerCase().includes(term)
+    );
+  });
 
   const handleCreate = async (formData: any) => {
     await createEnrollment({ baseUrl, body: formData }).unwrap();
@@ -534,7 +555,7 @@ function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
           <input
             type="text"
-            placeholder="Search by learner ID or pathway ID..."
+            placeholder="Search by learner name, phone, or pathway..."
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden"
@@ -580,8 +601,8 @@ function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
                 <tr><td colSpan={5} className="py-8 text-center text-zinc-400">No enrollments recorded yet.</td></tr>
               ) : (
                 filtered.map((e: any) => {
-                  const student = students.find((s: any) => s.id === e.userId);
-                  const pathway = pathways.find((p: any) => p.id === e.pathwayId);
+                  const student = students.find((s: any) => s.id === e.userId) || e.user;
+                  const pathway = pathways.find((p: any) => p.id === e.pathwayId || p.id === e.itemId);
                   return (
                     <tr key={e.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
                       <td className="py-3.5 px-4">
@@ -594,9 +615,9 @@ function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">
-                          {pathway ? pathway.title : e.pathwayId}
+                          {pathway ? pathway.title : e.pathwayId || e.itemId}
                         </div>
-                        <div className="text-[11px] text-zinc-400 font-mono mt-0.5">ID: {e.pathwayId}</div>
+                        <div className="text-[11px] text-zinc-400 font-mono mt-0.5">ID: {e.pathwayId || e.itemId}</div>
                       </td>
                       <td className="py-3.5 px-4">
                         <Badge variant={e.status === "ACTIVE" ? "emerald" : "default"} size="sm">
