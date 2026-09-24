@@ -444,6 +444,18 @@ export const adminApi = createApi({
     // Enrollments
     getEnrollments: build.query({
       query: (baseUrl) => ({ url: `${baseUrl}/api/admin/enrollments` }),
+      transformResponse: (res: any) => {
+        const list = Array.isArray(res) ? res : res?.data || [];
+        return list.map((item: any) => {
+          if (item?.enrollment) {
+            return {
+              ...item.enrollment,
+              user: item.user,
+            };
+          }
+          return item;
+        });
+      },
       providesTags: ["Enrollments"],
     }),
     createEnrollment: build.mutation({
