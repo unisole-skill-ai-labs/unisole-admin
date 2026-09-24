@@ -770,7 +770,9 @@ export default function LiveProjectorPage() {
         handleShowLeaderboard();
       } else if (e.key === "p" || e.key === "P") {
         e.preventDefault();
-        if (instantPollState.isActive) {
+        if (currentSlide?.type === "POLL" && !quizState.isQuizActive) {
+          handleStartQuestion();
+        } else if (instantPollState.isActive) {
           handleCloseInstantPoll();
         } else {
           handleStartInstantPoll();
@@ -1577,8 +1579,8 @@ export default function LiveProjectorPage() {
 
         {/* Center: Slide Interaction Buttons & Instant Poll Button */}
         <div className="flex items-center gap-2">
-          {/* Instant Yes/No Poll Launcher Button */}
-          {isPresentationStarted && (
+          {/* Instant Yes/No Poll Launcher Button (Only on non-POLL slides) */}
+          {isPresentationStarted && currentSlide?.type !== "POLL" && (
             <Button
               variant={instantPollState.isActive ? "danger" : "primary"}
               size="sm"
@@ -1592,22 +1594,14 @@ export default function LiveProjectorPage() {
               className={
                 instantPollState.isActive
                   ? "bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-lg flex items-center gap-1.5 animate-pulse"
-                  : currentSlide?.poll
-                  ? "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold shadow-lg flex items-center gap-1.5 cursor-pointer ring-2 ring-amber-400/60"
                   : "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold shadow-lg flex items-center gap-1.5 cursor-pointer"
               }
-              title={
-                currentSlide?.poll
-                  ? `Launch Slide Poll: "${currentSlide.poll.question}" (P)`
-                  : "Launch 20s Instant Yes/No Poll (P)"
-              }
+              title="Launch 20s Instant Yes/No Poll (P)"
             >
               <Zap className="w-3.5 h-3.5 fill-current" />
               <span>
                 {instantPollState.isActive
                   ? `Stop Poll (${instantPollState.remainingTime}s)`
-                  : currentSlide?.poll
-                  ? "Launch Slide Poll (P)"
                   : "Poll (P)"}
               </span>
             </Button>
@@ -1621,11 +1615,11 @@ export default function LiveProjectorPage() {
                 variant="primary"
                 size="sm"
                 onClick={handleStartQuestion}
-                className="bg-amber-500 hover:bg-amber-400 text-black font-bold shadow-lg flex items-center gap-1.5"
-                title="Launch Question to Audience (Q)"
+                className="bg-gradient-to-r from-amber-400 to-yellow-400 hover:from-amber-300 hover:to-yellow-300 text-black font-black shadow-xl flex items-center gap-1.5 px-3.5 py-1.5 ring-2 ring-amber-300/80 animate-pulse cursor-pointer"
+                title="Launch Poll to Audience (Q or P)"
               >
-                <Play className="w-3.5 h-3.5 fill-current" />
-                <span>Start {currentSlide.type === "POLL" ? "Poll" : "Quiz"} (Q)</span>
+                <Play className="w-4 h-4 fill-current" />
+                <span>Start {currentSlide.type === "POLL" ? "Poll (Q / P)" : "Quiz (Q)"}</span>
               </Button>
             )}
 

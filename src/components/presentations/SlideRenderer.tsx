@@ -1854,14 +1854,19 @@ function renderSlideContent({
     // ==========================================
     case "POLL": {
       const pollOptions = slide.options || slide.poll?.options || [];
-      const pollQuestion = slide.question || slide.poll?.question || slide.title;
+      const pollQuestion = slide.question || slide.title || "Live Audience Poll";
+      const totalVotes = Object.values(quizState?.pollCounts || {}).reduce(
+        (a: any, b: any) => (a as number) + (b as number),
+        0
+      ) as number;
+
       return (
-        <div className="w-full max-w-5xl mx-auto space-y-6 sm:space-y-8 animate-fade-in text-center sm:text-left">
+        <div className="w-full max-w-5xl mx-auto space-y-5 sm:space-y-6 animate-fade-in text-center sm:text-left">
           {/* Header */}
           <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
-            <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-amber-500/20 border border-amber-500/40 text-amber-300 text-xs sm:text-sm font-mono font-bold uppercase tracking-wider w-fit mx-auto sm:mx-0">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
-              <span>{slide.badge || "⚡ LIVE AUDIENCE POLL"}</span>
+            <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-cyan-500/20 border border-cyan-500/40 text-cyan-300 text-xs sm:text-sm font-mono font-bold uppercase tracking-wider w-fit mx-auto sm:mx-0">
+              <BarChart3 className="w-4 h-4 text-cyan-400" />
+              <span>{slide.badge || "LIVE AUDIENCE POLL"}</span>
             </div>
 
             {remainingTime !== null && (
@@ -1874,7 +1879,7 @@ function renderSlideContent({
 
           {/* Question Title & Subtitle */}
           <div className="space-y-2">
-            <h2 className="text-2xl sm:text-4xl md:text-5xl font-black text-white leading-tight tracking-tight">
+            <h2 className="text-2xl sm:text-4xl lg:text-5xl font-black text-white leading-tight tracking-tight">
               {pollQuestion}
             </h2>
             {slide.subtitle && (
@@ -1884,44 +1889,66 @@ function renderSlideContent({
             )}
           </div>
 
-          {/* 4 Options Grid (2x2) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 sm:gap-4 pt-2">
+          {/* 4 Options Grid (2x2) with live progress bars */}
+          <div className={`grid ${isLandscape ? "grid-cols-2" : "grid-cols-1 sm:grid-cols-2"} gap-3.5 sm:gap-4 pt-2`}>
             {pollOptions.map((opt: any, optIdx: number) => {
               const text = typeof opt === "object" ? opt.text : opt;
-              const optionLetters = ["A", "B", "C", "D"];
-              const letter = optionLetters[optIdx] || String.fromCharCode(65 + optIdx);
-              const cardStyles = [
-                "from-indigo-950/60 to-indigo-900/30 border-indigo-500/40 text-indigo-100 hover:border-indigo-400",
-                "from-amber-950/60 to-amber-900/30 border-amber-500/40 text-amber-100 hover:border-amber-400",
-                "from-emerald-950/60 to-emerald-900/30 border-emerald-500/40 text-emerald-100 hover:border-emerald-400",
-                "from-cyan-950/60 to-cyan-900/30 border-cyan-500/40 text-cyan-100 hover:border-cyan-400",
+              const count = quizState?.pollCounts?.[optIdx] || 0;
+              const percent = totalVotes > 0 ? Math.round((count / totalVotes) * 100) : 0;
+              const isSelected = selectedOption === optIdx;
+
+              const cardColors = [
+                "border-cyan-500/30 hover:border-cyan-400/60",
+                "border-indigo-500/30 hover:border-indigo-400/60",
+                "border-amber-500/30 hover:border-amber-400/60",
+                "border-emerald-500/30 hover:border-emerald-400/60",
               ];
               const badgeColors = [
-                "bg-indigo-500/30 text-indigo-300 border-indigo-500/40",
-                "bg-amber-500/30 text-amber-300 border-amber-500/40",
-                "bg-emerald-500/30 text-emerald-300 border-emerald-500/40",
-                "bg-cyan-500/30 text-cyan-300 border-cyan-500/40",
+                "bg-cyan-500/20 text-cyan-300 border-cyan-500/40",
+                "bg-indigo-500/20 text-indigo-300 border-indigo-500/40",
+                "bg-amber-500/20 text-amber-300 border-amber-500/40",
+                "bg-emerald-500/20 text-emerald-300 border-emerald-500/40",
               ];
-              const isSelected = selectedOption === optIdx;
+              const fillColors = [
+                "bg-cyan-500/25",
+                "bg-indigo-500/25",
+                "bg-amber-500/25",
+                "bg-emerald-500/25",
+              ];
 
               return (
                 <button
                   key={optIdx}
                   type="button"
-                  disabled={isProjector || isSubmitted}
+                  disabled={isProjector || (!quizState?.isQuizActive && !isSubmitted)}
                   onClick={() => onSelectOption && onSelectOption(optIdx)}
-                  className={`p-4 sm:p-5 rounded-2xl sm:rounded-3xl bg-gradient-to-br border-2 transition-all duration-300 flex items-center gap-3.5 sm:gap-4 shadow-xl text-left ${
-                    cardStyles[optIdx % 4]
+                  className={`relative p-4 sm:p-5 rounded-2xl sm:rounded-3xl border-2 transition-all duration-300 ease-out overflow-hidden shadow-xl text-left bg-white/[0.03] backdrop-blur-md flex items-center justify-between gap-3.5 ${
+                    cardColors[optIdx % 4]
                   } ${
-                    isSelected ? "ring-4 ring-amber-400 scale-[1.02] border-amber-400" : ""
-                  } ${!isProjector && !isSubmitted ? "cursor-pointer active:scale-98" : ""}`}
+                    isSelected
+                      ? "ring-4 ring-amber-400 scale-[1.02] bg-white/10 !border-amber-400"
+                      : ""
+                  } ${!isProjector && quizState?.isQuizActive && !isSubmitted ? "cursor-pointer active:scale-98" : ""}`}
                 >
-                  <span className={`w-9 h-9 sm:w-11 sm:h-11 rounded-xl sm:rounded-2xl border flex items-center justify-center font-mono font-black text-sm sm:text-base shrink-0 shadow-md ${badgeColors[optIdx % 4]}`}>
-                    {letter}
-                  </span>
-                  <span className="text-sm sm:text-lg font-bold text-white leading-snug">
-                    {text}
-                  </span>
+                  {/* Fill Bar */}
+                  <div
+                    className={`absolute inset-y-0 left-0 ${fillColors[optIdx % 4]} transition-all duration-500 ease-out pointer-events-none`}
+                    style={{ width: `${percent}%` }}
+                  />
+
+                  <div className="relative z-10 flex items-center gap-3 sm:gap-4 truncate">
+                    <span className={`w-8 h-8 sm:w-10 sm:h-10 rounded-xl sm:rounded-2xl border flex items-center justify-center font-mono font-black text-xs sm:text-base shrink-0 shadow-md ${badgeColors[optIdx % 4]}`}>
+                      {String.fromCharCode(65 + optIdx)}
+                    </span>
+                    <span className="text-sm sm:text-base md:text-lg font-bold text-white leading-snug truncate">
+                      {text}
+                    </span>
+                  </div>
+
+                  {/* Real-time Percentage Indicator */}
+                  <div className="relative z-10 flex items-center gap-1 font-mono font-black text-sm sm:text-lg text-zinc-200 shrink-0">
+                    <span>{percent}%</span>
+                  </div>
                 </button>
               );
             })}
@@ -3745,44 +3772,9 @@ function renderSlideContent({
 export default function SlideRenderer(props: SlideRendererProps) {
   const content = renderSlideContent(props);
   if (!content) return null;
-  const poll = props.slide?.poll;
   return (
     <div className="w-full min-w-[280px] max-w-5xl mx-auto flex flex-col justify-center shrink-0">
       {content}
-      {props.slide?.type !== "POLL" && poll && (
-        <div className="mt-4 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-indigo-500/15 border-2 border-amber-500/40 shadow-xl shadow-amber-500/5 animate-fade-in text-left">
-          <div className="flex items-center justify-between gap-2 mb-1.5">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
-              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/25 text-amber-300 text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider">
-                LIVE AUDIENCE POLL
-              </span>
-            </div>
-            <span className="text-[10px] sm:text-xs text-amber-400 font-mono font-semibold">
-              {props.isProjector ? "Press (P) to Launch" : "Poll active on presenter cue"}
-            </span>
-          </div>
-          <div className="text-sm sm:text-base font-extrabold text-white leading-snug">
-            “{poll.question}”
-          </div>
-          {poll.options && (
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
-              {poll.options.map((opt: string, idx: number) => (
-                <div
-                  key={idx}
-                  className="px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-[11px] sm:text-xs text-zinc-200 font-medium truncate flex items-center gap-1.5"
-                  title={opt}
-                >
-                  <span className="w-5 h-5 rounded-md bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-[10px] shrink-0">
-                    {String.fromCharCode(65 + idx)}
-                  </span>
-                  <span className="truncate">{opt}</span>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
     </div>
   );
 }
