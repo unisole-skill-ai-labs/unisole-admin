@@ -346,6 +346,13 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Courses"],
     }),
+    syncCanonicalCurriculum: build.mutation({
+      query: (baseUrl) => ({
+        url: `${baseUrl}/api/admin/courses/sync-canonical`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Courses", "Pathways", "Modules", "Lessons", "Pricing"],
+    }),
     getCourseModules: build.query({
       query: ({ baseUrl, id }) => ({ url: `${baseUrl}/api/admin/courses/${id}/modules` }),
       providesTags: (_res, _err, { id }) => [{ type: "Courses", id: `${id}-modules` }],
@@ -577,7 +584,7 @@ export const adminApi = createApi({
         url: `${baseUrl}/api/admin/pricing/sync-canonical`,
         method: "POST",
       }),
-      invalidatesTags: ["Pricing"],
+      invalidatesTags: ["Pricing", "Courses", "Pathways", "Modules", "Lessons"],
     }),
 
     // Discount Coupons & Promo Codes
@@ -1342,6 +1349,7 @@ export const {
   useCreateCourseMutation,
   useUpdateCourseMutation,
   useDeleteCourseMutation,
+  useSyncCanonicalCurriculumMutation,
   useGetCourseModulesQuery,
   useAttachCourseModuleMutation,
   useDetachCourseModuleMutation,

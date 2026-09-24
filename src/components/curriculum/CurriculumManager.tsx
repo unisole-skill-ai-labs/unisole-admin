@@ -4,6 +4,7 @@ import {
   useCreateCourseMutation,
   useUpdateCourseMutation,
   useDeleteCourseMutation,
+  useSyncCanonicalCurriculumMutation,
   useGetCourseModulesQuery,
   useAttachCourseModuleMutation,
   useDetachCourseModuleMutation,
@@ -108,6 +109,7 @@ function CoursesSection({ baseUrl }: { baseUrl: string }) {
   const [createCourse, { isLoading: isCreating }] = useCreateCourseMutation();
   const [updateCourse, { isLoading: isUpdating }] = useUpdateCourseMutation();
   const [deleteCourse] = useDeleteCourseMutation();
+  const [syncCanonicalCurriculum, { isLoading: isSyncing }] = useSyncCanonicalCurriculumMutation();
 
   const [search, setSearch] = useState("");
   const [editingCourse, setEditingCourse] = useState<any>(null);
@@ -134,6 +136,15 @@ function CoursesSection({ baseUrl }: { baseUrl: string }) {
     }
   };
 
+  const handleSyncCanonical = async () => {
+    try {
+      await syncCanonicalCurriculum(baseUrl).unwrap();
+      refetch();
+    } catch (err: any) {
+      alert("Failed to sync canonical curriculum: " + (err?.data?.message || err?.message || "Unknown error"));
+    }
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
@@ -148,6 +159,15 @@ function CoursesSection({ baseUrl }: { baseUrl: string }) {
           />
         </div>
         <div className="flex items-center gap-2 w-full sm:w-auto">
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleSyncCanonical}
+            loading={isSyncing}
+            icon={RefreshCw}
+          >
+            {isSyncing ? "Syncing..." : "Sync & Purge Canonical"}
+          </Button>
           <Button variant="secondary" size="sm" onClick={refetch} icon={RefreshCw}>
             Refresh
           </Button>
