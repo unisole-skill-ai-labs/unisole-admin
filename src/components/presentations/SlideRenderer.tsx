@@ -2182,6 +2182,286 @@ function renderSlideContent({
     }
 
     // ==========================================
+    // 28B. COMPARISON (SUNNI & ROADSHOW DECKS)
+    // ==========================================
+    case "COMPARISON": {
+      const columns = slide.columns || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-4 sm:space-y-6 animate-fade-in">
+          <div>
+            {slide.badge && (
+              <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                {slide.badge}
+              </span>
+            )}
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            {slide.subtitle && (
+              <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+                {slide.subtitle}
+              </p>
+            )}
+          </div>
+
+          {renderAudienceQuestionBanner()}
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
+            {columns.map((col: any, idx: number) => {
+              const isRevealed = currentStep >= idx;
+              const isFirst = idx === 0;
+              return (
+                <div
+                  key={idx}
+                  className={`p-4 sm:p-5 rounded-3xl border transition-all duration-300 ease-out shadow-xl space-y-3 ${
+                    isRevealed
+                      ? isFirst
+                        ? "bg-white/5 border-white/10 opacity-100 translate-y-0"
+                        : "bg-gradient-to-b from-indigo-950/60 to-zinc-900 border-indigo-500/40 opacity-100 translate-y-0"
+                      : "bg-white/2 border-white/5 opacity-25 translate-y-2"
+                  }`}
+                >
+                  <div className="flex items-center justify-between border-b border-white/10 pb-2">
+                    <span className={`text-xs sm:text-sm font-mono font-black uppercase tracking-wider ${col.color || "text-zinc-200"}`}>
+                      {col.label}
+                    </span>
+                    <span className="text-[10px] font-mono px-2 py-0.5 rounded-md bg-white/5 text-zinc-400">
+                      0{idx + 1}
+                    </span>
+                  </div>
+                  <div className="space-y-2">
+                    {(col.items || []).map((it: string, itIdx: number) => (
+                      <div
+                        key={itIdx}
+                        className="p-2 sm:p-2.5 rounded-xl bg-black/30 border border-white/5 flex items-start gap-2.5 text-xs text-zinc-200 font-medium leading-relaxed"
+                      >
+                        <span className={`font-bold shrink-0 mt-0.5 ${isFirst ? "text-zinc-400" : "text-emerald-400"}`}>
+                          {isFirst ? "—" : "✓"}
+                        </span>
+                        <span>{it}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {slide.punchline && (
+            <div
+              className={`p-3 sm:p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center font-bold text-xs sm:text-sm text-amber-300 transition-all duration-300 ${
+                currentStep >= 2 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {slide.punchline}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 28C. TIMELINE (SUNNI & ROADSHOW DECKS)
+    // ==========================================
+    case "TIMELINE": {
+      const timeline = slide.timeline || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-4 sm:space-y-6 animate-fade-in">
+          <div>
+            {slide.badge && (
+              <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                {slide.badge}
+              </span>
+            )}
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            {slide.subtitle && (
+              <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+                {slide.subtitle}
+              </p>
+            )}
+          </div>
+
+          {renderAudienceQuestionBanner()}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 pt-1">
+            {timeline.map((t: any, idx: number) => {
+              const isRevealed = currentStep >= idx;
+              return (
+                <div
+                  key={idx}
+                  className={`p-4 rounded-3xl border transition-all duration-300 ease-out shadow-lg space-y-2 flex flex-col justify-between ${
+                    isRevealed
+                      ? "bg-gradient-to-b from-indigo-950/60 to-zinc-900 border-indigo-500/40 opacity-100 translate-y-0"
+                      : "bg-white/2 border-white/5 opacity-25 translate-y-2"
+                  }`}
+                  style={{ borderTopColor: t.color, borderTopWidth: "3px" }}
+                >
+                  <div className="space-y-1.5">
+                    <span
+                      className="px-2.5 py-0.5 rounded-lg text-xs font-mono font-black inline-block"
+                      style={{ backgroundColor: `${t.color}25`, color: t.color }}
+                    >
+                      {t.period}
+                    </span>
+                    <h3 className="font-extrabold text-sm sm:text-base text-white">{t.event}</h3>
+                    <p className="text-xs text-zinc-300 leading-relaxed font-medium">{t.desc}</p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          {slide.punchline && (
+            <div
+              className={`p-3 sm:p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center font-bold text-xs sm:text-sm text-amber-300 transition-all duration-300 ${
+                currentStep >= 3 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {slide.punchline}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 28D. METRIC_CARD (SUNNI & ROADSHOW DECKS)
+    // ==========================================
+    case "METRIC_CARD": {
+      const metrics = slide.metrics || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-4 sm:space-y-6 animate-fade-in text-center sm:text-left">
+          <div>
+            {slide.badge && (
+              <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                {slide.badge}
+              </span>
+            )}
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            {slide.subtitle && (
+              <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+                {slide.subtitle}
+              </p>
+            )}
+          </div>
+
+          {renderAudienceQuestionBanner()}
+
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5 pt-1">
+            {metrics.map((m: any, idx: number) => {
+              const isRevealed = currentStep >= idx;
+              return (
+                <div
+                  key={idx}
+                  className={`p-5 sm:p-6 rounded-3xl border text-center space-y-2 transition-all duration-300 ease-out shadow-xl ${
+                    isRevealed
+                      ? "bg-gradient-to-b from-indigo-950/60 to-zinc-900 border-indigo-500/40 opacity-100 scale-100"
+                      : "bg-white/2 border-white/5 opacity-25 scale-95"
+                  }`}
+                >
+                  <div
+                    className="text-3xl sm:text-5xl font-black font-mono tracking-tight"
+                    style={{ color: m.color || "#06B6D4" }}
+                  >
+                    {m.val}
+                  </div>
+                  <div className="text-xs sm:text-sm font-bold text-white uppercase tracking-wider">
+                    {m.label}
+                  </div>
+                  {m.sub && (
+                    <div className="text-[11px] text-zinc-400 font-medium leading-relaxed">
+                      {m.sub}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {slide.punchline && (
+            <div
+              className={`p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center font-bold text-xs sm:text-sm text-amber-300 transition-all duration-300 ${
+                currentStep >= 2 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {slide.punchline}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
+    // 28E. STEP_CARDS (SUNNI & ROADSHOW DECKS)
+    // ==========================================
+    case "STEP_CARDS": {
+      const steps = slide.steps || [];
+      return (
+        <div className="w-full max-w-5xl mx-auto space-y-4 sm:space-y-5 animate-fade-in">
+          <div>
+            {slide.badge && (
+              <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
+                {slide.badge}
+              </span>
+            )}
+            <h2 className="text-xl sm:text-4xl font-black text-white mt-2">
+              {slide.title}
+            </h2>
+            {slide.subtitle && (
+              <p className="text-xs sm:text-sm text-zinc-400 mt-1">
+                {slide.subtitle}
+              </p>
+            )}
+          </div>
+
+          {renderAudienceQuestionBanner()}
+
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-1">
+            {steps.map((st: any, idx: number) => {
+              const isRevealed = currentStep >= idx;
+              return (
+                <div
+                  key={idx}
+                  className={`p-3.5 sm:p-4 rounded-3xl border transition-all duration-300 ease-out shadow-md space-y-1.5 ${
+                    isRevealed
+                      ? "bg-white/5 border-white/10 opacity-100 translate-y-0"
+                      : "bg-white/2 border-white/5 opacity-25 translate-y-2"
+                  }`}
+                >
+                  <div className="flex items-center gap-2">
+                    <span className="w-6 h-6 rounded-lg bg-indigo-600/30 text-indigo-300 font-mono font-bold text-xs flex items-center justify-center border border-indigo-500/30 shrink-0">
+                      {st.num || `0${idx + 1}`}
+                    </span>
+                    <h4 className="font-extrabold text-xs sm:text-sm text-white">{st.title}</h4>
+                  </div>
+                  {st.desc && (
+                    <p className="text-[11px] sm:text-xs text-zinc-300 font-medium leading-relaxed pl-8">
+                      {st.desc}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {slide.punchline && (
+            <div
+              className={`p-3.5 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-center font-bold text-xs sm:text-sm text-amber-300 transition-all duration-300 ${
+                currentStep >= 3 ? "opacity-100" : "opacity-0"
+              }`}
+            >
+              {slide.punchline}
+            </div>
+          )}
+        </div>
+      );
+    }
+
+    // ==========================================
     // 29. THREE CARDS
     // ==========================================
     case "THREE_CARDS": {
@@ -3446,9 +3726,44 @@ function renderSlideContent({
 export default function SlideRenderer(props: SlideRendererProps) {
   const content = renderSlideContent(props);
   if (!content) return null;
+  const poll = props.slide?.poll;
   return (
     <div className="w-full min-w-[280px] max-w-5xl mx-auto flex flex-col justify-center shrink-0">
       {content}
+      {props.slide?.type !== "POLL" && poll && (
+        <div className="mt-4 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-indigo-500/15 border-2 border-amber-500/40 shadow-xl shadow-amber-500/5 animate-fade-in text-left">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/25 text-amber-300 text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider">
+                LIVE AUDIENCE POLL
+              </span>
+            </div>
+            <span className="text-[10px] sm:text-xs text-amber-400 font-mono font-semibold">
+              {props.isProjector ? "Press (P) to Launch" : "Poll active on presenter cue"}
+            </span>
+          </div>
+          <div className="text-sm sm:text-base font-extrabold text-white leading-snug">
+            “{poll.question}”
+          </div>
+          {poll.options && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+              {poll.options.map((opt: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-[11px] sm:text-xs text-zinc-200 font-medium truncate flex items-center gap-1.5"
+                  title={opt}
+                >
+                  <span className="w-5 h-5 rounded-md bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-[10px] shrink-0">
+                    {String.fromCharCode(65 + idx)}
+                  </span>
+                  <span className="truncate">{opt}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -131,14 +131,28 @@ export default function LiveProjectorPage() {
     setTimeout(() => setCopied(false), 2500);
   }, [session]);
 
-  const handleExitShow = useCallback(() => {
+  const handleExitShow = useCallback(async () => {
+    const authHeaders = token ? { Authorization: `Bearer ${token}` } : {};
     if (socketRef.current && session?.sessionCode) {
       socketRef.current.emit("admin:end_session", {
         sessionCode: session.sessionCode,
       });
     }
-    navigate(`/presentations/sessions/${sessionId}/analytics`);
-  }, [navigate, session?.sessionCode, sessionId]);
+    if (sessionId) {
+      try {
+        await fetch(`${baseUrl}/api/admin/presentations/sessions/${sessionId}/status`, {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json", ...authHeaders },
+          body: JSON.stringify({ status: "ENDED" }),
+        });
+      } catch (e) {
+        console.error("Failed to update session status on exit:", e);
+      }
+    }
+    setTimeout(() => {
+      navigate(`/presentations/sessions/${sessionId}/analytics`);
+    }, 150);
+  }, [baseUrl, navigate, session?.sessionCode, sessionId, token]);
 
   // Fetch initial session & presentation data
   useEffect(() => {
@@ -645,13 +659,14 @@ export default function LiveProjectorPage() {
 
   const handleStartInstantPoll = useCallback(() => {
     if (!socketRef.current || !session?.sessionCode) return;
+    const currentPoll = currentSlide?.poll || currentSlide?.instantPoll;
     socketRef.current.emit("admin:start_instant_poll", {
       sessionCode: session.sessionCode,
-      question: "YES or NO?",
-      timeLimit: 20,
-      options: ["YES", "NO"],
+      question: currentPoll?.question || currentSlide?.questionPrompt || "YES or NO?",
+      timeLimit: currentPoll?.timeLimit || 20,
+      options: currentPoll?.options || ["YES", "NO"],
     });
-  }, [session?.sessionCode]);
+  }, [session?.sessionCode, currentSlide]);
 
   const handleCloseInstantPoll = useCallback(() => {
     if (!socketRef.current || !session?.sessionCode) return;
@@ -1506,14 +1521,22 @@ export default function LiveProjectorPage() {
               className={
                 instantPollState.isActive
                   ? "bg-rose-600 hover:bg-rose-500 text-white font-bold shadow-lg flex items-center gap-1.5 animate-pulse"
+                  : currentSlide?.poll
+                  ? "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold shadow-lg flex items-center gap-1.5 cursor-pointer ring-2 ring-amber-400/60"
                   : "bg-gradient-to-r from-amber-500 to-yellow-500 hover:from-amber-400 hover:to-yellow-400 text-black font-extrabold shadow-lg flex items-center gap-1.5 cursor-pointer"
               }
-              title="Launch 20s Instant Yes/No Poll (P)"
+              title={
+                currentSlide?.poll
+                  ? `Launch Slide Poll: "${currentSlide.poll.question}" (P)`
+                  : "Launch 20s Instant Yes/No Poll (P)"
+              }
             >
               <Zap className="w-3.5 h-3.5 fill-current" />
               <span>
                 {instantPollState.isActive
                   ? `Stop Poll (${instantPollState.remainingTime}s)`
+                  : currentSlide?.poll
+                  ? "Launch Slide Poll (P)"
                   : "Poll (P)"}
               </span>
             </Button>
