@@ -560,6 +560,13 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Pricing"],
     }),
+    syncCanonicalPricing: build.mutation({
+      query: (baseUrl) => ({
+        url: `${baseUrl}/api/admin/pricing/sync-canonical`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Pricing"],
+    }),
 
     // Discount Coupons & Promo Codes
     getCoupons: build.query({
@@ -1355,6 +1362,7 @@ export const {
   useCreateOfferingPricingMutation,
   useUpdateOfferingPricingMutation,
   useDeleteOfferingPricingMutation,
+  useSyncCanonicalPricingMutation,
   // Discount Coupons
   useGetCouponsQuery,
   useCreateCouponMutation,
