@@ -59,7 +59,7 @@ const COURSES_CATALOG = [
   { id: "sci-p1", title: "Scientific Machine Learning for Basic Sciences (BSc Physics | BSc Maths)", group: "Group 02 • Science & Math" },
   { id: "sci-p2", title: "Mathematics + AI / Computational Intelligence", group: "Group 02 • Science & Math" },
   { id: "mgmt-p1", title: "Business Analytics & Data Engineering", group: "Group 03 • Commerce & Management" },
-  { id: "mgmt-common", title: "AI Entrepreneurship & Business Innovation", group: "Group 03 • Commerce & Management" },
+  { id: "mgmt-common", title: "AI Entrepreneurship & Innovation", group: "Group 03 • Commerce & Management" },
   { id: "arts-p1", title: "Applied AI for Humanities, Research & Careers", group: "Group 04 • BA & Non-Tech" },
   { id: "AI_MASTERCLASS_2026", title: "AI Revolution & Agentic Engineering Masterclass", group: "Workshop / Masterclass" },
   { id: "ai-masterclass", title: "AI Revolution & Agentic Engineering Masterclass (Alias)", group: "Workshop / Masterclass" },
