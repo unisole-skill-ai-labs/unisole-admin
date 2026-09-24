@@ -3446,9 +3446,44 @@ function renderSlideContent({
 export default function SlideRenderer(props: SlideRendererProps) {
   const content = renderSlideContent(props);
   if (!content) return null;
+  const poll = props.slide?.poll;
   return (
     <div className="w-full min-w-[280px] max-w-5xl mx-auto flex flex-col justify-center shrink-0">
       {content}
+      {props.slide?.type !== "POLL" && poll && (
+        <div className="mt-4 p-3 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-indigo-500/15 border-2 border-amber-500/40 shadow-xl shadow-amber-500/5 animate-fade-in text-left">
+          <div className="flex items-center justify-between gap-2 mb-1.5">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-amber-400 animate-ping shrink-0" />
+              <span className="px-2.5 py-0.5 rounded-full bg-amber-500/25 text-amber-300 text-[10px] sm:text-xs font-mono font-bold uppercase tracking-wider">
+                LIVE AUDIENCE POLL
+              </span>
+            </div>
+            <span className="text-[10px] sm:text-xs text-amber-400 font-mono font-semibold">
+              {props.isProjector ? "Press (P) to Launch" : "Poll active on presenter cue"}
+            </span>
+          </div>
+          <div className="text-sm sm:text-base font-extrabold text-white leading-snug">
+            “{poll.question}”
+          </div>
+          {poll.options && (
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2">
+              {poll.options.map((opt: string, idx: number) => (
+                <div
+                  key={idx}
+                  className="px-2.5 py-1.5 rounded-xl bg-black/40 border border-white/10 text-[11px] sm:text-xs text-zinc-200 font-medium truncate flex items-center gap-1.5"
+                  title={opt}
+                >
+                  <span className="w-5 h-5 rounded-md bg-amber-500/20 text-amber-300 flex items-center justify-center font-bold text-[10px] shrink-0">
+                    {String.fromCharCode(65 + idx)}
+                  </span>
+                  <span className="truncate">{opt}</span>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }
