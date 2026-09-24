@@ -8,8 +8,10 @@ import {
   useGetEnrollmentsQuery,
   useCreateEnrollmentMutation,
   useUpdateEnrollmentMutation,
+  useManualGrantEnrollmentMutation,
   useGetPathwaysQuery,
 } from "../../store";
+import { CANONICAL_CATALOG, resolveOfferingTitle } from "../../constants/offerings";
 import {
   Users,
   GraduationCap,
@@ -136,8 +138,9 @@ const exportEnrollmentsCsv = (data: any[], allStudents: any[], allPathways: any[
   ];
 
   const rows = data.map((e: any) => {
-    const student = allStudents.find((s: any) => s.id === e.userId);
-    const pathway = allPathways.find((p: any) => p.id === e.pathwayId);
+    const student = allStudents.find((s: any) => s.id === e.userId) || e.user;
+    const offeringId = e.pathwayId || e.itemId || "";
+    const offeringTitle = resolveOfferingTitle(offeringId, allPathways);
     const formattedPhone = student?.phone ? formatPhone(student.phone) : "";
     const enrolledDate = e.enrolledAt
       ? new Date(e.enrolledAt).toISOString().replace("T", " ").substring(0, 19)
@@ -152,8 +155,8 @@ const exportEnrollmentsCsv = (data: any[], allStudents: any[], allPathways: any[
       student?.name || "",
       formattedPhone,
       student?.collegeName || "",
-      e.pathwayId || "",
-      pathway?.title || e.pathwayId || "",
+      offeringId,
+      offeringTitle,
       e.status || "",
       enrolledDate,
       createdDate,
@@ -498,11 +501,11 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
   );
 }
 
-// ─── 2. ENROLLMENTS SECTION ───────────────────────────────────────────────────
 function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
   const { data: enrollments = [], isLoading, refetch } = useGetEnrollmentsQuery(baseUrl);
   const { data: students = [] } = useGetStudentsQuery(baseUrl);
   const { data: pathways = [] } = useGetPathwaysQuery(baseUrl);
+  const [manualGrantEnrollment, { isLoading: isGranting }] = useManualGrantEnrollmentMutation();
   const [createEnrollment, { isLoading: isCreating }] = useCreateEnrollmentMutation();
   const [updateEnrollment, { isLoading: isUpdating }] = useUpdateEnrollmentMutation();
 
@@ -525,22 +528,43 @@ function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
     if (!search.trim()) return true;
     const term = search.toLowerCase();
     const student = students.find((s: any) => s.id === e.userId) || e.user;
-    const pathway = pathways.find((p: any) => p.id === e.pathwayId || p.id === e.itemId);
+    const offeringId = e.pathwayId || e.itemId || "";
+    const offeringTitle = resolveOfferingTitle(offeringId, pathways);
     return (
       e.id?.toLowerCase().includes(term) ||
       e.userId?.toLowerCase().includes(term) ||
-      e.pathwayId?.toLowerCase().includes(term) ||
-      e.itemId?.toLowerCase().includes(term) ||
+      offeringId.toLowerCase().includes(term) ||
+      offeringTitle.toLowerCase().includes(term) ||
       student?.name?.toLowerCase().includes(term) ||
       student?.phone?.includes(term) ||
-      student?.email?.toLowerCase().includes(term) ||
-      pathway?.title?.toLowerCase().includes(term)
+      student?.email?.toLowerCase().includes(term)
     );
   });
 
-  const handleCreate = async (formData: any) => {
-    await createEnrollment({ baseUrl, body: formData }).unwrap();
+  const handleCreate = async (formData: { userId: string; itemId: string; itemType: string }) => {
+    try {
+      await manualGrantEnrollment({
+        baseUrl,
+        body: {
+          userId: formData.userId,
+          itemType: formData.itemType || "PATHWAY",
+          itemId: formData.itemId,
+          source: "ADMIN_MANUAL",
+        },
+      }).unwrap();
+    } catch {
+      await createEnrollment({
+        baseUrl,
+        body: {
+          userId: formData.userId,
+          itemType: formData.itemType || "PATHWAY",
+          itemId: formData.itemId,
+          pathwayId: formData.itemId,
+        },
+      }).unwrap();
+    }
     setShowCreateModal(false);
+    refetch();
   };
 
   const handleUpdate = async (formData: any) => {
@@ -602,7 +626,8 @@ function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
               ) : (
                 filtered.map((e: any) => {
                   const student = students.find((s: any) => s.id === e.userId) || e.user;
-                  const pathway = pathways.find((p: any) => p.id === e.pathwayId || p.id === e.itemId);
+                  const offeringId = e.pathwayId || e.itemId || "";
+                  const offeringTitle = resolveOfferingTitle(offeringId, pathways);
                   return (
                     <tr key={e.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
                       <td className="py-3.5 px-4">
@@ -615,9 +640,11 @@ function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">
-                          {pathway ? pathway.title : e.pathwayId || e.itemId}
+                          {offeringTitle}
                         </div>
-                        <div className="text-[11px] text-zinc-400 font-mono mt-0.5">ID: {e.pathwayId || e.itemId}</div>
+                        <div className="text-[11px] text-zinc-400 font-mono mt-0.5">
+                          {e.itemType ? `${e.itemType} • ` : ""}ID: {offeringId}
+                        </div>
                       </td>
                       <td className="py-3.5 px-4">
                         <Badge variant={e.status === "ACTIVE" ? "emerald" : "default"} size="sm">
@@ -643,7 +670,7 @@ function EnrollmentsSection({ baseUrl }: { baseUrl: string }) {
         <CreateEnrollmentModal
           students={students}
           pathways={pathways}
-          isLoading={isCreating}
+          isLoading={isCreating || isGranting}
           onClose={() => setShowCreateModal(false)}
           onSave={handleCreate}
         />
@@ -687,30 +714,153 @@ function StudentModal({ student, isLoading, onClose, onSave }: any) {
   );
 }
 
-function CreateEnrollmentModal({ students, pathways, isLoading, onClose, onSave }: any) {
+function CreateEnrollmentModal({
+  students,
+  pathways,
+  isLoading,
+  onClose,
+  onSave,
+}: {
+  students: any[];
+  pathways: any[];
+  isLoading: boolean;
+  onClose: () => void;
+  onSave: (data: { userId: string; itemId: string; itemType: string }) => void;
+}) {
   const [userId, setUserId] = useState("");
-  const [pathwayId, setPathwayId] = useState("");
+  const [selectedOfferingId, setSelectedOfferingId] = useState("");
+  const [learnerFilter, setLearnerFilter] = useState("");
+
+  const filteredStudents = students.filter((s: any) => {
+    if (!learnerFilter.trim()) return true;
+    const term = learnerFilter.toLowerCase();
+    return (
+      s.name?.toLowerCase().includes(term) ||
+      s.phone?.includes(term) ||
+      s.id?.toLowerCase().includes(term)
+    );
+  });
+
+  const canonicalIds = new Set(CANONICAL_CATALOG.map((c) => c.id.toLowerCase()));
+  const canonicalSlugs = new Set(CANONICAL_CATALOG.map((c) => c.slug.toLowerCase()));
+  const extraPathways = pathways.filter(
+    (p: any) => !canonicalIds.has(p.id?.toLowerCase()) && !canonicalSlugs.has(p.slug?.toLowerCase())
+  );
+
+  const groups = [
+    "Group 01 • Computer Science & IT",
+    "Incubator Track • CS & Commerce",
+    "Group 02 • Science & Mathematics",
+    "Group 03 • Commerce & Management",
+    "Group 04 • BA & Humanities",
+    "Workshops & Masterclasses",
+  ];
+
+  const selectedOffering =
+    CANONICAL_CATALOG.find((c) => c.id === selectedOfferingId) ||
+    extraPathways.find((p: any) => p.id === selectedOfferingId);
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!userId || !selectedOfferingId) return;
+    const itemType = (selectedOffering as any)?.itemType || "PATHWAY";
+    onSave({
+      userId,
+      itemId: selectedOfferingId,
+      itemType,
+    });
+  };
 
   return (
     <Modal isOpen={true} onClose={onClose} title="Grant Pathway Access" maxWidth="max-w-md">
-      <form onSubmit={(e) => { e.preventDefault(); onSave({ userId, pathwayId }); }} className="space-y-4">
+      <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">Select Learner</label>
-          <select value={userId} onChange={(e) => setUserId(e.target.value)} className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs" required>
+          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+            Select Learner ({students.length} available)
+          </label>
+          {students.length > 5 && (
+            <input
+              type="text"
+              placeholder="Search learner name or phone..."
+              value={learnerFilter}
+              onChange={(e) => setLearnerFilter(e.target.value)}
+              className="w-full mb-1.5 px-3 py-1.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-lg text-xs"
+            />
+          )}
+          <select
+            value={userId}
+            onChange={(e) => setUserId(e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-medium"
+            required
+          >
             <option value="">Choose learner account...</option>
-            {students.map((s: any) => <option key={s.id} value={s.id}>{s.name || "Learner"} ({formatPhone(s.phone)})</option>)}
+            {filteredStudents.map((s: any) => (
+              <option key={s.id} value={s.id}>
+                {s.name || "Learner"} ({formatPhone(s.phone)})
+              </option>
+            ))}
           </select>
         </div>
+
         <div>
-          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">Select Pathway</label>
-          <select value={pathwayId} onChange={(e) => setPathwayId(e.target.value)} className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs" required>
+          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+            Select Pathway
+          </label>
+          <select
+            value={selectedOfferingId}
+            onChange={(e) => setSelectedOfferingId(e.target.value)}
+            className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-semibold"
+            required
+          >
             <option value="">Choose pathway curriculum...</option>
-            {pathways.map((p: any) => <option key={p.id} value={p.id}>{p.title} (/{p.slug})</option>)}
+            {groups.map((groupName) => {
+              const items = CANONICAL_CATALOG.filter((c) => c.group === groupName);
+              if (items.length === 0) return null;
+              return (
+                <optgroup key={groupName} label={groupName}>
+                  {items.map((item) => (
+                    <option key={item.id} value={item.id}>
+                      {item.title} ({item.id})
+                    </option>
+                  ))}
+                </optgroup>
+              );
+            })}
+            {extraPathways.length > 0 && (
+              <optgroup label="Additional / Database Pathways">
+                {extraPathways.map((p: any) => (
+                  <option key={p.id} value={p.id}>
+                    {p.title} (/{p.slug})
+                  </option>
+                ))}
+              </optgroup>
+            )}
           </select>
         </div>
+
+        {selectedOffering && (
+          <div className="p-3 bg-indigo-50/70 dark:bg-indigo-950/30 border border-indigo-100 dark:border-indigo-900/50 rounded-xl text-xs space-y-1">
+            <div className="font-bold text-indigo-900 dark:text-indigo-200">
+              {selectedOffering.title}
+            </div>
+            <div className="text-[11px] text-indigo-700 dark:text-indigo-300 font-mono">
+              ID: {selectedOffering.id} • Track: {(selectedOffering as any).group || "Pathway"}
+            </div>
+            {(selectedOffering as any).description && (
+              <div className="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 line-clamp-2">
+                {(selectedOffering as any).description}
+              </div>
+            )}
+          </div>
+        )}
+
         <div className="pt-2 flex justify-end gap-2 border-t border-zinc-100 dark:border-zinc-800">
-          <Button type="button" variant="ghost" size="sm" onClick={onClose}>Cancel</Button>
-          <Button type="submit" variant="primary" size="sm" loading={isLoading}>Grant Access</Button>
+          <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+            Cancel
+          </Button>
+          <Button type="submit" variant="primary" size="sm" loading={isLoading}>
+            Grant Access
+          </Button>
         </div>
       </form>
     </Modal>

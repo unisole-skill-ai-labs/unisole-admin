@@ -50,19 +50,7 @@ import Badge from "../ui/Badge";
 import Button from "../ui/Button";
 import Modal from "../ui/Modal";
 import { formatPhone } from "../../utils/formatters";
-
-const COURSES_CATALOG = [
-  { id: "cs-genai", title: "Generative AI Engineering", group: "Group 01 • CS & IT" },
-  { id: "cs-agentic", title: "AI Agent Engineering", group: "Group 01 • CS & IT" },
-  { id: "cs-p1", title: "Machine Learning in Production: MLOps Engineering", group: "Group 01 • CS & IT" },
-  { id: "cs-common", title: "AI Entrepreneurship & Business Innovation", group: "Incubator Track • CS & Commerce" },
-  { id: "sci-p1", title: "Scientific Machine Learning for Basic Sciences (BSc Physics | BSc Maths)", group: "Group 02 • Science & Math" },
-  { id: "sci-p2", title: "Mathematics + AI / Computational Intelligence", group: "Group 02 • Science & Math" },
-  { id: "mgmt-p1", title: "Business Analytics & Data Engineering", group: "Group 03 • Commerce & Management" },
-  { id: "arts-p1", title: "Applied AI for Humanities, Research & Careers", group: "Group 04 • BA & Non-Tech" },
-  { id: "AI_MASTERCLASS_2026", title: "AI Revolution & Agentic Engineering Masterclass", group: "Workshop / Masterclass" },
-  { id: "ai-masterclass", title: "AI Revolution & Agentic Engineering Masterclass (Alias)", group: "Workshop / Masterclass" },
-];
+import { CANONICAL_CATALOG as COURSES_CATALOG } from "../../constants/offerings";
 
 interface PaymentsViewProps {
   baseUrl: string;
