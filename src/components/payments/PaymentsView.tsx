@@ -6,6 +6,7 @@ import {
   useCreateOfferingPricingMutation,
   useUpdateOfferingPricingMutation,
   useDeleteOfferingPricingMutation,
+  useSyncCanonicalPricingMutation,
   useGetCouponsQuery,
   useCreateCouponMutation,
   useUpdateCouponMutation,
@@ -41,6 +42,9 @@ import {
   Calendar,
   X,
   Sparkles,
+  BookOpen,
+  Layers,
+  Filter,
 } from "lucide-react";
 import Badge from "../ui/Badge";
 import Button from "../ui/Button";
@@ -48,20 +52,19 @@ import Modal from "../ui/Modal";
 import { formatPhone } from "../../utils/formatters";
 
 const COURSES_CATALOG = [
-  { id: "cs-genai", title: "Generative AI & LLM Systems", group: "Group 01 • CS & IT" },
-  { id: "cs-agentic", title: "Agentic AI & Autonomous Systems", group: "Group 01 • CS & IT" },
-  { id: "cs-p1", title: "ML Engineering in Production", group: "Group 01 • CS & IT" },
-  { id: "cs-p2", title: "Full Stack Web Development (AI)", group: "Group 01 • CS & IT" },
-  { id: "cs-p3", title: "Complete ML + Full Stack (Dual Track)", group: "Group 01 • CS & IT" },
+  { id: "cs-genai", title: "Generative AI Engineering", group: "Group 01 • CS & IT" },
+  { id: "cs-agentic", title: "AI Agent Engineering", group: "Group 01 • CS & IT" },
+  { id: "cs-p1", title: "Machine Learning in Production: MLOps Engineering", group: "Group 01 • CS & IT" },
   { id: "cs-common", title: "AI Entrepreneurship & Innovation", group: "Group 01 • CS & IT" },
-  { id: "sci-p1", title: "Scientific Machine Learning & AI", group: "Group 02 • Science & Math" },
-  { id: "sci-p2", title: "Mathematics + AI / Comp Intelligence", group: "Group 02 • Science & Math" },
-  { id: "mgmt-p1", title: "Business Analytics & Data Engineering", group: "Group 03 • Commerce" },
-  { id: "mgmt-p2", title: "AI in Finance & FinTech Systems", group: "Group 03 • Commerce" },
-  { id: "mgmt-p3", title: "Complete Business AI (Dual Track)", group: "Group 03 • Commerce" },
-  { id: "mgmt-common", title: "AI Entrepreneurship & Biz Innovation", group: "Group 03 • Commerce" },
-  { id: "arts-p1", title: "Applied AI for Humanities & Careers", group: "Group 04 • Humanities" },
-  { id: "ai-masterclass", title: "AI Revolution Masterclass (2-Hour)", group: "Workshop" },
+  { id: "sci-p1", title: "Scientific Machine Learning for Basic Sciences (BSc Physics | BSc Maths)", group: "Group 02 • Science & Math" },
+  { id: "sci-p2", title: "Mathematics + AI / Computational Intelligence", group: "Group 02 • Science & Math" },
+  { id: "mgmt-p1", title: "Business Analytics & Data Engineering", group: "Group 03 • Commerce & Management" },
+  { id: "mgmt-p2", title: "AI in Finance & FinTech Systems", group: "Group 03 • Commerce & Management" },
+  { id: "mgmt-p3", title: "Complete Business AI Pathway", group: "Group 03 • Commerce & Management" },
+  { id: "mgmt-common", title: "AI Entrepreneurship & Business Innovation", group: "Group 03 • Commerce & Management" },
+  { id: "arts-p1", title: "Applied AI for Humanities, Research & Careers", group: "Group 04 • BA & Non-Tech" },
+  { id: "AI_MASTERCLASS_2026", title: "AI Revolution & Agentic Engineering Masterclass", group: "Workshop / Masterclass" },
+  { id: "ai-masterclass", title: "AI Revolution & Agentic Engineering Masterclass (Alias)", group: "Workshop / Masterclass" },
 ];
 
 interface PaymentsViewProps {
@@ -72,6 +75,8 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
   const [activeTab, setActiveTab] = useState<"orders" | "pricing" | "coupons" | "gateway">("orders");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("PAID");
+  const [pricingSearch, setPricingSearch] = useState("");
+  const [pricingTypeFilter, setPricingTypeFilter] = useState("ALL");
 
   // Queries
   const { data: ordersData, isLoading: isOrdersLoading, refetch: refetchOrders } = useGetOrdersQuery({
@@ -89,6 +94,7 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
   const [createPricing, { isLoading: isCreatingPricing }] = useCreateOfferingPricingMutation();
   const [updatePricing, { isLoading: isUpdatingPricing }] = useUpdateOfferingPricingMutation();
   const [deletePricing] = useDeleteOfferingPricingMutation();
+  const [syncCanonicalPricing, { isLoading: isSyncingCanonical }] = useSyncCanonicalPricingMutation();
 
   const [createCoupon, { isLoading: isCreatingCoupon }] = useCreateCouponMutation();
   const [updateCoupon, { isLoading: isUpdatingCoupon }] = useUpdateCouponMutation();
@@ -198,6 +204,16 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
       refetchPricing();
     } catch (err: any) {
       alert(err?.data?.message || err?.message || "Failed to save pricing item");
+    }
+  };
+
+  const handleSyncCanonicalOfferings = async () => {
+    try {
+      const res = await syncCanonicalPricing(baseUrl).unwrap();
+      refetchPricing();
+      alert(res?.message || "Successfully synchronized all canonical SEO course offerings!");
+    } catch (err: any) {
+      alert(err?.data?.message || err?.message || "Failed to sync SEO courses");
     }
   };
 
@@ -403,27 +419,39 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
           </Button>
 
           {activeTab === "pricing" && (
-            <Button
-              variant="primary"
-              size="sm"
-              onClick={() => {
-                setEditingPricing(null);
-                setPricingForm({
-                  itemType: "WORKSHOP",
-                  itemId: "",
-                  title: "",
-                  description: "",
-                  priceRupees: "39",
-                  mrpRupees: "999",
-                  isActive: true,
-                  isPublic: true,
-                });
-                setIsPricingModalOpen(true);
-              }}
-              icon={Plus}
-            >
-              Add Price Offering
-            </Button>
+            <>
+              <Button
+                variant="secondary"
+                size="sm"
+                onClick={handleSyncCanonicalOfferings}
+                disabled={isSyncingCanonical}
+                icon={Sparkles}
+              >
+                {isSyncingCanonical ? "Syncing Catalog..." : "Sync SEO Course Catalog"}
+              </Button>
+
+              <Button
+                variant="primary"
+                size="sm"
+                onClick={() => {
+                  setEditingPricing(null);
+                  setPricingForm({
+                    itemType: "PATHWAY",
+                    itemId: "",
+                    title: "",
+                    description: "",
+                    priceRupees: "2999",
+                    mrpRupees: "9999",
+                    isActive: true,
+                    isPublic: true,
+                  });
+                  setIsPricingModalOpen(true);
+                }}
+                icon={Plus}
+              >
+                Add Price Offering
+              </Button>
+            </>
           )}
 
           {activeTab === "coupons" && (
@@ -702,104 +730,182 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
       {/* ============================================================ */}
       {/* TAB 2: DYNAMIC PRICING CATALOG */}
       {/* ============================================================ */}
-      {activeTab === "pricing" && (
-        <div className="space-y-4">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-xs">
-            <div className="overflow-x-auto">
-              <table className="w-full text-left text-xs">
-                <thead>
-                  <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 text-zinc-400 font-mono">
-                    <th className="py-3 px-4 font-semibold">Item Type</th>
-                    <th className="py-3 px-4 font-semibold">Item ID / Code</th>
-                    <th className="py-3 px-4 font-semibold">Offering Title</th>
-                    <th className="py-3 px-4 font-semibold">Live Price (INR)</th>
-                    <th className="py-3 px-4 font-semibold">MRP (INR)</th>
-                    <th className="py-3 px-4 font-semibold">Status</th>
-                    <th className="py-3 px-4 font-semibold text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
-                  {isPricingLoading ? (
-                    <tr><td colSpan={7} className="py-8 text-center text-zinc-400">Loading catalog offerings...</td></tr>
-                  ) : pricingItems.length === 0 ? (
-                    <tr><td colSpan={7} className="py-8 text-center text-zinc-400">No pricing items found. Click 'Add Price Offering' to create one!</td></tr>
-                  ) : (
-                    pricingItems.map((p: any) => {
-                      const priceRupees = (Number(p.pricePaise) || 0) / 100;
-                      const mrpRupees = (Number(p.mrpPaise) || 0) / 100;
-                      return (
-                        <tr key={p.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
-                          <td className="py-3.5 px-4 font-mono font-bold text-indigo-600 dark:text-indigo-400">
-                            {p.itemType}
-                          </td>
-                          <td className="py-3.5 px-4 font-mono font-bold text-xs text-zinc-900 dark:text-zinc-100">
-                            {p.itemId}
-                          </td>
-                          <td className="py-3.5 px-4 font-extrabold text-sm text-zinc-900 dark:text-zinc-100">
-                            {p.title}
-                            {p.description && (
-                              <div className="text-zinc-400 font-normal text-xs line-clamp-1 mt-0.5">
-                                {p.description}
+      {activeTab === "pricing" && (() => {
+        const filteredPricingItems = pricingItems.filter((p: any) => {
+          const matchesSearch =
+            !pricingSearch ||
+            p.title?.toLowerCase().includes(pricingSearch.toLowerCase()) ||
+            p.itemId?.toLowerCase().includes(pricingSearch.toLowerCase()) ||
+            p.description?.toLowerCase().includes(pricingSearch.toLowerCase());
+          const matchesType = pricingTypeFilter === "ALL" || p.itemType === pricingTypeFilter;
+          return matchesSearch && matchesType;
+        });
+
+        return (
+          <div className="space-y-4">
+            {/* Toolbar / Search & Filter */}
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-3 p-3 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
+              <div className="relative w-full sm:max-w-md">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" />
+                <input
+                  type="text"
+                  placeholder="Search offerings by Course Title, ID, or Keywords..."
+                  value={pricingSearch}
+                  onChange={(e) => setPricingSearch(e.target.value)}
+                  className="w-full pl-10 pr-4 py-2 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs sm:text-sm text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-hidden"
+                />
+              </div>
+
+              <div className="flex items-center gap-1.5 overflow-x-auto w-full sm:w-auto pb-1 sm:pb-0">
+                {["ALL", "PATHWAY", "WORKSHOP", "COURSE", "PROGRAM"].map((type) => (
+                  <button
+                    key={type}
+                    onClick={() => setPricingTypeFilter(type)}
+                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap ${
+                      pricingTypeFilter === type
+                        ? "bg-indigo-600 text-white shadow-xs"
+                        : "bg-zinc-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 hover:bg-zinc-200 dark:hover:bg-zinc-700"
+                    }`}
+                  >
+                    {type === "ALL" ? `All Types (${pricingItems.length})` : type}
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            <div className="bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-3xl overflow-hidden shadow-xs">
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs">
+                  <thead>
+                    <tr className="border-b border-zinc-100 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-950/50 text-zinc-400 font-mono">
+                      <th className="py-3 px-4 font-semibold">Offering Type</th>
+                      <th className="py-3 px-4 font-semibold">Item ID / Code</th>
+                      <th className="py-3 px-4 font-semibold">Offering & Course Name</th>
+                      <th className="py-3 px-4 font-semibold">Live Price (INR)</th>
+                      <th className="py-3 px-4 font-semibold">MRP (INR)</th>
+                      <th className="py-3 px-4 font-semibold">Status</th>
+                      <th className="py-3 px-4 font-semibold text-right">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
+                    {isPricingLoading ? (
+                      <tr><td colSpan={7} className="py-8 text-center text-zinc-400">Loading catalog offerings...</td></tr>
+                    ) : filteredPricingItems.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-10 text-center text-zinc-400">
+                          <p className="font-semibold text-sm">No course offerings found matching your filter.</p>
+                          <p className="text-xs text-zinc-500 mt-1">Click "Sync SEO Course Catalog" in header to auto-populate all SEO tracks!</p>
+                        </td>
+                      </tr>
+                    ) : (
+                      filteredPricingItems.map((p: any) => {
+                        const priceRupees = (Number(p.pricePaise) || 0) / 100;
+                        const mrpRupees = (Number(p.mrpPaise) || 0) / 100;
+                        const discountPct = mrpRupees > 0 ? Math.round(((mrpRupees - priceRupees) / mrpRupees) * 100) : 0;
+
+                        return (
+                          <tr key={p.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40 transition-colors">
+                            <td className="py-3.5 px-4 font-mono font-bold">
+                              <span className={`px-2 py-0.5 rounded-md text-[10px] font-mono font-black tracking-wider ${
+                                p.itemType === "PATHWAY"
+                                  ? "bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-400"
+                                  : p.itemType === "WORKSHOP"
+                                  ? "bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400"
+                                  : "bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-400"
+                              }`}>
+                                {p.itemType}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4 font-mono font-bold text-xs text-zinc-900 dark:text-zinc-100">
+                              <span className="bg-zinc-100 dark:bg-zinc-800 px-2 py-0.5 rounded-md text-[11px]">
+                                {p.itemId}
+                              </span>
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="font-extrabold text-sm text-zinc-900 dark:text-zinc-100">
+                                {p.title}
                               </div>
-                            )}
-                          </td>
-                          <td className="py-3.5 px-4 font-black text-sm text-emerald-600 dark:text-emerald-400 font-mono">
-                            ₹{priceRupees.toLocaleString("en-IN")}
-                          </td>
-                          <td className="py-3.5 px-4 font-mono text-zinc-400 line-through text-xs">
-                            ₹{mrpRupees.toLocaleString("en-IN")}
-                          </td>
-                          <td className="py-3.5 px-4">
-                            <Badge variant={p.isActive ? "emerald" : "default"} size="sm">
-                              {p.isActive ? "ACTIVE" : "INACTIVE"}
-                            </Badge>
-                          </td>
-                          <td className="py-3.5 px-4 text-right">
-                            <div className="flex items-center justify-end gap-1.5">
-                              <button
-                                onClick={() => {
-                                  setEditingPricing(p);
-                                  setPricingForm({
-                                    itemType: p.itemType,
-                                    itemId: p.itemId,
-                                    title: p.title,
-                                    description: p.description || "",
-                                    priceRupees: String((Number(p.pricePaise) || 0) / 100),
-                                    mrpRupees: String((Number(p.mrpPaise) || 0) / 100),
-                                    isActive: p.isActive,
-                                    isPublic: p.isPublic,
-                                  });
-                                  setIsPricingModalOpen(true);
-                                }}
-                                className="p-1.5 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-colors"
-                                title="Edit Price"
-                              >
-                                <Edit2 className="w-4 h-4" />
-                              </button>
-                              <button
-                                onClick={async () => {
-                                  if (confirm(`Delete pricing item for ${p.title}?`)) {
-                                    await deletePricing({ baseUrl, id: p.id });
-                                    refetchPricing();
-                                  }
-                                }}
-                                className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
-                                title="Delete"
-                              >
-                                <Trash2 className="w-4 h-4" />
-                              </button>
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })
-                  )}
-                </tbody>
-              </table>
+                              {p.description && (
+                                <div className="text-zinc-400 font-normal text-xs line-clamp-1 mt-0.5">
+                                  {p.description}
+                                </div>
+                              )}
+                              {p.metadata?.groupTitle && (
+                                <div className="text-[10px] font-mono text-indigo-500 font-semibold mt-0.5">
+                                  {p.metadata.groupTitle} {p.metadata.duration ? `• ${p.metadata.duration}` : ""}
+                                </div>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4 font-black text-sm text-emerald-600 dark:text-emerald-400 font-mono">
+                              ₹{priceRupees.toLocaleString("en-IN")}
+                            </td>
+                            <td className="py-3.5 px-4 font-mono text-zinc-400 text-xs">
+                              <span className="line-through">₹{mrpRupees.toLocaleString("en-IN")}</span>
+                              {discountPct > 0 && (
+                                <span className="ml-1.5 text-[10px] font-bold text-emerald-500">
+                                  ({discountPct}% OFF)
+                                </span>
+                              )}
+                            </td>
+                            <td className="py-3.5 px-4">
+                              <div className="flex items-center gap-1.5 flex-wrap">
+                                <Badge variant={p.isActive ? "emerald" : "default"} size="sm">
+                                  {p.isActive ? "ACTIVE" : "INACTIVE"}
+                                </Badge>
+                                {p.isPublic && (
+                                  <span className="text-[10px] font-mono font-bold text-zinc-400">
+                                    PUBLIC
+                                  </span>
+                                )}
+                              </div>
+                            </td>
+                            <td className="py-3.5 px-4 text-right">
+                              <div className="flex items-center justify-end gap-1.5">
+                                <button
+                                  onClick={() => {
+                                    setEditingPricing(p);
+                                    setPricingForm({
+                                      itemType: p.itemType,
+                                      itemId: p.itemId,
+                                      title: p.title,
+                                      description: p.description || "",
+                                      priceRupees: String((Number(p.pricePaise) || 0) / 100),
+                                      mrpRupees: String((Number(p.mrpPaise) || 0) / 100),
+                                      isActive: p.isActive,
+                                      isPublic: p.isPublic,
+                                    });
+                                    setIsPricingModalOpen(true);
+                                  }}
+                                  className="p-1.5 text-zinc-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 rounded-lg transition-colors"
+                                  title="Edit Price & Offering Details"
+                                >
+                                  <Edit2 className="w-4 h-4" />
+                                </button>
+                                <button
+                                  onClick={async () => {
+                                    if (confirm(`Are you sure you want to permanently delete offering "${p.title}" (${p.itemId})? It will be removed from checkout and SEO pages.`)) {
+                                      await deletePricing({ baseUrl, id: p.id });
+                                      refetchPricing();
+                                    }
+                                  }}
+                                  className="p-1.5 text-zinc-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg transition-colors"
+                                  title="Delete Course Offering"
+                                >
+                                  <Trash2 className="w-4 h-4" />
+                                </button>
+                              </div>
+                            </td>
+                          </tr>
+                        );
+                      })
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* ============================================================ */}
       {/* TAB 3: PROMO CODES & COUPONS */}
