@@ -47,6 +47,7 @@ import SlideRenderer from "./SlideRenderer";
 import { UNISOLE_AI_CAMPUS_DECK_SLIDES } from "../../data/aiCampusDeck";
 import { THEOG_COLLEGE_PPT_SLIDES } from "../../data/theogDeck";
 import { SANJAULI_COLLEGE_PPT_SLIDES } from "../../data/sanjauliDeck";
+import { SUNNI_COLLEGE_PPT_SLIDES } from "../../data/sunniDeck";
 
 interface PresentationBuilderProps {
   baseUrl: string;
@@ -797,6 +798,24 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
     setStepTestIndex(999);
   };
 
+  const handleLoadSunniTemplate = () => {
+    if (
+      slides.length > 0 &&
+      !window.confirm(
+        "Are you sure you want to load the 28-slide ABV Govt Degree College Sunni PPT (Mobile-First Master Deck)? This will replace current slides."
+      )
+    ) {
+      return;
+    }
+    setTitle("Atal Bihari Vajpayee Govt Degree College Sunni PPT");
+    setDescription(
+      "28-slide mobile-first career awareness & industrial training presentation for ABV Govt Degree College Sunni featuring AI History, AlphaFold Protein Folding, Math Reinvention, Fresher Hiring Collapse (6L to 2.5L), Cheap vs Valuable Skills, Stream-Specific Roles, and the 5-Step Action Playbook."
+    );
+    setSlides(SUNNI_COLLEGE_PPT_SLIDES);
+    setActiveSlideIndex(0);
+    setStepTestIndex(999);
+  };
+
   const handleInsertTemplate = (template: any) => {
     const newSlide = {
       id: `slide_${Date.now()}`,
@@ -966,6 +985,17 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
               <span>Mobile Phone (9:16)</span>
             </button>
           </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleLoadSunniTemplate}
+            className="border-cyan-500/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-950/50 flex items-center gap-1.5 font-bold"
+            title="Load the 28-slide ABV Govt Degree College Sunni PPT presentation (Mobile-First)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
+            <span className="hidden sm:inline">Load Sunni College PPT (28 Slides)</span>
+          </Button>
 
           <Button
             variant="secondary"
