@@ -832,6 +832,10 @@ export default function LiveAudiencePage() {
         body: JSON.stringify({ phone: cleanPhone }),
       }).then((r) => r.json());
 
+      if (checkRes.error && !checkRes.exists) {
+        throw new Error(checkRes.message || checkRes.error || "Failed to check user status");
+      }
+
       if (checkRes.exists && checkRes.user) {
         // Existing user -> log in immediately
         const loginRes = await fetch(`${baseUrl}/api/auth/login`, {
@@ -845,7 +849,7 @@ export default function LiveAudiencePage() {
         }).then((r) => r.json());
 
         if (!loginRes.user || (!loginRes.token && !loginRes.accessToken)) {
-          throw new Error(loginRes.message || "Login failed");
+          throw new Error(loginRes.message || loginRes.error || "Login failed");
         }
 
         const token = loginRes.token || loginRes.accessToken;
@@ -899,7 +903,7 @@ export default function LiveAudiencePage() {
       }).then((r) => r.json());
 
       if (!loginRes.user || (!loginRes.token && !loginRes.accessToken)) {
-        throw new Error(loginRes.message || "Registration failed");
+        throw new Error(loginRes.message || loginRes.error || "Registration failed");
       }
 
       const token = loginRes.token || loginRes.accessToken;
