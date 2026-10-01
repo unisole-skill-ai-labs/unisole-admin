@@ -3337,9 +3337,9 @@ function renderSlideContent({
     // 41. PIPELINE FLOW
     // ==========================================
     case "PIPELINE_FLOW": {
-      const stages = slide.stages || [];
+      const stages = slide.stages || slide.steps || [];
       return (
-        <div className="w-full max-w-5xl mx-auto space-y-6 animate-fade-in text-center">
+        <div className="w-full max-w-5xl mx-auto space-y-4 sm:space-y-5 animate-fade-in text-center">
           <div>
             <span className="px-3 py-1 rounded-full bg-indigo-500/20 border border-indigo-500/40 text-xs font-bold text-indigo-300 uppercase tracking-wider">
               {slide.badge || "METHODOLOGY"}
@@ -3352,29 +3352,68 @@ function renderSlideContent({
             </p>
           </div>
 
-          <div
-            className={`grid grid-cols-2 sm:grid-cols-6 gap-2.5 pt-2 transition-all duration-300 ease-out ${
-              currentStep >= 1 ? "opacity-100 translate-y-0" : "opacity-0 translate-y-3"
-            }`}
-          >
-            {stages.map((st: string, idx: number) => (
+          {/* Career Path / Pipeline Stages */}
+          {stages.length > 0 && (
+            <div className="space-y-2 pt-1">
+              {slide.stagesLabel && (
+                <div className="text-xs font-mono font-bold text-indigo-400 uppercase tracking-wider text-left">
+                  {slide.stagesLabel}
+                </div>
+              )}
               <div
-                key={idx}
-                className="p-3.5 rounded-2xl bg-gradient-to-b from-indigo-950/60 to-zinc-900 border border-indigo-500/30 text-center space-y-1.5 shadow-md"
+                className={`grid grid-cols-2 sm:grid-cols-6 gap-2 sm:gap-2.5 transition-all duration-300 ease-out opacity-100 translate-y-0`}
               >
-                <span className="w-6 h-6 rounded-lg bg-indigo-600/30 text-indigo-300 font-mono font-bold text-xs mx-auto flex items-center justify-center border border-indigo-500/30">
-                  {idx + 1}
-                </span>
-                <p className="text-xs font-bold text-white leading-tight">{st}</p>
+                {stages.map((st: string, idx: number) => (
+                  <div
+                    key={idx}
+                    className="p-3 sm:p-3.5 rounded-2xl bg-gradient-to-b from-indigo-950/60 to-zinc-900 border border-indigo-500/30 text-center space-y-1 shadow-md hover:border-indigo-400/50 transition-all"
+                  >
+                    <span className="w-5 h-5 rounded-lg bg-indigo-600/30 text-indigo-300 font-mono font-bold text-[10px] mx-auto flex items-center justify-center border border-indigo-500/30">
+                      {idx + 1}
+                    </span>
+                    <p className="text-[11px] sm:text-xs font-bold text-white leading-tight">{st}</p>
+                  </div>
+                ))}
               </div>
-            ))}
-          </div>
+            </div>
+          )}
+
+          {/* Job Creation and Displacement Stats */}
+          {slide.stats && (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1 text-left">
+              {slide.stats.map((st: any, idx: number) => (
+                <div
+                  key={idx}
+                  className="p-4 sm:p-5 rounded-2xl bg-gradient-to-b from-white/5 to-white/2 border border-white/10 space-y-1.5 shadow-lg"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="text-xs font-mono font-bold text-zinc-400 uppercase tracking-wider">
+                      {st.label}
+                    </span>
+                    <span className={`text-xl sm:text-2xl font-black ${st.color || "text-emerald-400"}`}>
+                      {st.value}
+                    </span>
+                  </div>
+                  <p className="text-xs text-zinc-300 font-medium leading-relaxed">
+                    {st.desc}
+                  </p>
+                </div>
+              ))}
+            </div>
+          )}
+
+          {/* Quote Callout */}
+          {slide.quote && (
+            <div className="p-3.5 sm:p-4 rounded-2xl bg-gradient-to-r from-amber-500/15 via-orange-500/10 to-indigo-500/15 border border-amber-500/40 text-left shadow-lg">
+              <p className="text-xs sm:text-sm font-bold text-amber-200 leading-snug">
+                {slide.quote}
+              </p>
+            </div>
+          )}
 
           {slide.punchline && (
             <div
-              className={`p-3.5 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 font-bold text-xs sm:text-base text-indigo-200 transition-all duration-300 ${
-                currentStep >= 2 ? "opacity-100" : "opacity-0"
-              }`}
+              className={`p-3 rounded-2xl bg-indigo-600/20 border border-indigo-500/40 font-bold text-xs sm:text-sm text-indigo-200 transition-all duration-300`}
             >
               {slide.punchline}
             </div>
