@@ -137,10 +137,7 @@ export default function LiveAudiencePage() {
   const [selectedOption, setSelectedOption] = useState<number | null>(null);
   const [isSubmitted, setIsSubmitted] = useState(false);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
-  const [reactions, setReactions] = useState<{ id: string; emoji: string }[]>([]);
-  const [cooldownRemaining, setCooldownRemaining] = useState<number>(0);
-  const [isSpamPenalized, setIsSpamPenalized] = useState(false);
-  const penaltyUntilRef = useRef<number>(0);
+
   const [copied, setCopied] = useState(false);
   const [remainingTime, setRemainingTime] = useState<number | null>(null);
   const [isKicked, setIsKicked] = useState(false);
@@ -687,12 +684,7 @@ export default function LiveAudiencePage() {
       });
     });
 
-    socket.on("reaction_pulse", ({ emoji, id }) => {
-      setReactions((prev) => [...prev.slice(-4), { id, emoji }]);
-      setTimeout(() => {
-        setReactions((prev) => prev.filter((r) => r.id !== id));
-      }, 1800);
-    });
+
 
     // ==================== DOUBTS & Q&A CHAT LISTENERS ====================
     socket.on("chat_status_updated", ({ isChatEnabled: enabled, doubts: list, spotlightedDoubtId: sId }) => {
@@ -969,43 +961,7 @@ export default function LiveAudiencePage() {
     });
   };
 
-  // Progressive Anti-Spam Reaction Cooldown (5s base, 10s penalty)
-  useEffect(() => {
-    const interval = setInterval(() => {
-      const now = Date.now();
-      const remainingMs = Math.max(0, penaltyUntilRef.current - now);
-      const remainingSec = Math.ceil(remainingMs / 1000);
-      setCooldownRemaining(remainingSec);
-      if (remainingMs === 0) {
-        setIsSpamPenalized(false);
-      }
-    }, 200);
 
-    return () => clearInterval(interval);
-  }, []);
-
-  // Send Floating Reaction with 5s standard cooldown and 10s spam escalation
-  const handleSendReaction = (emoji: string) => {
-    const now = Date.now();
-
-    // If student clicks while locked in cooldown -> PENALIZE TO 10 SECONDS!
-    if (now < penaltyUntilRef.current) {
-      penaltyUntilRef.current = now + 10000;
-      setIsSpamPenalized(true);
-      setCooldownRemaining(10);
-      return;
-    }
-
-    // Normal reaction: lock for standard 5s
-    penaltyUntilRef.current = now + 5000;
-    setCooldownRemaining(5);
-    setIsSpamPenalized(false);
-
-    socketRef.current?.emit("audience:reaction", {
-      sessionCode: code,
-      emoji,
-    });
-  };
 
   const handleSendDoubt = (e: React.FormEvent) => {
     e.preventDefault();
@@ -1337,18 +1293,7 @@ export default function LiveAudiencePage() {
   if (!isPresentationStarted) {
     return (
       <div className="min-h-screen bg-zinc-950 text-white flex flex-col justify-between p-4 sm:p-6 relative overflow-x-hidden font-sans select-none">
-        {/* Compact Corner Floating Reactions Track */}
-        <div className="fixed bottom-20 right-4 z-40 pointer-events-none w-12 h-44 flex flex-col items-center justify-end overflow-hidden">
-          {reactions.map((r, i) => (
-            <div
-              key={r.id}
-              className="absolute bottom-0 text-base opacity-85 animate-float-reaction drop-shadow-sm select-none"
-              style={{ left: `${(i % 3) * 8 + 4}px` }}
-            >
-              {r.emoji}
-            </div>
-          ))}
-        </div>
+
 
         {/* Background glow lamps */}
         <div className="absolute -top-32 -left-32 w-80 h-80 bg-indigo-600/20 rounded-full blur-3xl pointer-events-none" />
@@ -1599,30 +1544,7 @@ export default function LiveAudiencePage() {
                 )}
               </div>
 
-              {/* Send Cheer Reaction Dock */}
-              <div className="pt-3 border-t border-white/10 space-y-1.5">
-                <span className="text-[10px] uppercase font-bold text-zinc-400 block text-center">
-                  Send a Cheer to the Stage:
-                </span>
-                <div className="flex items-center justify-center gap-3">
-                  {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
-                    <button
-                      key={emoji}
-                      type="button"
-                      disabled={cooldownRemaining > 0}
-                      onClick={() => handleSendReaction(emoji)}
-                      className={`p-1 text-xl transition-all select-none ${
-                        cooldownRemaining > 0
-                          ? "opacity-35 cursor-not-allowed grayscale-[30%]"
-                          : "hover:scale-125 active:scale-90 cursor-pointer"
-                      }`}
-                      title={`Send ${emoji}`}
-                    >
-                      {emoji}
-                    </button>
-                  ))}
-                </div>
-              </div>
+
             </div>
           </div>
         </main>
@@ -1824,18 +1746,7 @@ export default function LiveAudiencePage() {
             : "fixed inset-0 w-full h-full"
         }`}
       >
-        {/* Compact Corner Floating Reactions Track in Landscape */}
-        <div className="fixed bottom-16 right-4 z-40 pointer-events-none w-12 h-44 flex flex-col items-center justify-end overflow-hidden">
-          {reactions.map((r, i) => (
-            <div
-              key={r.id}
-              className="absolute bottom-0 text-base opacity-85 animate-float-reaction drop-shadow-sm select-none"
-              style={{ left: `${(i % 3) * 8 + 4}px` }}
-            >
-              {r.emoji}
-            </div>
-          ))}
-        </div>
+
 
         {/* Ambient Glow Lights */}
         <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-indigo-600/15 rounded-full blur-3xl pointer-events-none" />
@@ -2003,28 +1914,10 @@ export default function LiveAudiencePage() {
         {/* Instant Pulse Poll Overlay in Landscape */}
         {renderInstantPollOverlay()}
 
-        {/* Landscape Floating Bottom Reactions Dock */}
+        {/* Landscape Floating Bottom Dock */}
         <footer className="px-4 py-1.5 bg-zinc-900/70 backdrop-blur-md border-t border-white/10 z-30 shrink-0 flex items-center justify-between">
           <div className="text-[11px] font-mono text-zinc-400">
             Unisole Live Arena
-          </div>
-          <div className="flex items-center gap-3">
-            {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
-              <button
-                key={emoji}
-                type="button"
-                disabled={cooldownRemaining > 0}
-                onClick={() => handleSendReaction(emoji)}
-                className={`p-1 text-lg transition-all select-none ${
-                  cooldownRemaining > 0
-                    ? "opacity-35 cursor-not-allowed grayscale-[30%]"
-                    : "hover:scale-125 active:scale-90 cursor-pointer"
-                }`}
-                title={`React ${emoji}`}
-              >
-                {emoji}
-              </button>
-            ))}
           </div>
         </footer>
 
@@ -2118,18 +2011,7 @@ export default function LiveAudiencePage() {
       ref={arenaRef}
       className="h-[100dvh] max-h-[100dvh] w-full bg-zinc-950 text-white flex flex-col justify-between relative overflow-hidden font-sans select-none"
     >
-      {/* Compact Corner Floating Reactions Track in Portrait */}
-      <div className="fixed bottom-16 right-4 z-40 pointer-events-none w-12 h-44 flex flex-col items-center justify-end overflow-hidden">
-        {reactions.map((r, i) => (
-          <div
-            key={r.id}
-            className="absolute bottom-0 text-base opacity-85 animate-float-reaction drop-shadow-sm select-none"
-            style={{ left: `${(i % 3) * 8 + 4}px` }}
-          >
-            {r.emoji}
-          </div>
-        ))}
-      </div>
+
 
       {/* Top Mobile/Desktop Status Header */}
       <header className="px-3 py-2.5 sm:px-4 sm:py-3 bg-zinc-900/80 backdrop-blur-xl border-b border-white/10 flex items-center justify-between z-30 shrink-0">
@@ -2288,27 +2170,7 @@ export default function LiveAudiencePage() {
       {/* Instant Pulse Poll Overlay in Portrait */}
       {renderInstantPollOverlay()}
 
-      {/* Floating Bottom Emoji Reaction Bar */}
-      <footer className="px-3 py-1.5 bg-zinc-900/90 backdrop-blur-xl border-t border-white/10 z-30 shrink-0">
-        <div className="flex items-center justify-center gap-4 max-w-xs mx-auto">
-          {["🔥", "👏", "🚀", "❤️", "💡"].map((emoji) => (
-            <button
-              key={emoji}
-              type="button"
-              disabled={cooldownRemaining > 0}
-              onClick={() => handleSendReaction(emoji)}
-              className={`p-1 text-lg sm:text-xl transition-all select-none ${
-                cooldownRemaining > 0
-                  ? "opacity-35 cursor-not-allowed grayscale-[30%]"
-                  : "hover:scale-125 active:scale-90 cursor-pointer"
-              }`}
-              title={`React ${emoji}`}
-            >
-              {emoji}
-            </button>
-          ))}
-        </div>
-      </footer>
+
 
       {/* Mid-Session Peer QR Modal */}
       {peerQrModalOpen && (
