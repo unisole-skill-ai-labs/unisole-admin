@@ -569,7 +569,19 @@ export default function PresentationList({ baseUrl }: PresentationListProps) {
                           </span>
                         </td>
                         <td className="py-4 px-4 font-mono text-zinc-800 dark:text-zinc-200 font-bold">
-                          {sess.activeAttendeesCount || 0} students
+                          {sess.status === "LIVE" ? (
+                            <span className="inline-flex items-center gap-1.5 text-emerald-600 dark:text-emerald-400">
+                              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                              <span>{sess.activeAttendeesCount || 0} active</span>
+                              <span className="text-zinc-400 text-xs font-normal">
+                                ({sess.totalAttendeesCount || sess.totalAttendees || 0} joined)
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-zinc-700 dark:text-zinc-300">
+                              {(sess.totalAttendeesCount ?? sess.totalAttendees ?? sess.activeAttendeesCount ?? 0)} students
+                            </span>
+                          )}
                         </td>
                         <td className="py-4 px-4 text-zinc-400 font-mono text-[11px]">
                           {sess.createdAt ? new Date(sess.createdAt).toLocaleDateString() : "—"}{" "}
