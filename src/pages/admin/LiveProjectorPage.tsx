@@ -101,7 +101,7 @@ export default function LiveProjectorPage() {
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [qrModalOpen, setQrModalOpen] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [reactions, setReactions] = useState<{ id: string; emoji: string }[]>([]);
+
   const [isChatEnabled, setIsChatEnabled] = useState(false);
   const [doubts, setDoubts] = useState<any[]>([]);
   const [spotlightedDoubtId, setSpotlightedDoubtId] = useState<string | null>(null);
@@ -427,12 +427,7 @@ export default function LiveProjectorPage() {
       }, 2500);
     });
 
-    socket.on("reaction_pulse", ({ emoji, id }) => {
-      setReactions((prev) => [...prev.slice(-4), { id, emoji }]);
-      setTimeout(() => {
-        setReactions((prev) => prev.filter((r) => r.id !== id));
-      }, 1800);
-    });
+
 
     // ==================== DOUBTS & Q&A CHAT LISTENERS ====================
     socket.on("chat_status_updated", ({ isChatEnabled: enabled, doubts: list, spotlightedDoubtId: sId }) => {
@@ -839,26 +834,7 @@ export default function LiveProjectorPage() {
       ref={stageRef}
       className="fixed inset-0 z-50 bg-zinc-950 text-white flex flex-col justify-between overflow-hidden select-none font-sans"
     >
-      {/* Micro-Sized Bottom-Right Reactions Gutter (40px width, 15px emoji) */}
-      <div
-        className="fixed bottom-24 right-6 z-50 pointer-events-none flex flex-col items-center justify-end overflow-hidden"
-        style={{ width: "40px", height: "160px" }}
-      >
-        {reactions.map((r, i) => (
-          <div
-            key={r.id}
-            className="absolute bottom-0 animate-float-reaction select-none drop-shadow-sm"
-            style={{
-              left: `${(i % 3) * 8 + 4}px`,
-              fontSize: "15px",
-              lineHeight: "15px",
-              opacity: 0.85,
-            }}
-          >
-            {r.emoji}
-          </div>
-        ))}
-      </div>
+
 
       {/* Top Projector Stage Bar */}
       <header className="px-6 py-3.5 flex items-center justify-between bg-zinc-950/70 backdrop-blur-md border-b border-white/10 z-30">
