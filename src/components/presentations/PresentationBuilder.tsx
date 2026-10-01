@@ -48,6 +48,7 @@ import { UNISOLE_AI_CAMPUS_DECK_SLIDES } from "../../data/aiCampusDeck";
 import { THEOG_COLLEGE_PPT_SLIDES } from "../../data/theogDeck";
 import { SANJAULI_COLLEGE_PPT_SLIDES } from "../../data/sanjauliDeck";
 import { SUNNI_COLLEGE_PPT_SLIDES } from "../../data/sunniDeck";
+import { AI_TRAINING_ROADSHOW_DECK_SLIDES } from "../../data/aiTrainingRoadshowDeck";
 
 interface PresentationBuilderProps {
   baseUrl: string;
@@ -762,6 +763,24 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
     setStepTestIndex(999);
   };
 
+  const handleLoadAiTrainingRoadshowTemplate = () => {
+    if (
+      slides.length > 0 &&
+      !window.confirm(
+        "Are you sure you want to load the 27-slide AI Training Program Roadshow Deck? This will replace current slides."
+      )
+    ) {
+      return;
+    }
+    setTitle("AI Training Program Roadshow Deck");
+    setDescription(
+      "27-slide industrial training cum internship roadshow presentation featuring Ajay Mokta, leadership team, 90s vs 20s environment shift, 570M private job landscape, career capital, 7-stage product development cycle, cheap vs valuable skills, 100-to-4 hiring funnel, and Agentic AI boom."
+    );
+    setSlides(AI_TRAINING_ROADSHOW_DECK_SLIDES);
+    setActiveSlideIndex(0);
+    setStepTestIndex(999);
+  };
+
   const handleLoadTheogTemplate = () => {
     if (
       slides.length > 0 &&
@@ -985,6 +1004,17 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
               <span>Mobile Phone (9:16)</span>
             </button>
           </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleLoadAiTrainingRoadshowTemplate}
+            className="border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/50 flex items-center gap-1.5 font-bold"
+            title="Load the 27-slide AI Training Program Roadshow Deck"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-violet-400" />
+            <span className="hidden sm:inline">Load AI Roadshow Deck (27 Slides)</span>
+          </Button>
 
           <Button
             variant="secondary"
