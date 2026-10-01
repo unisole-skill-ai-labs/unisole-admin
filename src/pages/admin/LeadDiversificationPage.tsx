@@ -616,7 +616,7 @@ export default function LeadDiversificationPage() {
                               >
                                 <span>{sess.sessionCode}</span>
                                 <span className="text-zinc-400">•</span>
-                                <span>{sess.activeAttendeesCount} att.</span>
+                                <span>{(sess.totalAttendeesCount ?? sess.totalAttendees ?? sess.activeAttendeesCount ?? 0)} att.</span>
                               </button>
                             ))}
                           </div>
