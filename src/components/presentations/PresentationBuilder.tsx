@@ -767,14 +767,14 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
     if (
       slides.length > 0 &&
       !window.confirm(
-        "Are you sure you want to load the 27-slide AI Training Program Roadshow Deck? This will replace current slides."
+        "Are you sure you want to load the 27-slide PG Govt. College Bilaspur Deck? This will replace current slides."
       )
     ) {
       return;
     }
-    setTitle("AI Training Program Roadshow Deck");
+    setTitle("PG Govt. College Bilaspur");
     setDescription(
-      "27-slide industrial training cum internship roadshow presentation featuring Ajay Mokta, leadership team, 90s vs 20s environment shift, 570M private job landscape, career capital, 7-stage product development cycle, cheap vs valuable skills, 100-to-4 hiring funnel, and Agentic AI boom."
+      "27-slide industrial training cum internship roadshow presentation for PG Govt. College Bilaspur featuring Ajay Mokta, leadership team, 90s vs 20s environment shift, 570M private job landscape, career capital, 7-stage product development cycle, cheap vs valuable skills, 100-to-4 hiring funnel, and Agentic AI boom."
     );
     setSlides(AI_TRAINING_ROADSHOW_DECK_SLIDES);
     setActiveSlideIndex(0);
@@ -821,14 +821,14 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
     if (
       slides.length > 0 &&
       !window.confirm(
-        "Are you sure you want to load the 28-slide ABV Govt Degree College Sunni PPT (Mobile-First Master Deck)? This will replace current slides."
+        "Are you sure you want to load the 28-slide PG Govt. College Bilaspur PPT (Mobile-First Master Deck)? This will replace current slides."
       )
     ) {
       return;
     }
-    setTitle("Atal Bihari Vajpayee Govt Degree College Sunni PPT");
+    setTitle("PG Govt. College Bilaspur PPT");
     setDescription(
-      "28-slide mobile-first career awareness & industrial training presentation for ABV Govt Degree College Sunni featuring AI History, AlphaFold Protein Folding, Math Reinvention, Fresher Hiring Collapse (6L to 2.5L), Cheap vs Valuable Skills, Stream-Specific Roles, and the 5-Step Action Playbook."
+      "28-slide mobile-first career awareness & industrial training presentation for PG Govt. College Bilaspur featuring AI History, AlphaFold Protein Folding, Math Reinvention, Fresher Hiring Collapse (6L to 2.5L), Cheap vs Valuable Skills, Stream-Specific Roles, and the 5-Step Action Playbook."
     );
     setSlides(SUNNI_COLLEGE_PPT_SLIDES);
     setActiveSlideIndex(0);
@@ -1010,10 +1010,10 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
             size="sm"
             onClick={handleLoadAiTrainingRoadshowTemplate}
             className="border-violet-500/30 text-violet-600 dark:text-violet-400 hover:bg-violet-50 dark:hover:bg-violet-950/50 flex items-center gap-1.5 font-bold"
-            title="Load the 27-slide AI Training Program Roadshow Deck"
+            title="Load the 27-slide PG Govt. College Bilaspur Deck"
           >
             <Sparkles className="w-3.5 h-3.5 text-violet-400" />
-            <span className="hidden sm:inline">Load AI Roadshow Deck (27 Slides)</span>
+            <span className="hidden sm:inline">Load PG Govt. College Bilaspur (27 Slides)</span>
           </Button>
 
           <Button
@@ -1021,10 +1021,10 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
             size="sm"
             onClick={handleLoadSunniTemplate}
             className="border-cyan-500/30 text-cyan-600 dark:text-cyan-400 hover:bg-cyan-50 dark:hover:bg-cyan-950/50 flex items-center gap-1.5 font-bold"
-            title="Load the 28-slide ABV Govt Degree College Sunni PPT presentation (Mobile-First)"
+            title="Load the 28-slide PG Govt. College Bilaspur PPT presentation (Mobile-First)"
           >
             <Sparkles className="w-3.5 h-3.5 text-cyan-400" />
-            <span className="hidden sm:inline">Load Sunni College PPT (28 Slides)</span>
+            <span className="hidden sm:inline">Load PG Govt. College Bilaspur PPT (28 Slides)</span>
           </Button>
 
           <Button
