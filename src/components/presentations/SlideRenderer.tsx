@@ -2259,11 +2259,11 @@ function renderSlideContent({
               return (
                 <div
                   key={idx}
-                  className={`p-4 sm:p-5 rounded-3xl border transition-all duration-300 ease-out shadow-xl space-y-3 ${
+                  className={`p-4 sm:p-5 rounded-3xl border transition-all duration-300 ease-out shadow-xl space-y-3.5 ${
                     isRevealed
                       ? isFirst
-                        ? "bg-white/5 border-white/10 opacity-100 translate-y-0"
-                        : "bg-gradient-to-b from-indigo-950/60 to-zinc-900 border-indigo-500/40 opacity-100 translate-y-0"
+                        ? "bg-gradient-to-b from-cyan-950/40 via-zinc-900 to-zinc-950 border-cyan-500/30 opacity-100 translate-y-0"
+                        : "bg-gradient-to-b from-indigo-950/60 via-zinc-900 to-zinc-950 border-indigo-500/40 opacity-100 translate-y-0"
                       : "bg-white/2 border-white/5 opacity-25 translate-y-2"
                   }`}
                 >
@@ -2275,14 +2275,19 @@ function renderSlideContent({
                       0{idx + 1}
                     </span>
                   </div>
+                  {col.stat && (
+                    <div className={`text-2xl sm:text-3xl font-black ${col.color || "text-white"}`}>
+                      {col.stat}
+                    </div>
+                  )}
                   <div className="space-y-2">
                     {(col.items || []).map((it: string, itIdx: number) => (
                       <div
                         key={itIdx}
-                        className="p-2 sm:p-2.5 rounded-xl bg-black/30 border border-white/5 flex items-start gap-2.5 text-xs text-zinc-200 font-medium leading-relaxed"
+                        className="p-2 sm:p-2.5 rounded-xl bg-black/40 border border-white/5 flex items-start gap-2.5 text-xs sm:text-sm text-zinc-200 font-medium leading-relaxed"
                       >
-                        <span className={`font-bold shrink-0 mt-0.5 ${isFirst ? "text-zinc-400" : "text-emerald-400"}`}>
-                          {isFirst ? "—" : "✓"}
+                        <span className={`font-bold text-base shrink-0 leading-none mt-0.5 ${col.color || (isFirst ? "text-cyan-400" : "text-indigo-400")}`}>
+                          •
                         </span>
                         <span>{it}</span>
                       </div>
