@@ -55,7 +55,17 @@ export default function LoginPage() {
         throw new Error(data.message || data.error || `HTTP ${res.status}`);
       }
 
-      if (!["SUPER_ADMIN", "ADMIN", "MEMBER", "SALES"].includes(data.user?.role)) {
+      const userRoles = [
+        data.user?.role,
+        ...(Array.isArray(data.user?.roles) ? data.user.roles : []),
+        ...(Array.isArray(data.user?.metadata?.roles) ? data.user.metadata.roles : []),
+      ];
+
+      const hasStaffPrivileges = userRoles.some((r) =>
+        ["SUPER_ADMIN", "ADMIN", "MEMBER", "SALES", "PROGRAM_MANAGER"].includes(r)
+      );
+
+      if (!hasStaffPrivileges) {
         throw new Error("Access denied. Internal staff privileges required.");
       }
 
