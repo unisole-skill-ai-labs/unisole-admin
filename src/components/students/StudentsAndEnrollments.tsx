@@ -10,6 +10,9 @@ import {
   useUpdateEnrollmentMutation,
   useManualGrantEnrollmentMutation,
   useGetPathwaysQuery,
+  useGetAdminMentorsQuery,
+  useAssignMentorMutation,
+  useUnassignMentorMutation,
 } from "../../store";
 
 // Helper to resolve pathway title directly from DB query results
@@ -27,6 +30,7 @@ import {
   Edit2,
   Trash2,
   UserX,
+  UserCheck,
   Search,
   CheckCircle,
   XCircle,
@@ -251,6 +255,46 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingStudent, setEditingStudent] = useState<any>(null);
 
+  // Mentorship Assignment State
+  const { data: mentors = [] } = useGetAdminMentorsQuery(baseUrl);
+  const [assignMentor, { isLoading: isAssigningMentor }] = useAssignMentorMutation();
+  const [unassignMentor, { isLoading: isUnassigningMentor }] = useUnassignMentorMutation();
+  const [assigningStudent, setAssigningStudent] = useState<any>(null);
+
+  const handleAssignMentor = async (data: { mentorId: string; courseId?: string }) => {
+    if (!assigningStudent) return;
+    try {
+      await assignMentor({
+        baseUrl,
+        body: {
+          mentorId: data.mentorId,
+          menteeIds: [assigningStudent.id],
+          courseId: data.courseId,
+        },
+      }).unwrap();
+      setAssigningStudent(null);
+      refetch();
+    } catch (err: any) {
+      alert("Failed to assign mentor: " + (err?.data?.error || err.message));
+    }
+  };
+
+  const handleUnassignMentor = async () => {
+    if (!assigningStudent) return;
+    try {
+      await unassignMentor({
+        baseUrl,
+        body: {
+          menteeId: assigningStudent.id,
+        },
+      }).unwrap();
+      setAssigningStudent(null);
+      refetch();
+    } catch (err: any) {
+      alert("Failed to unassign mentor: " + (err?.data?.error || err.message));
+    }
+  };
+
   const filtered = students.filter((s: any) => {
     const matchesSearch =
       s.name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -384,6 +428,7 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
                 <th className="py-3 px-4 font-semibold">Mobile Number</th>
                 <th className="py-3 px-4 font-semibold">Acquisition Source</th>
                 <th className="py-3 px-4 font-semibold min-w-[240px]">Campus & Branch</th>
+                <th className="py-3 px-4 font-semibold">Assigned Mentor</th>
                 <th className="py-3 px-4 font-semibold">Role</th>
                 <th className="py-3 px-4 font-semibold">Status</th>
                 <th className="py-3 px-4 font-semibold text-right">Actions</th>
@@ -391,9 +436,9 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
             </thead>
             <tbody className="divide-y divide-zinc-100 dark:divide-zinc-800/60">
               {isLoading ? (
-                <tr><td colSpan={7} className="py-8 text-center text-zinc-400">Loading student accounts...</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-zinc-400">Loading student accounts...</td></tr>
               ) : filtered.length === 0 ? (
-                <tr><td colSpan={7} className="py-8 text-center text-zinc-400">No learners found.</td></tr>
+                <tr><td colSpan={8} className="py-8 text-center text-zinc-400">No learners found.</td></tr>
               ) : (
                 filtered.map((s: any) => (
                   <tr key={s.id} className="hover:bg-zinc-50/50 dark:hover:bg-zinc-800/40">
@@ -465,6 +510,19 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
                       )}
                     </td>
                     <td className="py-3.5 px-4">
+                      {s.assignedMentor ? (
+                        <div className="flex items-center gap-1.5">
+                          <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold bg-purple-500/10 text-purple-600 dark:text-purple-400 border border-purple-500/20 font-mono">
+                            👤 {s.assignedMentor.mentorName}
+                          </span>
+                        </div>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] text-zinc-400 dark:text-zinc-500 italic border border-dashed border-zinc-200 dark:border-zinc-800">
+                          Unassigned
+                        </span>
+                      )}
+                    </td>
+                    <td className="py-3.5 px-4">
                       <Badge variant={s.role === "SUPER_ADMIN" ? "rose" : s.role === "ADMIN" ? "rose" : s.role === "MEMBER" ? "brand" : "default"} size="sm">
                         {s.role || "STUDENT"}
                       </Badge>
@@ -476,6 +534,7 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
                     </td>
                     <td className="py-3.5 px-4 text-right">
                       <div className="flex items-center justify-end gap-1.5">
+                        <Button variant="ghost" size="sm" onClick={() => setAssigningStudent(s)} icon={UserCheck} className="text-purple-600 hover:text-purple-700 hover:bg-purple-50 dark:hover:bg-purple-950/30" title="Assign / Change Mentor" />
                         <Button variant="ghost" size="sm" onClick={() => setEditingStudent(s)} icon={Edit2} title="Edit Learner" />
                         <Button variant="ghost" size="sm" onClick={() => handleDeactivate(s)} icon={UserX} className="text-amber-500 hover:text-amber-700" title={s.isActive !== false ? "Deactivate Account" : "Activate Account"} />
                         <Button variant="ghost" size="sm" onClick={() => handleDelete(s)} icon={Trash2} className="text-rose-500 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/30" title="Delete Learner (Permanent Cascade)" />
@@ -503,6 +562,17 @@ function StudentsSection({ baseUrl }: { baseUrl: string }) {
           isLoading={isUpdating}
           onClose={() => setEditingStudent(null)}
           onSave={handleSave}
+        />
+      )}
+
+      {assigningStudent && (
+        <AssignMentorModal
+          student={assigningStudent}
+          mentors={mentors}
+          isLoading={isAssigningMentor || isUnassigningMentor}
+          onClose={() => setAssigningStudent(null)}
+          onAssign={handleAssignMentor}
+          onUnassign={handleUnassignMentor}
         />
       )}
     </div>
@@ -937,3 +1007,147 @@ function CreateUserModal({ isLoading, onClose, onSave }: any) {
     </Modal>
   );
 }
+
+function AssignMentorModal({
+  student,
+  mentors,
+  isLoading,
+  onClose,
+  onAssign,
+  onUnassign,
+}: {
+  student: any;
+  mentors: any[];
+  isLoading: boolean;
+  onClose: () => void;
+  onAssign: (data: { mentorId: string; courseId?: string }) => void;
+  onUnassign: () => void;
+}) {
+  const currentMentorId = student.assignedMentor?.mentorId || mentors[0]?.id || "";
+  const [selectedMentorId, setSelectedMentorId] = useState(currentMentorId);
+  const [selectedCourseId, setSelectedCourseId] = useState("");
+
+  const enrolledCourses = student.enrolledCourses || [];
+
+  const handleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!selectedMentorId) return;
+    onAssign({
+      mentorId: selectedMentorId,
+      courseId: selectedCourseId || undefined,
+    });
+  };
+
+  return (
+    <Modal isOpen={true} onClose={onClose} title="Assign Mentor to Learner" maxWidth="max-w-md">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {/* Learner Info Card */}
+        <div className="p-3.5 bg-zinc-50 dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-2xl text-xs space-y-1.5">
+          <div className="flex justify-between">
+            <span className="text-zinc-400 font-medium">Learner Name:</span>
+            <span className="font-bold text-zinc-900 dark:text-zinc-100">{student.name || "Student"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-400 font-medium">Mobile Number:</span>
+            <span className="font-mono text-zinc-700 dark:text-zinc-300">{student.phone ? formatPhone(student.phone) : "—"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-400 font-medium">Campus:</span>
+            <span className="text-zinc-700 dark:text-zinc-300 font-semibold truncate max-w-[200px]">{student.collegeName || "—"}</span>
+          </div>
+          <div className="flex justify-between">
+            <span className="text-zinc-400 font-medium">Current Status:</span>
+            <span>
+              {student.assignedMentor ? (
+                <span className="text-emerald-600 dark:text-emerald-400 font-bold">
+                  Guided by {student.assignedMentor.mentorName}
+                </span>
+              ) : (
+                <span className="text-amber-500 font-bold">Unassigned</span>
+              )}
+            </span>
+          </div>
+        </div>
+
+        {/* Mentor Selector */}
+        <div>
+          <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+            Select Academic Mentor *
+          </label>
+          <select
+            value={selectedMentorId}
+            onChange={(e) => setSelectedMentorId(e.target.value)}
+            required
+            className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-semibold focus:outline-hidden"
+          >
+            <option value="" disabled>Choose an authorized mentor...</option>
+            {mentors.map((m: any) => (
+              <option key={m.id} value={m.id}>
+                {m.name} — {m.specialization || "Technical Mentor"} ({m.activeMenteesCount || 0} active mentees)
+              </option>
+            ))}
+          </select>
+          <p className="text-[11px] text-zinc-400 mt-1">
+            Platform administrators can allocate and balance mentor bandwidth across learners.
+          </p>
+        </div>
+
+        {/* Course Scope (Optional) */}
+        {enrolledCourses.length > 0 && (
+          <div>
+            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1.5">
+              Course / Curriculum Scope
+            </label>
+            <select
+              value={selectedCourseId}
+              onChange={(e) => setSelectedCourseId(e.target.value)}
+              className="w-full px-3.5 py-2.5 bg-white dark:bg-zinc-950 border border-zinc-200 dark:border-zinc-800 rounded-xl text-xs font-semibold focus:outline-hidden"
+            >
+              <option value="">Global (All enrolled courses)</option>
+              {enrolledCourses.map((c: any) => (
+                <option key={c.id} value={c.id}>
+                  {c.title}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
+
+        {/* Modal Actions */}
+        <div className="pt-3 flex items-center justify-between border-t border-zinc-100 dark:border-zinc-800">
+          {student.assignedMentor ? (
+            <Button
+              type="button"
+              variant="ghost"
+              size="sm"
+              onClick={onUnassign}
+              loading={isLoading}
+              className="text-rose-600 hover:text-rose-700 hover:bg-rose-50 dark:hover:bg-rose-950/40 text-xs font-bold"
+            >
+              <Trash2 className="w-3.5 h-3.5 mr-1" />
+              Unassign
+            </Button>
+          ) : <div />}
+
+          <div className="flex items-center gap-2">
+            <Button type="button" variant="ghost" size="sm" onClick={onClose}>
+              Cancel
+            </Button>
+            <Button
+              type="submit"
+              variant="primary"
+              size="sm"
+              loading={isLoading}
+              disabled={!selectedMentorId}
+              className="bg-purple-600 hover:bg-purple-700 text-white"
+            >
+              <UserCheck className="w-3.5 h-3.5 mr-1" />
+              Confirm Assignment
+            </Button>
+          </div>
+        </div>
+      </form>
+    </Modal>
+  );
+}
+

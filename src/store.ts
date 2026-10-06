@@ -143,6 +143,28 @@ export const adminApi = createApi({
       invalidatesTags: ["Students", "Colleges", "Branches"],
     }),
 
+    // Mentorship Allocations
+    getAdminMentors: build.query({
+      query: (baseUrl) => ({ url: `${baseUrl}/api/admin/mentorship/mentors` }),
+      providesTags: ["Students"],
+    }),
+    assignMentor: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/mentorship/assign`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Students", "Enrollments"],
+    }),
+    unassignMentor: build.mutation({
+      query: ({ baseUrl, body }) => ({
+        url: `${baseUrl}/api/admin/mentorship/unassign`,
+        method: "POST",
+        body,
+      }),
+      invalidatesTags: ["Students", "Enrollments"],
+    }),
+
     // Colleges
     getColleges: build.query({
       query: (baseUrl) => ({ url: `${baseUrl}/api/admin/colleges` }),
@@ -1311,12 +1333,15 @@ export const {
   useGetSurveyResponsesQuery,
   useGetSurveyStatsQuery,
   useUpdateSurveyMutation,
-  // Students
+  // Students & Mentorship
   useGetStudentsQuery,
   useCreateStudentMutation,
   useUpdateStudentMutation,
   useDeleteStudentMutation,
   useDeactivateStudentMutation,
+  useGetAdminMentorsQuery,
+  useAssignMentorMutation,
+  useUnassignMentorMutation,
   // Colleges
   useGetCollegesQuery,
   useGetCollegeAnalyticsQuery,
