@@ -49,6 +49,7 @@ import { THEOG_COLLEGE_PPT_SLIDES } from "../../data/theogDeck";
 import { SANJAULI_COLLEGE_PPT_SLIDES } from "../../data/sanjauliDeck";
 import { SUNNI_COLLEGE_PPT_SLIDES } from "../../data/sunniDeck";
 import { AI_TRAINING_ROADSHOW_DECK_SLIDES } from "../../data/aiTrainingRoadshowDeck";
+import { SEEMA_COLLEGE_ROADSHOW_DECK_SLIDES } from "../../data/seemaRoadshowDeck";
 
 interface PresentationBuilderProps {
   baseUrl: string;

@@ -34,8 +34,15 @@ export default function RequireAdminAuth() {
 
         const resData = await response.json();
         const freshUser = resData?.data || resData;
-        const role = freshUser?.role;
-        if (role && !["SUPER_ADMIN", "ADMIN", "MEMBER", "SALES"].includes(role)) {
+        const userRoles = [
+          freshUser?.role,
+          ...(Array.isArray(freshUser?.roles) ? freshUser.roles : []),
+          ...(Array.isArray(freshUser?.metadata?.roles) ? freshUser.metadata.roles : []),
+        ];
+        const isAllowed = userRoles.some((r) =>
+          ["SUPER_ADMIN", "ADMIN", "MEMBER", "SALES", "PROGRAM_MANAGER"].includes(r)
+        );
+        if (!isAllowed) {
           dispatch(logout());
         } else if (freshUser) {
           dispatch(updateUser(freshUser));

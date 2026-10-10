@@ -1,23 +1,23 @@
-export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
+export const SEEMA_COLLEGE_ROADSHOW_DECK_SLIDES = [
   // =========================================================================
   // SLIDE 1 — COVER
   // =========================================================================
   {
-    id: "ai_train_slide_1",
+    id: "seema_train_slide_1",
     type: "COVER",
     badge: "INDUSTRIAL TRAINING CUM INTERNSHIP PROGRAM",
     title: "Industrial Training cum Internship Program",
     subtitle: "Learn AI Today or remain Behind Tomorrow",
     org: "UNISOLE SKILL AI LABS",
     maxBuildSteps: 2,
-    notes: "Welcome students! Today we are announcing the Unisole Industrial Training cum Internship Opportunity Program. The simple truth of 2026: Learn AI Today or remain Behind Tomorrow.",
+    notes: "Welcome students of Govt College Seema (Rohru)! Today we are announcing the Unisole Industrial Training cum Internship Opportunity Program. The simple truth of 2026: Learn AI Today or remain Behind Tomorrow.",
   },
 
   // =========================================================================
   // SLIDE 2 — FOUNDER BIO (AJAY MOKTA)
   // =========================================================================
   {
-    id: "ai_train_slide_2",
+    id: "seema_train_slide_2",
     type: "FOUNDER_BIO",
     badge: "LEADERSHIP & MENTORSHIP",
     title: "Ajay Mokta",
@@ -29,7 +29,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
       "Positioned Unisole 3rd in National Startup Summit",
       "Leading technical skilling transformations statewide",
     ],
-    quote: "“A degree from any college in Himachal should be backed by skills that compete globally.”",
+    quote: "“A degree from Govt College Seema (Rohru) should be backed by skills that compete globally.”",
     sideSection: {
       title: "UNISOLE",
       items: ["AI Education", "Industry Skills", "Career Awareness", "Practical Projects"],
@@ -42,7 +42,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 3 — TEAM
   // =========================================================================
   {
-    id: "ai_train_slide_3",
+    id: "seema_train_slide_3",
     type: "TEAM_GRID",
     badge: "CREDIBILITY",
     title: "Meet Our Team",
@@ -78,7 +78,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 4 — आगे क्या सोचा है? (THE HOOK QUESTION)
   // =========================================================================
   {
-    id: "ai_train_slide_4",
+    id: "seema_train_slide_4",
     type: "BIG_QUESTION",
     badge: "THE HOOK QUESTION",
     title: "आगे क्या सोचा है?",
@@ -93,7 +93,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 5 — POLL: WHAT ARE YOUR CURRENT CAREER GOALS?
   // =========================================================================
   {
-    id: "ai_train_slide_5",
+    id: "seema_train_slide_5",
     type: "POLL",
     badge: "LIVE POLL 01",
     title: "Poll: What Are Your Current Career Goals?",
@@ -112,7 +112,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 6 — YOUR CAREER ENVIRONMENT HAS CHANGED
   // =========================================================================
   {
-    id: "ai_train_slide_6",
+    id: "seema_train_slide_6",
     type: "EDUCATION_SHIFT",
     badge: "ENVIRONMENT CHANGE",
     title: "Your Career Environment Has Changed",
@@ -138,7 +138,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 7 — JOB LANDSCAPE
   // =========================================================================
   {
-    id: "ai_train_slide_7",
+    id: "seema_train_slide_7",
     type: "COMPARISON",
     badge: "MARKET REALITY",
     title: "Job Landscape",
@@ -173,7 +173,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 8 — POLL: ARE PRIVATE JOBS UNSTABLE?
   // =========================================================================
   {
-    id: "ai_train_slide_8",
+    id: "seema_train_slide_8",
     type: "POLL",
     badge: "LIVE POLL 02",
     title: "Poll: Are Private Jobs Unstable?",
@@ -190,7 +190,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 9 — PRIVATE JOBS ARE UNSTABLE??
   // =========================================================================
   {
-    id: "ai_train_slide_9",
+    id: "seema_train_slide_9",
     type: "PIPELINE_FLOW",
     badge: "RETHINKING STABILITY",
     title: "Private Jobs Are Unstable??",
@@ -228,7 +228,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 10 — PRIVATE JOBS LAYOFFS
   // =========================================================================
   {
-    id: "ai_train_slide_10",
+    id: "seema_train_slide_10",
     type: "MYTH_REALITY_PAIRS",
     badge: "DISPLACEMENT REALITY",
     title: "Private Jobs Layoffs",
@@ -252,7 +252,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 11 — WHAT IS THAT ONE THING?
   // =========================================================================
   {
-    id: "ai_train_slide_11",
+    id: "seema_train_slide_11",
     type: "POLL",
     badge: "LIVE POLL 03",
     title: "What Is That One Thing?",
@@ -271,7 +271,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 12 — CAREER CAPITAL
   // =========================================================================
   {
-    id: "ai_train_slide_12",
+    id: "seema_train_slide_12",
     type: "CAREER_CAPITAL_GRID",
     badge: "CORE PRINCIPLE",
     title: "Career Capital",
@@ -295,7 +295,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 13 — HOW TO MAXIMIZE CAREER CAPITAL
   // =========================================================================
   {
-    id: "ai_train_slide_13",
+    id: "seema_train_slide_13",
     type: "BIG_QUESTION",
     badge: "STRATEGIC MINDSET",
     title: "How to Maximize Career Capital",
@@ -310,7 +310,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 14 — WHAT INDUSTRY DO (PRODUCT DEV CYCLE)
   // =========================================================================
   {
-    id: "ai_train_slide_14",
+    id: "seema_train_slide_14",
     type: "PIPELINE_FLOW",
     badge: "SYSTEMS THINKING",
     title: "What Industry Do",
@@ -334,7 +334,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 15 — WHAT PART BECOMES VERY CHEAP?
   // =========================================================================
   {
-    id: "ai_train_slide_15",
+    id: "seema_train_slide_15",
     type: "BIG_QUESTION",
     badge: "AUDIENCE REFLECTION",
     title: "What Part Becomes Very Cheap?",
@@ -348,7 +348,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 16 — WHAT BECOMES CHEAP
   // =========================================================================
   {
-    id: "ai_train_slide_16",
+    id: "seema_train_slide_16",
     type: "STEP_CARDS",
     badge: "COMMODITIZATION",
     title: "What Becomes Cheap",
@@ -369,7 +369,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 17 — WHAT PART BECOMES VERY VALUABLE?
   // =========================================================================
   {
-    id: "ai_train_slide_17",
+    id: "seema_train_slide_17",
     type: "BIG_QUESTION",
     badge: "THE FLIP SIDE",
     title: "What Part Becomes Very Valuable?",
@@ -383,7 +383,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 18 — THE VALUE IS MOVING UPSTREAM
   // =========================================================================
   {
-    id: "ai_train_slide_18",
+    id: "seema_train_slide_18",
     type: "STEP_CARDS",
     badge: "THE UPSTREAM SHIFT",
     title: "The Value Is Moving Upstream",
@@ -403,7 +403,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 19 — LEARN WHAT IS VALUABLE (THE CATCH)
   // =========================================================================
   {
-    id: "ai_train_slide_19",
+    id: "seema_train_slide_19",
     type: "BIG_QUESTION",
     badge: "THE CATCH",
     title: "Now you know the valuable part...",
@@ -418,7 +418,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 20 — LEARN → PROJECT → RESUME → INTERVIEW → JOB (FUNNEL)
   // =========================================================================
   {
-    id: "ai_train_slide_20",
+    id: "seema_train_slide_20",
     type: "DROPOUT_FUNNEL",
     badge: "THE HIRING LEAK",
     title: "Learn → Project → Resume → Interview → Job",
@@ -439,7 +439,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 21 — GO THROUGH THE FUNNEL
   // =========================================================================
   {
-    id: "ai_train_slide_21",
+    id: "seema_train_slide_21",
     type: "STEP_CARDS",
     badge: "EXECUTION PLAYBOOK",
     title: "So You Have to Go Through the Funnel",
@@ -460,7 +460,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 22 — WHAT IS IN BOOM
   // =========================================================================
   {
-    id: "ai_train_slide_22",
+    id: "seema_train_slide_22",
     type: "STATS",
     badge: "EXPONENTIAL DEMAND",
     title: "What Is in Boom",
@@ -491,7 +491,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 23 — AGENTIC AI ENGINEERING
   // =========================================================================
   {
-    id: "ai_train_slide_23",
+    id: "seema_train_slide_23",
     type: "BIG_QUESTION",
     badge: "PARADIGM SHIFT",
     title: "Agentic AI Engineering",
@@ -506,7 +506,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 24 — UNISOLE INDUSTRIAL TRAINING PROGRAM
   // =========================================================================
   {
-    id: "ai_train_slide_24",
+    id: "seema_train_slide_24",
     type: "PROGRAM_PILLARS",
     badge: "THE SOLUTION",
     title: "Unisole Industrial Training Program",
@@ -533,7 +533,7 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 25 — SCHEDULE OF PROGRAM
   // =========================================================================
   {
-    id: "ai_train_slide_25",
+    id: "seema_train_slide_25",
     type: "THREE_CARDS",
     badge: "LOGISTICS",
     title: "Schedule of Program",
@@ -549,18 +549,18 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
       },
       {
         title: "Campus Project Implementation",
-        desc: "If we get 20+ students from your college, we will do the project and implementation part here offline on weekends.",
+        desc: "If we get 20+ students from Govt College Seema (Rohru), we will do the project and implementation part here offline on weekends.",
       },
     ],
     maxBuildSteps: 3,
-    notes: "Online classes. Batch starts Nov after exams. If 20+ students from your college, offline weekend project sessions at your campus.",
+    notes: "Online classes. Batch starts Nov after exams. If 20+ students from Govt College Seema (Rohru), offline weekend project sessions at your campus.",
   },
 
   // =========================================================================
   // SLIDE 26 — INDUSTRIAL CERTIFICATE
   // =========================================================================
   {
-    id: "ai_train_slide_26",
+    id: "seema_train_slide_26",
     type: "CERTIFICATE_SHOWCASE",
     badge: "CREDENTIAL",
     title: "Industrial Certificate",
@@ -574,14 +574,14 @@ export const AI_TRAINING_ROADSHOW_DECK_SLIDES = [
   // SLIDE 27 — PROGRAM QR CODE (CTA)
   // =========================================================================
   {
-    id: "ai_train_slide_27",
+    id: "seema_train_slide_27",
     type: "ENROLLMENT_CTA",
     badge: "ENROLLMENT",
     title: "Program QR Code",
     subtitle: "Scan the QR code to register and secure your seat in the upcoming cohort",
     actions: [
       "Scan QR Code with your smartphone",
-      "Fill your details (College, Branch, WhatsApp)",
+      "Fill your details (Govt College Seema (Rohru), Branch, WhatsApp)",
       "Get Onboarded into the Unisole Talent Pool",
     ],
     qrUrl: "https://unisole.org/programs",

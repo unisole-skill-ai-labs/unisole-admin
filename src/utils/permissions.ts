@@ -170,16 +170,38 @@ export function getPermissionDef(key: string): PermissionDefinition | undefined 
 
 export const DESIGNATION_PRESETS: Record<
   string,
-  { label: string; role: "ADMIN" | "MEMBER"; permissions: string[] }
+  { label: string; role: "ADMIN" | "MEMBER" | "SALES" | "MENTOR" | "PROGRAM_MANAGER"; permissions: string[] }
 > = {
   SUPER_ADMIN: {
     label: "Super Administrator (All Powers)",
     role: "ADMIN",
     permissions: ALL_PERMISSIONS.map((p) => p.key),
   },
+  PROGRAM_MANAGER: {
+    label: "Program Manager (Curriculum Studio & Lead)",
+    role: "PROGRAM_MANAGER",
+    permissions: [
+      "my_work:view",
+      "curriculum:view",
+      "curriculum:manage",
+      "tasks:manage",
+      "students:manage",
+      "analytics:view",
+    ],
+  },
+  MENTOR: {
+    label: "Mentor (Academic & Project Reviewer)",
+    role: "MENTOR",
+    permissions: [
+      "my_work:view",
+      "curriculum:view",
+      "students:manage",
+      "tasks:manage",
+    ],
+  },
   SALES: {
     label: "Sales Executive / Representative",
-    role: "MEMBER",
+    role: "SALES",
     permissions: ["leads:view", "leads:manage"],
   },
   COUNSELOR: {
@@ -256,6 +278,12 @@ export function getDefaultPermissionsForUser(user: any): string[] {
   const role = (user.role || "").toUpperCase();
   const des = (user.designation || "").toUpperCase();
 
+  if (role === "PROGRAM_MANAGER" || des.includes("PROGRAM")) {
+    return DESIGNATION_PRESETS.PROGRAM_MANAGER.permissions;
+  }
+  if (role === "MENTOR" || des.includes("MENTOR")) {
+    return DESIGNATION_PRESETS.MENTOR.permissions;
+  }
   if (role === "SALES" || des.includes("SALES")) {
     return DESIGNATION_PRESETS.SALES.permissions;
   }
