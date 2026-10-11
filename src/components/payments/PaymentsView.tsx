@@ -60,7 +60,7 @@ interface PaymentsViewProps {
 export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
   const [activeTab, setActiveTab] = useState<"orders" | "pricing" | "coupons" | "gateway">("orders");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("ALL");
+  const [statusFilter, setStatusFilter] = useState("PAID");
   const [pricingSearch, setPricingSearch] = useState("");
   const [pricingTypeFilter, setPricingTypeFilter] = useState("ALL");
 
@@ -514,11 +514,6 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
           <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
             {paidOrdersCount}
           </div>
-          {pendingOrdersCount > 0 && (
-            <div className="text-[10px] text-amber-500 font-mono mt-0.5">
-              {pendingOrdersCount} pending / awaiting
-            </div>
-          )}
         </div>
 
         <div className="p-5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
