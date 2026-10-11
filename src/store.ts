@@ -572,6 +572,13 @@ export const adminApi = createApi({
       }),
       invalidatesTags: ["Orders", "Payments", "Enrollments", "Students"],
     }),
+    reconcileOrders: build.mutation({
+      query: (baseUrl) => ({
+        url: `${baseUrl}/api/admin/orders/reconcile`,
+        method: "POST",
+      }),
+      invalidatesTags: ["Orders", "Payments", "Enrollments", "Students"],
+    }),
 
     // Dynamic Offerings & Product Pricing Catalog
     getOfferingsPricing: build.query({
@@ -1402,6 +1409,7 @@ export const {
   useConfirmManualOrderMutation,
   useUpdateOrderStatusMutation,
   useDeleteOrderMutation,
+  useReconcileOrdersMutation,
   // Dynamic Catalog Pricing
   useGetOfferingsPricingQuery,
   useCreateOfferingPricingMutation,
