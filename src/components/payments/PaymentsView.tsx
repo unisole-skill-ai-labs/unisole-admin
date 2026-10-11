@@ -14,6 +14,7 @@ import {
   useConfirmManualOrderMutation,
   useUpdateOrderStatusMutation,
   useDeleteOrderMutation,
+  useReconcileOrdersMutation,
   useManualGrantEnrollmentMutation,
   useGetStudentsQuery,
   useGetPathwaysQuery,
@@ -59,7 +60,7 @@ interface PaymentsViewProps {
 export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
   const [activeTab, setActiveTab] = useState<"orders" | "pricing" | "coupons" | "gateway">("orders");
   const [search, setSearch] = useState("");
-  const [statusFilter, setStatusFilter] = useState("PAID");
+  const [statusFilter, setStatusFilter] = useState("ALL");
   const [pricingSearch, setPricingSearch] = useState("");
   const [pricingTypeFilter, setPricingTypeFilter] = useState("ALL");
 
@@ -67,6 +68,7 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
   const { data: ordersData, isLoading: isOrdersLoading, refetch: refetchOrders } = useGetOrdersQuery({
     baseUrl,
     search: search || undefined,
+    limit: 200,
   });
   const { data: pricingData, isLoading: isPricingLoading, refetch: refetchPricing } = useGetOfferingsPricingQuery(baseUrl);
   const { data: couponsData, isLoading: isCouponsLoading, refetch: refetchCoupons } = useGetCouponsQuery(baseUrl);
@@ -88,6 +90,7 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
   const [confirmManualOrder, { isLoading: isConfirmingManual }] = useConfirmManualOrderMutation();
   const [updateOrderStatus, { isLoading: isUpdatingOrderStatus }] = useUpdateOrderStatusMutation();
   const [deleteOrder, { isLoading: isDeletingOrder }] = useDeleteOrderMutation();
+  const [reconcileOrders, { isLoading: isReconciling }] = useReconcileOrdersMutation();
   const [manualGrantEnrollment, { isLoading: isGrantingEnrollment }] = useManualGrantEnrollmentMutation();
 
   // Modals state
@@ -142,13 +145,31 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
   const pricingItems = pricingData?.items || [];
   const coupons = couponsData?.items || [];
 
-  // Metrics calculation
-  const totalRevenuePaise = allOrders
+  // Metrics calculation: Prioritize server-side DB aggregation & reconcile with gateway captured sums
+  const serverMetrics = ordersData?.metrics;
+  const rawOrdersRevenuePaise = allOrders
     .filter((o: any) => o.status === "PAID")
     .reduce((sum: number, o: any) => sum + (Number(o.totalPaise) || 0), 0);
 
-  const paidOrdersCount = allOrders.filter((o: any) => o.status === "PAID").length;
-  const pendingOrdersCount = allOrders.filter((o: any) => o.status === "PENDING").length;
+  const totalGatewayRevenuePaise = payments
+    .filter((p: any) => p.status === "SUCCESS")
+    .reduce((sum: number, p: any) => sum + (Number(p.amountPaise) || 0), 0);
+  const successfulPaymentsCount = payments.filter((p: any) => p.status === "SUCCESS").length;
+
+  const totalRevenuePaise =
+    serverMetrics?.totalRevenuePaise !== undefined
+      ? Math.max(Number(serverMetrics.totalRevenuePaise), totalGatewayRevenuePaise)
+      : Math.max(rawOrdersRevenuePaise, totalGatewayRevenuePaise);
+
+  const paidOrdersCount =
+    serverMetrics?.paidOrdersCount !== undefined
+      ? Math.max(Number(serverMetrics.paidOrdersCount), successfulPaymentsCount)
+      : Math.max(allOrders.filter((o: any) => o.status === "PAID").length, successfulPaymentsCount);
+
+  const pendingOrdersCount =
+    serverMetrics?.pendingOrdersCount !== undefined
+      ? Number(serverMetrics.pendingOrdersCount)
+      : allOrders.filter((o: any) => o.status === "PENDING").length;
 
   const handleSavePricing = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -453,7 +474,11 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
           <Button
             variant="secondary"
             size="sm"
-            onClick={() => {
+            disabled={isReconciling}
+            onClick={async () => {
+              try {
+                await reconcileOrders(baseUrl).unwrap();
+              } catch (_) {}
               refetchOrders();
               refetchPricing();
               refetchCoupons();
@@ -461,7 +486,7 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
             }}
             icon={RefreshCw}
           >
-            Refresh
+            {isReconciling ? "Reconciling..." : "Refresh & Reconcile"}
           </Button>
         </div>
       </div>
@@ -475,6 +500,11 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
           <div className="text-xl sm:text-2xl font-black text-amber-500 dark:text-amber-400 mt-1 font-mono">
             ₹{(totalRevenuePaise / 100).toLocaleString("en-IN")}
           </div>
+          {totalGatewayRevenuePaise > 0 && (
+            <div className="text-[10px] text-zinc-400 font-mono mt-0.5">
+              ₹{(totalGatewayRevenuePaise / 100).toLocaleString("en-IN")} captured in gateway
+            </div>
+          )}
         </div>
 
         <div className="p-5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
@@ -484,6 +514,11 @@ export default function PaymentsView({ baseUrl }: PaymentsViewProps) {
           <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">
             {paidOrdersCount}
           </div>
+          {pendingOrdersCount > 0 && (
+            <div className="text-[10px] text-amber-500 font-mono mt-0.5">
+              {pendingOrdersCount} pending / awaiting
+            </div>
+          )}
         </div>
 
         <div className="p-5 bg-white dark:bg-zinc-900 border border-zinc-200/80 dark:border-zinc-800 rounded-2xl shadow-xs">
