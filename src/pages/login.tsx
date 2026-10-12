@@ -62,7 +62,7 @@ export default function LoginPage() {
       ];
 
       const hasStaffPrivileges = userRoles.some((r) =>
-        ["SUPER_ADMIN", "ADMIN", "MEMBER", "SALES", "PROGRAM_MANAGER"].includes(r)
+        ["SUPER_ADMIN", "ADMIN", "MEMBER", "SALES", "PROGRAM_MANAGER", "MENTOR"].includes(r)
       );
 
       if (!hasStaffPrivileges) {
