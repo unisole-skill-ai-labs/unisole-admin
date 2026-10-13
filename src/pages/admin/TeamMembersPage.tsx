@@ -130,7 +130,7 @@ export default function TeamMembersPage() {
     const total = members.length;
     const superAdmins = members.filter((m) => m.role === "SUPER_ADMIN").length;
     const admins = members.filter((m) => m.role === "ADMIN").length;
-    const programManagers = members.filter((m) => m.role === "PROGRAM_MANAGER" || (m.roles || m.metadata?.roles || []).includes("PROGRAM_MANAGER")).length;
+    const programManagers = members.filter((m) => m.role === "COURSE_MANAGER" || m.role === "PROGRAM_MANAGER" || (m.roles || m.metadata?.roles || []).includes("COURSE_MANAGER") || (m.roles || m.metadata?.roles || []).includes("PROGRAM_MANAGER")).length;
     const mentors = members.filter((m) => m.role === "MENTOR" || (m.roles || m.metadata?.roles || []).includes("MENTOR")).length;
     const regularMembers = members.filter((m) => m.role === "MEMBER").length;
     const activeCount = members.filter((m) => m.isActive !== false).length;
@@ -142,9 +142,13 @@ export default function TeamMembersPage() {
     return members.filter((m: any) => {
       // Role Filter
       if (selectedRoleFilter !== "ALL") {
-        const primaryMatch = m.role === selectedRoleFilter;
-        const secondaryMatch = Array.isArray(m.roles) && m.roles.includes(selectedRoleFilter);
-        const metaMatch = Array.isArray(m.metadata?.roles) && m.metadata.roles.includes(selectedRoleFilter);
+        const isTarget = (r: string) =>
+          selectedRoleFilter === "COURSE_MANAGER"
+            ? r === "COURSE_MANAGER" || r === "PROGRAM_MANAGER"
+            : r === selectedRoleFilter;
+        const primaryMatch = isTarget(m.role);
+        const secondaryMatch = Array.isArray(m.roles) && m.roles.some(isTarget);
+        const metaMatch = Array.isArray(m.metadata?.roles) && m.metadata.roles.some(isTarget);
         if (!primaryMatch && !secondaryMatch && !metaMatch) return false;
       }
       // Department Filter
@@ -200,8 +204,8 @@ export default function TeamMembersPage() {
     } else if (DESIGNATION_PRESETS[presetKey]) {
       setMemberRole(DESIGNATION_PRESETS[presetKey].role);
       setMemberPermissions(DESIGNATION_PRESETS[presetKey].permissions);
-      if (presetKey === "PROGRAM_MANAGER") {
-        setMemberLmsRoles((prev) => Array.from(new Set([...prev, "PROGRAM_MANAGER"])));
+      if (presetKey === "COURSE_MANAGER" || presetKey === "PROGRAM_MANAGER") {
+        setMemberLmsRoles((prev) => Array.from(new Set([...prev, "COURSE_MANAGER"])));
       } else if (presetKey === "MENTOR") {
         setMemberLmsRoles((prev) => Array.from(new Set([...prev, "MENTOR"])));
       }
@@ -632,7 +636,7 @@ export default function TeamMembersPage() {
 
           {/* Role Filter Pills */}
           <div className="flex items-center gap-1.5 w-full sm:w-auto overflow-x-auto pb-1 sm:pb-0">
-            {["ALL", "SUPER_ADMIN", "ADMIN", "PROGRAM_MANAGER", "MENTOR", "MEMBER", "SALES"].map((role) => (
+            {["ALL", "SUPER_ADMIN", "ADMIN", "COURSE_MANAGER", "MENTOR", "MEMBER", "SALES"].map((role) => (
               <button
                 key={role}
                 type="button"
@@ -761,7 +765,7 @@ export default function TeamMembersPage() {
                                   ? "bg-gradient-to-tr from-amber-500 to-orange-600"
                                   : isAdmin
                                   ? "bg-gradient-to-tr from-indigo-600 to-violet-600"
-                                  : m.role === "PROGRAM_MANAGER"
+                                  : m.role === "COURSE_MANAGER" || m.role === "PROGRAM_MANAGER"
                                   ? "bg-gradient-to-tr from-purple-600 to-indigo-600"
                                   : m.role === "MENTOR"
                                   ? "bg-gradient-to-tr from-blue-600 to-cyan-600"
@@ -801,14 +805,14 @@ export default function TeamMembersPage() {
                                     ? "bg-amber-50 text-amber-700 border-amber-200/60 dark:bg-amber-950/40 dark:text-amber-400 dark:border-amber-800/40"
                                     : isAdmin
                                     ? "bg-indigo-50 text-indigo-700 border-indigo-200/60 dark:bg-indigo-950/40 dark:text-indigo-400 dark:border-indigo-800/40"
-                                    : m.role === "PROGRAM_MANAGER"
+                                    : m.role === "COURSE_MANAGER" || m.role === "PROGRAM_MANAGER"
                                     ? "bg-purple-50 text-purple-700 border-purple-200/60 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-800/40"
                                     : m.role === "MENTOR"
                                     ? "bg-blue-50 text-blue-700 border-blue-200/60 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/40"
                                     : "bg-emerald-50 text-emerald-700 border-emerald-200/60 dark:bg-emerald-950/40 dark:text-emerald-400 dark:border-emerald-800/40"
                                 }`}
                               >
-                                {m.role || "MEMBER"}
+                                {m.role === "PROGRAM_MANAGER" ? "COURSE_MANAGER" : (m.role || "MEMBER")}
                               </span>
                               {(m.roles || m.metadata?.roles || [])
                                 .filter((r: string) => r !== m.role)
@@ -816,12 +820,12 @@ export default function TeamMembersPage() {
                                   <span
                                     key={r}
                                     className={`inline-flex items-center px-1.5 py-0.5 rounded text-[9px] font-mono font-bold border ${
-                                      r === "PROGRAM_MANAGER"
+                                      r === "COURSE_MANAGER" || r === "PROGRAM_MANAGER"
                                         ? "bg-purple-50 text-purple-700 border-purple-200/60 dark:bg-purple-950/40 dark:text-purple-400 dark:border-purple-800/40"
                                         : "bg-blue-50 text-blue-700 border-blue-200/60 dark:bg-blue-950/40 dark:text-blue-400 dark:border-blue-800/40"
                                     }`}
                                   >
-                                    +{r.replace("_", " ")}
+                                    +{r === "PROGRAM_MANAGER" ? "COURSE MANAGER" : r.replace("_", " ")}
                                   </span>
                                 ))}
                             </div>
@@ -1159,7 +1163,7 @@ export default function TeamMembersPage() {
                                 ? "bg-amber-500"
                                 : m.role === "ADMIN"
                                 ? "bg-indigo-600"
-                                : m.role === "PROGRAM_MANAGER"
+                                : m.role === "COURSE_MANAGER" || m.role === "PROGRAM_MANAGER"
                                 ? "bg-purple-600"
                                 : m.role === "MENTOR"
                                 ? "bg-blue-600"
@@ -1575,7 +1579,7 @@ export default function TeamMembersPage() {
                   >
                     <option value="MEMBER">MEMBER (Staff / Support)</option>
                     <option value="SALES">SALES (Sales Executive / Leads Only)</option>
-                    <option value="PROGRAM_MANAGER">PROGRAM MANAGER (Curriculum & Studio Designer)</option>
+                    <option value="COURSE_MANAGER">COURSE MANAGER (Curriculum & Studio Designer)</option>
                     <option value="MENTOR">MENTOR (Academic & Project Reviewer)</option>
                     <option value="ADMIN">ADMIN (Lead / Manager)</option>
                     <option value="SUPER_ADMIN">SUPER ADMIN (Founders)</option>
@@ -1661,19 +1665,19 @@ export default function TeamMembersPage() {
                   <label className="flex items-start gap-2 p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 cursor-pointer hover:border-indigo-400 transition-colors">
                     <input
                       type="checkbox"
-                      checked={memberLmsRoles.includes("PROGRAM_MANAGER") || memberRole === "PROGRAM_MANAGER"}
-                      disabled={memberRole === "PROGRAM_MANAGER"}
+                      checked={memberLmsRoles.includes("COURSE_MANAGER") || memberLmsRoles.includes("PROGRAM_MANAGER") || memberRole === "COURSE_MANAGER" || memberRole === "PROGRAM_MANAGER"}
+                      disabled={memberRole === "COURSE_MANAGER" || memberRole === "PROGRAM_MANAGER"}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setMemberLmsRoles((prev) => [...prev.filter((r) => r !== "PROGRAM_MANAGER"), "PROGRAM_MANAGER"]);
+                          setMemberLmsRoles((prev) => [...prev.filter((r) => r !== "COURSE_MANAGER" && r !== "PROGRAM_MANAGER"), "COURSE_MANAGER"]);
                         } else {
-                          setMemberLmsRoles((prev) => prev.filter((r) => r !== "PROGRAM_MANAGER"));
+                          setMemberLmsRoles((prev) => prev.filter((r) => r !== "COURSE_MANAGER" && r !== "PROGRAM_MANAGER"));
                         }
                       }}
                       className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500"
                     />
                     <div>
-                      <div className="font-bold text-zinc-900 dark:text-zinc-100">Program Manager</div>
+                      <div className="font-bold text-zinc-900 dark:text-zinc-100">Course Manager</div>
                       <div className="text-[10px] text-zinc-500">Curriculum Studio & course design</div>
                     </div>
                   </label>
@@ -1866,7 +1870,7 @@ export default function TeamMembersPage() {
                   >
                     <option value="MEMBER">MEMBER (Staff / Support)</option>
                     <option value="SALES">SALES (Sales Executive / Leads Only)</option>
-                    <option value="PROGRAM_MANAGER">PROGRAM MANAGER (Curriculum & Studio Designer)</option>
+                    <option value="COURSE_MANAGER">COURSE MANAGER (Curriculum & Studio Designer)</option>
                     <option value="MENTOR">MENTOR (Academic & Project Reviewer)</option>
                     <option value="ADMIN">ADMIN (Lead / Manager)</option>
                     <option value="SUPER_ADMIN">SUPER ADMIN (Founders)</option>
@@ -1951,19 +1955,19 @@ export default function TeamMembersPage() {
                   <label className="flex items-start gap-2 p-2 rounded-lg bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 cursor-pointer hover:border-indigo-400 transition-colors">
                     <input
                       type="checkbox"
-                      checked={memberLmsRoles.includes("PROGRAM_MANAGER") || memberRole === "PROGRAM_MANAGER"}
-                      disabled={memberRole === "PROGRAM_MANAGER"}
+                      checked={memberLmsRoles.includes("COURSE_MANAGER") || memberLmsRoles.includes("PROGRAM_MANAGER") || memberRole === "COURSE_MANAGER" || memberRole === "PROGRAM_MANAGER"}
+                      disabled={memberRole === "COURSE_MANAGER" || memberRole === "PROGRAM_MANAGER"}
                       onChange={(e) => {
                         if (e.target.checked) {
-                          setMemberLmsRoles((prev) => [...prev.filter((r) => r !== "PROGRAM_MANAGER"), "PROGRAM_MANAGER"]);
+                          setMemberLmsRoles((prev) => [...prev.filter((r) => r !== "COURSE_MANAGER" && r !== "PROGRAM_MANAGER"), "COURSE_MANAGER"]);
                         } else {
-                          setMemberLmsRoles((prev) => prev.filter((r) => r !== "PROGRAM_MANAGER"));
+                          setMemberLmsRoles((prev) => prev.filter((r) => r !== "COURSE_MANAGER" && r !== "PROGRAM_MANAGER"));
                         }
                       }}
                       className="mt-0.5 rounded text-indigo-600 focus:ring-indigo-500"
                     />
                     <div>
-                      <div className="font-bold text-zinc-900 dark:text-zinc-100">Program Manager</div>
+                      <div className="font-bold text-zinc-900 dark:text-zinc-100">Course Manager</div>
                       <div className="text-[10px] text-zinc-500">Curriculum Studio & course design</div>
                     </div>
                   </label>

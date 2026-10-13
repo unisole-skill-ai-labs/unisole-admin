@@ -40,7 +40,7 @@ export default function RequireAdminAuth() {
           ...(Array.isArray(freshUser?.metadata?.roles) ? freshUser.metadata.roles : []),
         ];
         const isAllowed = userRoles.some((r) =>
-          ["SUPER_ADMIN", "ADMIN", "MEMBER", "SALES", "PROGRAM_MANAGER"].includes(r)
+          ["SUPER_ADMIN", "ADMIN", "MEMBER", "SALES", "COURSE_MANAGER", "PROGRAM_MANAGER"].includes(r)
         );
         if (!isAllowed) {
           dispatch(logout());
