@@ -50,6 +50,7 @@ import { SANJAULI_COLLEGE_PPT_SLIDES } from "../../data/sanjauliDeck";
 import { SUNNI_COLLEGE_PPT_SLIDES } from "../../data/sunniDeck";
 import { AI_TRAINING_ROADSHOW_DECK_SLIDES } from "../../data/aiTrainingRoadshowDeck";
 import { SEEMA_COLLEGE_ROADSHOW_DECK_SLIDES } from "../../data/seemaRoadshowDeck";
+import { VGC_MANDI_ROADSHOW_DECK_SLIDES } from "../../data/vgcMandiRoadshowDeck";
 
 interface PresentationBuilderProps {
   baseUrl: string;
@@ -782,6 +783,42 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
     setStepTestIndex(999);
   };
 
+  const handleLoadVgcMandiTemplate = () => {
+    if (
+      slides.length > 0 &&
+      !window.confirm(
+        "Are you sure you want to load the 27-slide AI Training Program Roadshow Deck (VGC Mandi)? This will replace current slides."
+      )
+    ) {
+      return;
+    }
+    setTitle("AI Training Program Roadshow (VGC Mandi)");
+    setDescription(
+      "27-slide industrial training cum internship roadshow presentation for Vallabh Government College Mandi (VGC Mandi) featuring Ajay Mokta, leadership team, 90s vs 20s environment shift, 570M private job landscape, career capital, 7-stage product development cycle, cheap vs valuable skills, 100-to-4 hiring funnel, and Agentic AI boom."
+    );
+    setSlides(VGC_MANDI_ROADSHOW_DECK_SLIDES);
+    setActiveSlideIndex(0);
+    setStepTestIndex(999);
+  };
+
+  const handleLoadSeemaTemplate = () => {
+    if (
+      slides.length > 0 &&
+      !window.confirm(
+        "Are you sure you want to load the 27-slide AI Training Program Roadshow Deck (Govt College Seema)? This will replace current slides."
+      )
+    ) {
+      return;
+    }
+    setTitle("AI Training Program Roadshow (Govt College Seema)");
+    setDescription(
+      "27-slide industrial training cum internship roadshow presentation for Govt College Seema (Rohru) featuring Ajay Mokta, leadership team, 90s vs 20s environment shift, 570M private job landscape, career capital, 7-stage product development cycle, cheap vs valuable skills, 100-to-4 hiring funnel, and Agentic AI boom."
+    );
+    setSlides(SEEMA_COLLEGE_ROADSHOW_DECK_SLIDES);
+    setActiveSlideIndex(0);
+    setStepTestIndex(999);
+  };
+
   const handleLoadTheogTemplate = () => {
     if (
       slides.length > 0 &&
@@ -1005,6 +1042,28 @@ export default function PresentationBuilder({ baseUrl }: PresentationBuilderProp
               <span>Mobile Phone (9:16)</span>
             </button>
           </div>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleLoadVgcMandiTemplate}
+            className="border-fuchsia-500/30 text-fuchsia-600 dark:text-fuchsia-400 hover:bg-fuchsia-50 dark:hover:bg-fuchsia-950/50 flex items-center gap-1.5 font-bold"
+            title="Load the 27-slide AI Training Program Roadshow Deck for Vallabh Govt College Mandi (VGC Mandi)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-fuchsia-400" />
+            <span className="hidden sm:inline">Load VGC Mandi Roadshow (27 Slides)</span>
+          </Button>
+
+          <Button
+            variant="secondary"
+            size="sm"
+            onClick={handleLoadSeemaTemplate}
+            className="border-purple-500/30 text-purple-600 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/50 flex items-center gap-1.5 font-bold"
+            title="Load the 27-slide AI Training Program Roadshow Deck for Govt College Seema (Rohru)"
+          >
+            <Sparkles className="w-3.5 h-3.5 text-purple-400" />
+            <span className="hidden sm:inline">Load Seema Roadshow (27 Slides)</span>
+          </Button>
 
           <Button
             variant="secondary"

@@ -170,16 +170,28 @@ export function getPermissionDef(key: string): PermissionDefinition | undefined 
 
 export const DESIGNATION_PRESETS: Record<
   string,
-  { label: string; role: "ADMIN" | "MEMBER" | "SALES" | "MENTOR" | "PROGRAM_MANAGER"; permissions: string[] }
+  { label: string; role: "ADMIN" | "MEMBER" | "SALES" | "MENTOR" | "PROGRAM_MANAGER" | "COURSE_MANAGER"; permissions: string[] }
 > = {
   SUPER_ADMIN: {
     label: "Super Administrator (All Powers)",
     role: "ADMIN",
     permissions: ALL_PERMISSIONS.map((p) => p.key),
   },
+  COURSE_MANAGER: {
+    label: "Course Manager (Curriculum Studio & Lead)",
+    role: "COURSE_MANAGER",
+    permissions: [
+      "my_work:view",
+      "curriculum:view",
+      "curriculum:manage",
+      "tasks:manage",
+      "students:manage",
+      "analytics:view",
+    ],
+  },
   PROGRAM_MANAGER: {
-    label: "Program Manager (Curriculum Studio & Lead)",
-    role: "PROGRAM_MANAGER",
+    label: "Course Manager (Curriculum Studio & Lead)",
+    role: "COURSE_MANAGER",
     permissions: [
       "my_work:view",
       "curriculum:view",
@@ -278,8 +290,8 @@ export function getDefaultPermissionsForUser(user: any): string[] {
   const role = (user.role || "").toUpperCase();
   const des = (user.designation || "").toUpperCase();
 
-  if (role === "PROGRAM_MANAGER" || des.includes("PROGRAM")) {
-    return DESIGNATION_PRESETS.PROGRAM_MANAGER.permissions;
+  if (role === "COURSE_MANAGER" || role === "PROGRAM_MANAGER" || des.includes("COURSE") || des.includes("PROGRAM")) {
+    return DESIGNATION_PRESETS.COURSE_MANAGER.permissions;
   }
   if (role === "MENTOR" || des.includes("MENTOR")) {
     return DESIGNATION_PRESETS.MENTOR.permissions;
